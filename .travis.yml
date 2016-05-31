@@ -1,13 +1,16 @@
 sudo: required
 
+services:
+  - docker
+
+env:
+  global:
+    - DOCKER_VERSION=1.11.1-0~trusty
+
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
-  - wget http://www.us.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz
-  - tar xfz thrift-0.9.2.tar.gz
-  - cd thrift-0.9.2 && ./configure && sudo make install
+  - apt-cache madison docker-engine
+  - sudo apt-get -o Dpkg::Options::="--force-confnew" install -y docker-engine=${DOCKER_VERSION}
+  - docker version
 
 script:
-  - thrift --gen go:thrift_import="github.com/apache/thrift/lib/go/thrift" thrift/agent.thrift
-  - thrift --gen go:thrift_import="github.com/apache/thrift/lib/go/thrift" thrift/zipkincore.thrift
-  - thrift --gen go:thrift_import="github.com/apache/thrift/lib/go/thrift" thrift/sampling.thrift
+  - make test_ci
