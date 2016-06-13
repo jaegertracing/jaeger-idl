@@ -10,6 +10,7 @@ thrift:	thrift-image
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) /data/thrift/agent.thrift
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) /data/thrift/sampling.thrift
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) /data/thrift/zipkincore.thrift
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) /data/thrift/crossdock/tracetest.thrift
 
 thrift-image:
 	docker pull $(THRIFT_IMG)
