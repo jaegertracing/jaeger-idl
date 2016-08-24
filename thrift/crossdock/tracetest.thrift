@@ -1,4 +1,4 @@
-namespace java com.uber.jaeger.crossdock.tracetest
+namespace java com.uber.jaeger.crossdock.thrift
 
 enum Transport { HTTP, TCHANNEL, DUMMY }
 
