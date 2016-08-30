@@ -25,15 +25,15 @@ enum TagType { STRING, DOUBLE, BOOL, I16, I32, I64, BINARY }
 
 # Tag is a basic strongly typed key/value pair. It has been flattened to reduce the use of pointers in golang
 struct Tag {
-  1: required string   key
+  1: required string  key
   2: required TagType tagType
-  3: required string  vStr
-  4: required double  vDouble
-  5: required bool    vBool
-  6: required i16     vInt16
-  7: required i32     vInt32
-  8: required i64     vInt64
-  9: required binary  vBinary
+  3: optional string  vStr
+  4: optional double  vDouble
+  5: optional bool    vBool
+  6: optional i16     vInt16
+  7: optional i32     vInt32
+  8: optional i64     vInt64
+  9: optional binary  vBinary
 }
 
 # Log is a timed even with an arbitrary set of tags.
@@ -77,5 +77,5 @@ struct Batch {
 }
 
 service Agent {
-    oneway void emitJaegerBatch(1: list<Span> spans)
+    oneway void emitBatch(1: Batch batch)
 }
