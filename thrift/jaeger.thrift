@@ -45,8 +45,9 @@ enum SpanRefType { CHILD_OF, FOLLOWS_FROM }
 # SpanRef describes causal relationship of the current span to another span (e.g. 'child-of')
 struct SpanRef {
   1: required SpanRefType refType
-  2: required i64         traceId
-  3: required i64         spanId
+  2: required i64         traceIdLow
+  3: required i64         traceIdHigh
+  4: required i64         spanId
 }
 
 # Span represents a named unit of work performed by a service.
