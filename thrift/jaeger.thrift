@@ -47,21 +47,22 @@ struct SpanRef {
   1: required SpanRefType refType
   2: required i64         traceIdLow
   3: required i64         traceIdHigh
-  4: required i64         spanId
+  4: required i32         spanId
 }
 
 # Span represents a named unit of work performed by a service.
 struct Span {
-  1:  required i64           traceIdLow   # the last 64 bits of a traceID
-  2:  required i64           traceIdHigh  # the first 64 bits of a traceID
-  3:  required i64           spanId       # unique span id (only unique within a given trace)
-  4:  required string        operationName
-  5:  optional list<SpanRef> references    # causal references to other spans
-  6:  required i32           flags         # tbd
-  7:  required i64           startTime
-  8:  required i64           duration
-  9:  optional list<Tag>     tags
-  10: optional list<Log>     logs
+  1:  required i64           traceIdLow   # the least significant 64 bits of a traceID
+  2:  required i64           traceIdHigh  # the most significant 64 bits of a traceID; 0 when only 64bit IDs are used
+  3:  required i32           spanId       # unique span id (only unique within a given trace)
+  4:  required i32           parentSpanId # since nearly all spans will have parents spans, CHILD_OF refs do not have to be explicit
+  5:  required string        operationName
+  6:  optional list<SpanRef> references   # causal references to other spans
+  7:  required i32           flags        # tbd
+  8:  required i64           startTime
+  9:  required i64           duration
+  10: optional list<Tag>     tags
+  11: optional list<Log>     logs
 }
 
 # Process describes the traced process/service that emits spans.
