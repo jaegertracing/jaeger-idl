@@ -54,8 +54,8 @@ struct SpanRef {
 struct Span {
   1:  required i64           traceIdLow   # the least significant 64 bits of a traceID
   2:  required i64           traceIdHigh  # the most significant 64 bits of a traceID; 0 when only 64bit IDs are used
-  3:  required i32           spanId       # unique span id (only unique within a given trace)
-  4:  required i32           parentSpanId # since nearly all spans will have parents spans, CHILD_OF refs do not have to be explicit
+  3:  required i64           spanId       # unique span id (only unique within a given trace)
+  4:  required i64           parentSpanId # since nearly all spans will have parents spans, CHILD_OF refs do not have to be explicit
   5:  required string        operationName
   6:  optional list<SpanRef> references   # causal references to other spans
   7:  required i32           flags        # tbd
