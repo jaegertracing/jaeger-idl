@@ -47,7 +47,7 @@ struct SpanRef {
   1: required SpanRefType refType
   2: required i64         traceIdLow
   3: required i64         traceIdHigh
-  4: required i32         spanId
+  4: required i64         spanId
 }
 
 # Span represents a named unit of work performed by a service.
