@@ -26,7 +26,7 @@ enum TagType { STRING, DOUBLE, BOOL, LONG, BINARY }
 # Tag is a basic strongly typed key/value pair. It has been flattened to reduce the use of pointers in golang
 struct Tag {
   1: required string  key
-  2: required TagType tagType
+  2: required TagType vType
   3: optional string  vStr
   4: optional double  vDouble
   5: optional bool    vBool
@@ -37,7 +37,7 @@ struct Tag {
 # Log is a timed even with an arbitrary set of tags.
 struct Log {
   1: required i64       timestamp
-  2: required list<Tag> tags
+  2: required list<Tag> fields
 }
 
 enum SpanRefType { CHILD_OF, FOLLOWS_FROM }
