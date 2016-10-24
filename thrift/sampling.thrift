@@ -37,7 +37,7 @@ struct RateLimitingSamplingStrategy {
 
 struct OperationSamplingStrategy {
   1: required string operation
-  2: required samplingStrategy SamplingStrategyResponse
+  2: required SamplingStrategyResponse samplingStrategy
 }
 
 struct SamplingStrategyResponse {
