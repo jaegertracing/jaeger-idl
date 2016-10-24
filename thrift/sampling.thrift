@@ -35,9 +35,10 @@ struct RateLimitingSamplingStrategy {
     1: required i16 maxTracesPerSecond
 }
 
+// OperationSamplingStrategy is the strategy used per operation.
 struct OperationSamplingStrategy {
   1: required string operation
-  2: required SamplingStrategyResponse samplingStrategy
+  2: required ProbabilisticSamplingStrategy probabilisticSampling
 }
 
 struct SamplingStrategyResponse {
