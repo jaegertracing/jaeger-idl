@@ -35,10 +35,16 @@ struct RateLimitingSamplingStrategy {
     1: required i16 maxTracesPerSecond
 }
 
+struct OperationSamplingStrategy {
+  1: required string operation
+  2: required samplingStrategy SamplingStrategyResponse
+}
+
 struct SamplingStrategyResponse {
     1: required SamplingStrategyType strategyType
     2: optional ProbabilisticSamplingStrategy probabilisticSampling
     3: optional RateLimitingSamplingStrategy rateLimitingSampling
+    4: optional list<OperationSamplingStrategy> operationSamplingStrategies
 }
 
 service SamplingManager {
