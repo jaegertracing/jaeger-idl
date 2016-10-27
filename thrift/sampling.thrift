@@ -53,8 +53,7 @@ struct SamplingStrategyResponse {
     1: required SamplingStrategyType strategyType
     2: optional ProbabilisticSamplingStrategy probabilisticSampling
     3: optional RateLimitingSamplingStrategy rateLimitingSampling
-    // 4 is deprecated
-    5: optional OperationSamplingStrategies operationSampling
+    4: optional OperationSamplingStrategies operationSampling
 }
 
 service SamplingManager {
