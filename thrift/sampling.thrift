@@ -39,7 +39,7 @@ struct RateLimitingSamplingStrategy {
 // the lower bound is met, operations are randomly sampled at a fixed percentage.
 struct OperationSamplingStrategies {
     1: required double defaultSamplingProbability
-    2: required double defaultLowerBound
+    2: required double defaultLowerBoundTracesPerSecond
     3: required list<OperationSamplingStrategy> strategies
 }
 
