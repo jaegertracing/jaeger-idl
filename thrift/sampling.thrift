@@ -35,6 +35,12 @@ struct RateLimitingSamplingStrategy {
     1: required i16 maxTracesPerSecond
 }
 
+// OperationSamplingStrategy defines a sampling strategy that randomly samples a fixed percentage of operation traces.
+struct OperationSamplingStrategy {
+    1: required string operation
+    2: required ProbabilisticSamplingStrategy probabilisticSampling
+}
+
 // PerOperationSamplingStrategies defines a sampling strategy per each operation name in the service
 // with a guaranteed lower bound per second. Once the lower bound is met, operations are randomly sampled
 // at a fixed percentage.
@@ -42,12 +48,6 @@ struct PerOperationSamplingStrategies {
     1: required double defaultSamplingProbability
     2: required double defaultLowerBoundTracesPerSecond
     3: required list<OperationSamplingStrategy> perOperationStrategies
-}
-
-// OperationSamplingStrategy defines a sampling strategy that randomly samples a fixed percentage of operation traces.
-struct OperationSamplingStrategy {
-    1: required string operation
-    2: required ProbabilisticSamplingStrategy probabilisticSampling
 }
 
 struct SamplingStrategyResponse {
