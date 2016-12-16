@@ -77,6 +77,14 @@ struct Batch {
   2: required list<Span> spans
 }
 
+struct BatchSubmitResponse {
+    1: required bool ok
+}
+
 service Agent {
     oneway void emitBatch(1: Batch batch)
+}
+
+service Collector  {
+    list<BatchSubmitResponse> submitBatches(1: list<Batch> batches)
 }
