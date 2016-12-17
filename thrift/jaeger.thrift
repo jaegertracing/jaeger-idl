@@ -77,8 +77,9 @@ struct Batch {
   2: required list<Span> spans
 }
 
+# BatchSubmitResponse is the response on submitting a batch. 
 struct BatchSubmitResponse {
-    1: required bool ok
+    1: required bool ok   # The Collector's client is expected to only log (or emit a counter) when not ok equals false
 }
 
 service Agent {
