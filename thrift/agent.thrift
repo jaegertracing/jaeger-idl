@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-include "zipkincore.thrift"
 include "jaeger.thrift"
+include "zipkincore.thrift"
 
 namespace java com.uber.jaeger.agent.thrift
 
