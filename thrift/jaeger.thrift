@@ -82,10 +82,6 @@ struct BatchSubmitResponse {
     1: required bool ok   # The Collector's client is expected to only log (or emit a counter) when not ok equals false
 }
 
-service Agent {
-    oneway void emitBatch(1: Batch batch)
-}
-
 service Collector  {
     list<BatchSubmitResponse> submitBatches(1: list<Batch> batches)
 }

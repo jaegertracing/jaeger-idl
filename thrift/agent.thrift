@@ -20,10 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+include "jaeger.thrift"
 include "zipkincore.thrift"
 
 namespace java com.uber.jaeger.agent.thrift
 
 service Agent {
     oneway void emitZipkinBatch(1: list<zipkincore.Span> spans)
+    oneway void emitBatch(1: jaeger.Batch batch)
 }
