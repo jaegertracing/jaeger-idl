@@ -21,9 +21,11 @@
 # THE SOFTWARE.
 
 include "zipkincore.thrift"
+include "jaeger.thrift"
 
 namespace java com.uber.jaeger.agent.thrift
 
 service Agent {
     oneway void emitZipkinBatch(1: list<zipkincore.Span> spans)
+    oneway void emitBatch(1: jaeger.Batch batch)
 }
