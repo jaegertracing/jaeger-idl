@@ -58,7 +58,7 @@ struct Span {
   4:  required i64           parentSpanId # since nearly all spans will have parents spans, CHILD_OF refs do not have to be explicit
   5:  required string        operationName
   6:  optional list<SpanRef> references   # causal references to other spans
-  7:  required i32           flags        # tbd
+  7:  required i32           flags        # a bit field used to propagate sampling decisions. 1 signifies a SAMPLED span, 2 signifies a DEBUG span.
   8:  required i64           startTime
   9:  required i64           duration
   10: optional list<Tag>     tags
