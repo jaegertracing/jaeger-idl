@@ -48,6 +48,7 @@ struct PerOperationSamplingStrategies {
     1: required double defaultSamplingProbability
     2: required double defaultLowerBoundTracesPerSecond
     3: required list<OperationSamplingStrategy> perOperationStrategies
+    4: optional double defaultUpperBoundTracesPerSecond
 }
 
 struct SamplingStrategyResponse {
