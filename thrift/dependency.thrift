@@ -21,22 +21,20 @@
 namespace java com.uber.jaeger.thriftjava
 
 struct DependencyLink {
-  /** parent service name (caller) */
+  // parent service name (caller)
   1: required string parent
-  /** child service name (callee) */
+  // child service name (callee)
   2: required string child
-  # 3: Moments OBSOLETE_duration_moments
-  /** calls made during the duration of this link */
+  // calls made during the duration of this link
   4: required i64 callCount
-  # histogram?
 }
 
-/* An aggregate representation of services paired with every service they call. */
+// An aggregate representation of services paired with every service they call.
 struct Dependencies {
-  /** milliseconds from epoch */
-  1: required i64 start_ts
-  /** milliseconds from epoch */
-  2: required i64 end_ts
+  // milliseconds from epoch
+  1: required i64 startTs
+  // milliseconds from epoch
+  2: required i64 endTs
   3: required list<DependencyLink> links
 }
 
