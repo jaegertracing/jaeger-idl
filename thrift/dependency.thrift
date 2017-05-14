@@ -31,13 +31,10 @@ struct DependencyLink {
 
 // An aggregate representation of services paired with every service they call.
 struct Dependencies {
-  // milliseconds from epoch
-  1: required i64 startTs
-  // milliseconds from epoch
-  2: required i64 endTs
-  3: required list<DependencyLink> links
+  1: required list<DependencyLink> links
 }
 
 service Dependency {
     Dependencies getDependenciesForTrace(1: string traceId)
+    oneway void saveDependencies(1: Dependencies dependencies)
 }
