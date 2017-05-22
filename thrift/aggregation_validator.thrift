@@ -23,6 +23,7 @@ namespace java com.uber.jaeger.thriftjava
 # ValidateTraceResponse returns ok when a trace has been written to redis.
 struct ValidateTraceResponse {
     1: required bool ok
+    2: required i64 traceCount
 }
 
 service AggregationValidator {
