@@ -20,12 +20,12 @@
 
 namespace java com.uber.jaeger.thriftjava
 
-# BaggageKey contains the baggage key and the upperbound size of the baggage for the key.
-struct BaggageKey {
+# BaggageRule contains the baggage key and the upperbound size of the baggage for the key.
+struct BaggageRule {
    1: required string key
    2: required i32 size
 }
 
 service Baggage  {
-    list<BaggageKey> getBaggageRules(1: string serviceName)
+    list<BaggageRule> getBaggageRules(1: string serviceName)
 }
