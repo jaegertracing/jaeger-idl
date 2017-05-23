@@ -27,5 +27,5 @@ struct BaggageKey {
 }
 
 service Baggage  {
-    list<BaggageKey> getBaggageRules()
+    list<BaggageKey> getBaggageRules(1: string service)
 }
