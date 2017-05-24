@@ -26,6 +26,6 @@ struct BaggageRule {
    2: required i32 size
 }
 
-service Baggage  {
+service BaggageManager  {
     list<BaggageRule> getBaggageRules(1: string serviceName)
 }
