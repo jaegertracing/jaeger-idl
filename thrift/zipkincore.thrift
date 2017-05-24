@@ -164,7 +164,7 @@ struct Endpoint {
    *
    * Ex for the ip 1.2.3.4, it would be (1 << 24) | (2 << 16) | (3 << 8) | 4
    */
-  1: i32 ipv4
+  1: required i32 ipv4
   /**
    * IPv4 port
    *
@@ -172,13 +172,13 @@ struct Endpoint {
    *
    * Conventionally, when the port isn't known, port = 0.
    */
-  2: i16 port
+  2: required i16 port
   /**
    * Service name in lowercase, such as "memcache" or "zipkin-web"
    *
    * Conventionally, when the service name isn't known, service_name = "unknown".
    */
-  3: string service_name
+  3: required string service_name
 }
 
 /**
@@ -192,8 +192,8 @@ struct Annotation {
    * This value should use the most precise value possible. For example,
    * gettimeofday or syncing nanoTime against a tick of currentTimeMillis.
    */
-  1: i64 timestamp
-  2: string value                  // what happened at the timestamp?
+  1: required i64 (js.type = "Long") timestamp
+  2: required string value                  // what happened at the timestamp?
   /**
    * Always the host that recorded the event. By specifying the host you allow
    * rollup of all events (such as client requests to a service) by IP address.
@@ -220,9 +220,9 @@ enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }
  * you can see the different points of view, which often help in debugging.
  */
 struct BinaryAnnotation {
-  1: string key,
-  2: binary value,
-  3: AnnotationType annotation_type,
+  1: required string key,
+  2: required binary value,
+  3: required AnnotationType annotation_type,
   /**
    * The host that recorded tag, which allows you to differentiate between
    * multiple tags with the same key. There are two exceptions to this.
@@ -242,17 +242,17 @@ struct BinaryAnnotation {
  * annotation and ending with a SERVER_SEND.
  */
 struct Span {
-  1: i64 trace_id                  # unique trace id, use for all spans in trace
+  1: required i64 (js.type = "Long") trace_id                  # unique trace id, use for all spans in trace
   /**
    * Span name in lowercase, rpc method for example
    *
    * Conventionally, when the span name isn't known, name = "unknown".
    */
-  3: string name,
-  4: i64 id,                       # unique span id, only used for this span
-  5: optional i64 parent_id,       # parent span id
-  6: list<Annotation> annotations, # all annotations/events that occured, sorted by timestamp
-  8: list<BinaryAnnotation> binary_annotations # any binary annotations
+  3: required string name,
+  4: required i64 (js.type = "Long") id,                       # unique span id, only used for this span
+  5: optional i64 (js.type = "Long") parent_id,       # parent span id
+  6: required list<Annotation> annotations, # all annotations/events that occured, sorted by timestamp
+  8: required list<BinaryAnnotation> binary_annotations # any binary annotations
   9: optional bool debug = 0       # if true, we DEMAND that this span passes all samplers
   /**
    * Microseconds from epoch of the creation of this span.
@@ -268,7 +268,7 @@ struct Span {
    * This field is optional for compatibility with old data: first-party span
    * stores are expected to support this at time of introduction.
    */
-  10: optional i64 timestamp,
+  10: optional i64 (js.type = "Long") timestamp,
   /**
    * Measurement of duration in microseconds, used to support queries.
    *
@@ -286,7 +286,7 @@ struct Span {
    *
    * This field is i64 vs i32 to support spans longer than 35 minutes.
    */
-  11: optional i64 duration
+  11: optional i64 (js.type = "Long") duration
 }
 
 # define TChannel service
