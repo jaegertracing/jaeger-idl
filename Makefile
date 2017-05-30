@@ -10,8 +10,14 @@ THRIFT_JAVA_ARGS=private-members
 THRIFT_GEN=--gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node
 THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
-THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
-	baggage.thrift dependency.thrift aggregation_validator.thrift
+THRIFT_FILES=agent.thrift \
+			jaeger.thrift \
+			sampling.thrift \
+			zipkincore.thrift \
+			crossdock/tracetest.thrift \
+			baggage.thrift \
+			dependency.thrift \
+			aggregation_validator.thrift
 
 test_ci: thrift
 
