@@ -35,6 +35,6 @@ struct Dependencies {
 }
 
 service Dependency {
-    Dependencies getDependenciesForTrace(1: string traceId)
+    Dependencies getDependenciesForTrace(1: required string traceId)
     oneway void saveDependencies(1: Dependencies dependencies)
 }
