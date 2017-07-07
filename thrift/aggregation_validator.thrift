@@ -27,5 +27,5 @@ struct ValidateTraceResponse {
 }
 
 service AggregationValidator {
-    ValidateTraceResponse validateTrace(1: string traceId)
+    ValidateTraceResponse validateTrace(1: required string traceId)
 }
