@@ -20,9 +20,11 @@
 
 namespace java com.uber.jaeger.thriftjava
 
-typedef string BaggageKey
-# MaxValueLength is the maximum length of the baggage value.
-typedef i32 MaxValueLength
+# BaggageRestriction contains the baggage key and the maximum length of the baggage value.
+struct BaggageRestriction {
+   1: required string baggageKey
+   2: required i32 maxValueLength
+}
 
 service BaggageRestrictionManager  {
     /**
@@ -30,5 +32,5 @@ service BaggageRestrictionManager  {
      * Usually, baggageRestrictions apply to all services however there may be situations
      * where a baggageKey might only be allowed to be set by a specific service.
      */
-    map<BaggageKey, MaxValueLength> getBaggageRestrictions(1: string serviceName)
+    list<BaggageRestriction> getBaggageRestrictions(1: string serviceName)
 }
