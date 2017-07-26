@@ -11,7 +11,7 @@ THRIFT_GEN=--gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(TH
 THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
-	baggage.thrift dependency.thrift aggregation_validator.thrift
+	baggage.thrift dependency.thrift aggregation_validator.thrift meta.thrift
 
 test_ci: thrift
 
