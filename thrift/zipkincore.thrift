@@ -179,6 +179,10 @@ struct Endpoint {
    * Conventionally, when the service name isn't known, service_name = "unknown".
    */
   3: string service_name
+  /**
+   * IPv6 host address packed into 16 bytes. Ex Inet6Address.getBytes()
+   */
+  4: optional binary ipv6
 }
 
 /**
@@ -287,6 +291,11 @@ struct Span {
    * This field is i64 vs i32 to support spans longer than 35 minutes.
    */
   11: optional i64 duration
+  /**
+   * Optional unique 8-byte additional identifier for a trace. If non zero, this
+   * means the trace uses 128 bit traceIds instead of 64 bit.
+   */
+  12: optional i64 trace_id_high
 }
 
 # define TChannel service
