@@ -1,3 +1,4 @@
+namespace cpp uber.jaeger.crossdock.thrift
 namespace java com.uber.jaeger.crossdock.thrift
 
 enum Transport { HTTP, TCHANNEL, DUMMY }

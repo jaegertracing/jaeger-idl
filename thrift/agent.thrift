@@ -23,6 +23,7 @@
 include "jaeger.thrift"
 include "zipkincore.thrift"
 
+namespace cpp uber.jaeger.agent.thrift
 namespace java com.uber.jaeger.agent.thrift
 
 service Agent {
