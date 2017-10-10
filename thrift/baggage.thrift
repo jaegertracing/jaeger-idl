@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 namespace java com.uber.jaeger.thriftjava
+namespace netcore Jaeger.Thrift.Agent
 
 # BaggageRestriction contains the baggage key and the maximum length of the baggage value.
 struct BaggageRestriction {

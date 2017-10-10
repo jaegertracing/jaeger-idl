@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 namespace java com.uber.jaeger.thriftjava
+namespace netcore Jaeger.Thrift
 
 # TagType denotes the type of a Tag's value.
 enum TagType { STRING, DOUBLE, BOOL, LONG, BINARY }

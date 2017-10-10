@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 namespace java com.uber.jaeger.thrift.sampling_manager
+namespace netcore Jaeger.Thrift.Agent
 
 enum SamplingStrategyType { PROBABILISTIC, RATE_LIMITING }
 

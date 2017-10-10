@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 namespace java com.uber.jaeger.thriftjava
+namespace netcore Jaeger.Thrift.Agent
 
 struct DependencyLink {
   // parent service name (caller)
