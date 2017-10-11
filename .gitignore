@@ -3,3 +3,4 @@ gen-go/
 gen-java/
 gen-nodejs/
 gen-py.tornado/
+gen-cpp/
