@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-namespace cpp jaegertracing.thrift.sampling_manager
+namespace cpp jaegertracing.sampling_manager.thrift
 namespace java com.uber.jaeger.thrift.sampling_manager
 
 enum SamplingStrategyType { PROBABILISTIC, RATE_LIMITING }
