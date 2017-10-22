@@ -5,3 +5,6 @@ A set of shared data model definitions used by Jaeger components.
 [ci-img]: https://travis-ci.org/uber/jaeger-idl.svg?branch=master
 [ci]: https://travis-ci.org/uber/jaeger-idl
 
+## Contributing
+
+See [CONTRIBUTING](./CONTRIBUTING.md).

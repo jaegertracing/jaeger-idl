@@ -13,7 +13,7 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
-test_ci: thrift
+test-ci: thrift
 
 clean:
 	rm -rf gen-* || true
@@ -28,5 +28,4 @@ thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
-.PHONY: test_ci clean thrift thrift-image $(THRIFT_FILES)
-
+.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES)
