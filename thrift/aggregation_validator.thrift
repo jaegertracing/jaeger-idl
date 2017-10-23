@@ -14,6 +14,7 @@
 
 namespace cpp jaegertracing.thrift
 namespace java com.uber.jaeger.thriftjava
+namespace netcore Jaeger.Thrift.Agent
 
 # ValidateTraceResponse returns ok when a trace has been written to redis.
 struct ValidateTraceResponse {

@@ -14,6 +14,7 @@
 
 namespace cpp jaegertracing.crossdock.thrift
 namespace java com.uber.jaeger.crossdock.thrift
+namespace netcore Jaeger.Thrift.Crossdock
 
 enum Transport { HTTP, TCHANNEL, DUMMY }
 

@@ -17,6 +17,7 @@ include "zipkincore.thrift"
 
 namespace cpp jaegertracing.agent.thrift
 namespace java com.uber.jaeger.agent.thrift
+namespace netcore Jaeger.Thrift.Agent
 
 service Agent {
     oneway void emitZipkinBatch(1: list<zipkincore.Span> spans)
