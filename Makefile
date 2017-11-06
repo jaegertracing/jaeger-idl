@@ -1,10 +1,10 @@
 
-THRIFT_VER=0.9.2
+THRIFT_VER=0.10.0
 THRIFT_IMG=thrift:$(THRIFT_VER)
 THRIFT=docker run -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
-THRIFT_PY_ARGS=new_style,tornado
+THRIFT_PY_ARGS=tornado
 THRIFT_JAVA_ARGS=private-members
 
 THRIFT_GEN=--gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node --gen cpp
