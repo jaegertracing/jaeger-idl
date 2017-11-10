@@ -77,6 +77,34 @@ const string SERVER_SEND = "ss"
  */
 const string SERVER_RECV = "sr"
 /**
+ * Message send ("ms") is a request to send a message to a destination, usually
+ * a broker. This may be the only annotation in a messaging span. If WIRE_SEND
+ * exists in the same span, it follows this moment and clarifies delays sending
+ * the message, such as batching.
+ *
+ * Unlike RPC annotations like CLIENT_SEND, messaging spans never share a span
+ * ID. For example, "ms" should always be the parent of "mr".
+ *
+ * Annotation.host is not the destination, it is the host which logged the send
+ * event: the producer. When annotating MESSAGE_SEND, instrumentation should
+ * also tag the MESSAGE_ADDR.
+ */
+const string MESSAGE_SEND = "ms"
+/**
+ * A consumer received ("mr") a message from a broker. This may be the only
+ * annotation in a messaging span. If WIRE_RECV exists in the same span, it
+ * precedes this moment and clarifies any local queuing delay.
+ *
+ * Unlike RPC annotations like SERVER_RECV, messaging spans never share a span
+ * ID. For example, "mr" should always be a child of "ms" unless it is a root
+ * span.
+ *
+ * Annotation.host is not the broker, it is the host which logged the receive
+ * event: the consumer.  When annotating MESSAGE_RECV, instrumentation should
+ * also tag the MESSAGE_ADDR.
+ */
+const string MESSAGE_RECV = "mr"
+/**
  * Optionally logs an attempt to send a message on the wire. Multiple wire send
  * events could indicate network retries. A lag between client or server send
  * and wire send might indicate queuing or processing delay.
@@ -150,6 +178,10 @@ const string CLIENT_ADDR = "ca"
  * different server ip or port.
  */
 const string SERVER_ADDR = "sa"
+/**
+ * Indicates the remote address of a messaging span, usually the broker.
+ */
+const string MESSAGE_ADDR = "ma"
 
 /**
  * Indicates the network context of a service recording an annotation with two
