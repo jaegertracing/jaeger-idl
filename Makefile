@@ -3,6 +3,10 @@ THRIFT_VER=0.9.2
 THRIFT_IMG=thrift:$(THRIFT_VER)
 THRIFT=docker run -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
+SWAGGER_VER=0.12.0
+SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
+SWAGGER=docker run --rm -it -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
+
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
 THRIFT_PY_ARGS=new_style,tornado
 THRIFT_JAVA_ARGS=private-members
@@ -13,7 +17,10 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
-test-ci: thrift
+test-ci: thrift swagger-validate
+
+swagger-validate:
+	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
 
 clean:
 	rm -rf gen-* || true
@@ -28,4 +35,4 @@ thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
-.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES)
+.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate
