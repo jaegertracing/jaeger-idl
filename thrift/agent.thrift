@@ -17,6 +17,7 @@ include "zipkincore.thrift"
 
 namespace cpp jaegertracing.agent.thrift
 namespace java com.uber.jaeger.agent.thrift
+namespace php Jaeger.Thrift.Agent
 namespace netcore Jaeger.Thrift.Agent
 
 service Agent {
