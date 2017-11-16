@@ -14,6 +14,7 @@
 
 namespace cpp jaegertracing.sampling_manager.thrift
 namespace java com.uber.jaeger.thrift.sampling_manager
+namespace php Jaeger.Thrift.Agent
 namespace netcore Jaeger.Thrift.Agent
 
 enum SamplingStrategyType { PROBABILISTIC, RATE_LIMITING }

@@ -14,6 +14,7 @@
 
 namespace cpp jaegertracing.thrift
 namespace java com.uber.jaeger.thriftjava
+namespace php Jaeger.Thrift.Agent
 namespace netcore Jaeger.Thrift.Agent
 
 struct DependencyLink {
