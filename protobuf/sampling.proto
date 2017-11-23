@@ -15,7 +15,10 @@
 syntax = "proto3";
 package jaegertracing.protobuf.sampling_manager;
 
-import "jaeger.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.testgen_all) = true;
+option (gogoproto.benchgen_all) = true;
 
 message ProbabilisticSamplingStrategy {
     double sampling_rate = 1;
@@ -25,19 +28,23 @@ message RateLimitingSamplingStrategy {
     int32 max_traces_per_seconds = 1;
 }
 
-message OperationSamplingStrategy {
-    string operation = 1;
-    oneof strategy {
-        ProbabilisticSamplingStrategy probabilistic = 2;
-        RateLimitingSamplingStrategy rate_limiting = 3;
-    }
-}
-
 message PerOperationSamplingStrategy {
+    message OperationSamplingStrategy {
+        string operation = 1;
+        oneof strategy {
+            ProbabilisticSamplingStrategy probabilistic = 2;
+            RateLimitingSamplingStrategy rate_limiting = 3;
+        }
+    }
+
     double default_sampling_probability = 1;
     double default_lower_bound_traces_per_second = 2;
-    repeated OperationSamplingStrategy per_operation_strategy = 3;
-    double default_upper_bound_traces_per_second = 4;
+    double default_upper_bound_traces_per_second = 3;
+    repeated OperationSamplingStrategy per_operation_strategy = 4;
+}
+
+message SamplingStrategyRequest {
+    string service_name = 1;
 }
 
 message SamplingStrategyResponse {
@@ -49,6 +56,6 @@ message SamplingStrategyResponse {
 }
 
 service SamplingManager {
-    rpc GetSamplingStrategy (stream ServiceRequest) returns
+    rpc GetSamplingStrategy (stream SamplingStrategyRequest) returns
         (stream SamplingStrategyResponse);
 }

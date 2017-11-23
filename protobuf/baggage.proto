@@ -15,11 +15,18 @@
 syntax = "proto3";
 package jaegertracing.protobuf.baggage;
 
-import "jaeger.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.testgen_all) = true;
+option (gogoproto.benchgen_all) = true;
 
 message BaggageRestriction {
     string baggage_key = 1;
     int32 max_value_length = 2;
+}
+
+message BaggageRestrictionRequest {
+    string service_name = 1;
 }
 
 message BaggageRestrictionResponse {
@@ -27,6 +34,6 @@ message BaggageRestrictionResponse {
 }
 
 service BaggageRestrictionManager {
-    rpc GetBaggageRestrictions (stream ServiceRequest) returns
+    rpc GetBaggageRestrictions (stream BaggageRestrictionRequest) returns
         (stream BaggageRestrictionResponse);
 }

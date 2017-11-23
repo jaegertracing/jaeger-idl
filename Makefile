@@ -24,7 +24,7 @@ PROTOC=$(DOCKER_RUN) $(PROTOC_IMG)
 PROTOC_OUT=--gofast_out=/data/pb-go --java_out=/data/pb-java \
 		   --js_out=/data/pb-js --python_out=/data/pb-py --cpp_out=/data/pb-cpp
 PROTOBUF_DIRS=pb-go pb-java pb-js pb-py pb-cpp
-PROTOBUF_FILES=agent.proto baggage.proto jaeger.proto sampling.proto crossdock/tracetest.proto
+PROTOBUF_FILES=agent.proto baggage.proto jaeger.proto sampling.proto
 
 test-ci: thrift swagger-validate protobuf
 
