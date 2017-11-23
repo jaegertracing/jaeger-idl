@@ -21,8 +21,9 @@ THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossd
 PROTOC_VER=0.1
 PROTOC_IMG=znly/protoc:$(PROTOC_VER)
 PROTOC=$(DOCKER_RUN) $(PROTOC_IMG)
-PROTOC_OUT=--cpp_out=/data/pb-cpp --gofast_out=/data/pb-go
-PROTOBUF_DIRS=pb-cpp pb-go
+PROTOC_OUT=--gofast_out=/data/pb-go --java_out=/data/pb-java \
+		   --js_out=/data/pb-js --python_out=/data/pb-py --cpp_out=/data/pb-cpp
+PROTOBUF_DIRS=pb-go pb-java pb-js pb-py pb-cpp
 PROTOBUF_FILES=agent.proto baggage.proto jaeger.proto sampling.proto crossdock/tracetest.proto
 
 test-ci: thrift swagger-validate protobuf

@@ -25,16 +25,12 @@ message RateLimitingSamplingStrategy {
     int32 max_traces_per_seconds = 1;
 }
 
-message SamplingStrategy {
-    oneof strategy {
-        ProbabilisticSamplingStrategy probabilistic = 1;
-        RateLimitingSamplingStrategy rate_limiting = 2;
-    }
-}
-
 message OperationSamplingStrategy {
     string operation = 1;
-    SamplingStrategy strategy = 2;
+    oneof strategy {
+        ProbabilisticSamplingStrategy probabilistic = 2;
+        RateLimitingSamplingStrategy rate_limiting = 3;
+    }
 }
 
 message PerOperationSamplingStrategy {
@@ -53,5 +49,6 @@ message SamplingStrategyResponse {
 }
 
 service SamplingManager {
-    rpc GetSamplingStrategy (ServiceRequest) returns (SamplingStrategyResponse);
+    rpc GetSamplingStrategy (stream ServiceRequest) returns
+        (stream SamplingStrategyResponse);
 }

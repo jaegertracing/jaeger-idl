@@ -27,6 +27,6 @@ message BaggageRestrictionResponse {
 }
 
 service BaggageRestrictionManager {
-    rpc GetBaggageRestrictions (ServiceRequest) returns
-        (BaggageRestrictionResponse);
+    rpc GetBaggageRestrictions (stream ServiceRequest) returns
+        (stream BaggageRestrictionResponse);
 }

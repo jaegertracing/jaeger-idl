@@ -4,3 +4,8 @@ gen-java/
 gen-nodejs/
 gen-py.tornado/
 gen-cpp/
+pb-go/
+pb-java/
+pb-js/
+pb-py/
+pb-cpp/
