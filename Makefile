@@ -1,3 +1,4 @@
+DOCKER_RUN=docker run -it --rm -v "${PWD}:/data:rw" -u ${shell id -u}:${shell id -g} -w /data
 
 THRIFT_VER=0.9.2
 THRIFT_IMG=thrift:$(THRIFT_VER)
@@ -15,18 +16,27 @@ THRIFT_PHP_ARGS=psr4
 THRIFT_GEN=--gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node --gen cpp --gen php:$(THRIFT_PHP_ARGS)
 THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
-THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
-	baggage.thrift dependency.thrift aggregation_validator.thrift
+THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift baggage.thrift dependency.thrift aggregation_validator.thrift
 
-test-ci: thrift swagger-validate
+PROTOC_VER=0.1
+PROTOC_IMG=znly/protoc:$(PROTOC_VER)
+PROTOC=$(DOCKER_RUN) $(PROTOC_IMG)
+PROTOC_OUT=--cpp_out=/data/pb-cpp --gofast_out=/data/pb-go
+PROTOBUF_DIRS=pb-cpp pb-go
+PROTOBUF_FILES=agent.proto baggage.proto jaeger.proto sampling.proto crossdock/tracetest.proto
+
+test-ci: thrift swagger-validate protobuf
 
 swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
 
-clean:
+clean: thrift-clean protobuf-clean
+
+
+thrift-clean:
 	rm -rf gen-* || true
 
-thrift:	thrift-image clean $(THRIFT_FILES)
+thrift:	thrift-image thrift-clean $(THRIFT_FILES)
 
 $(THRIFT_FILES):
 	@echo Compiling $@
@@ -36,4 +46,22 @@ thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
-.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate
+protobuf-clean:
+	rm -rf pb-* || true
+
+$(PROTOBUF_DIRS):
+	mkdir $@
+
+protobuf: protobuf-image protobuf-clean $(PROTOBUF_FILES)
+
+protobuf-image:
+	docker pull $(PROTOC_IMG)
+	$(PROTOC) --version
+
+$(PROTOBUF_FILES): $(PROTOBUF_DIRS)
+	@echo "Compiling $@"
+	$(PROTOC) $(PROTOC_OUT) -I/data/protobuf /data/protobuf/$@
+
+.PHONY: test-ci thrift-clean protobuf-clean clean \
+	thrift thrift-image $(THRIFT_FILES) swagger-validate \
+	protobuf protobuf-image $(PROTOBUF_FILES)
