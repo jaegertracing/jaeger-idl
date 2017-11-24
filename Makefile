@@ -21,9 +21,7 @@ THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossd
 PROTOC_VER=0.1
 PROTOC_IMG=znly/protoc:$(PROTOC_VER)
 PROTOC=$(DOCKER_RUN) $(PROTOC_IMG)
-PROTOC_OUT=--gofast_out=/data/pb-go --java_out=/data/pb-java \
-		   --js_out=/data/pb-js --python_out=/data/pb-py --cpp_out=/data/pb-cpp
-PROTOBUF_DIRS=pb-go pb-java pb-js pb-py pb-cpp
+PROTOBUF_DIRS=pb-go pb-java pb-py pb-js pb-cpp
 PROTOBUF_FILES=agent.proto baggage.proto jaeger.proto sampling.proto
 
 test-ci: thrift swagger-validate protobuf
@@ -32,7 +30,6 @@ swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
 
 clean: thrift-clean protobuf-clean
-
 
 thrift-clean:
 	rm -rf gen-* || true
@@ -60,9 +57,16 @@ protobuf-image:
 	$(PROTOC) --version
 
 $(PROTOBUF_FILES): $(PROTOBUF_DIRS)
-	@echo "Compiling $@"
-	$(PROTOC) $(PROTOC_OUT) -I/data/protobuf /data/protobuf/$@
+	$(PROTOC) -I/data/protobuf \
+		--gofast_out=plugins=grpc:/data/pb-go \
+		--java_out=/data/pb-java \
+		--python_out=/data/pb-py \
+		--js_out=/data/pb-js \
+		--grpc_out=/data/pb-cpp \
+		--plugin=protoc-gen-grpc=/usr/bin/grpc_cpp_plugin \
+		--cpp_out=/data/pb-cpp \
+		/data/protobuf/$@
 
 .PHONY: test-ci thrift-clean protobuf-clean clean \
 	thrift thrift-image $(THRIFT_FILES) swagger-validate \
-	protobuf protobuf-image $(PROTOBUF_FILES)
+	protobuf protobuf-image protobuf $(PROTOBUF_FILES)
