@@ -24,6 +24,4 @@ import "jaeger.proto";
 
 message Empty {};
 
-service Agent {
-    rpc EmitBatch(stream Batch) returns (Empty);
-}
+service Agent { rpc EmitBatch(stream Batch) returns (Empty); }

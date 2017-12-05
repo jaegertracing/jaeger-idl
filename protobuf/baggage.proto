@@ -21,19 +21,17 @@ option (gogoproto.testgen_all) = true;
 option (gogoproto.benchgen_all) = true;
 
 message BaggageRestriction {
-    string baggage_key = 1;
-    int32 max_value_length = 2;
+  string baggage_key = 1;
+  int32 max_value_length = 2;
 }
 
-message BaggageRestrictionRequest {
-    string service_name = 1;
-}
+message BaggageRestrictionRequest { string service_name = 1; }
 
 message BaggageRestrictionResponse {
-    repeated BaggageRestriction restrictions = 1;
+  repeated BaggageRestriction restrictions = 1;
 }
 
 service BaggageRestrictionManager {
-    rpc GetBaggageRestrictions (stream BaggageRestrictionRequest) returns
-        (stream BaggageRestrictionResponse);
+  rpc GetBaggageRestrictions(stream BaggageRestrictionRequest)
+      returns (stream BaggageRestrictionResponse);
 }
