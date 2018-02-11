@@ -15,11 +15,6 @@
 syntax = "proto3";
 package jaegertracing.protobuf.baggage;
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-
-option (gogoproto.testgen_all) = true;
-option (gogoproto.benchgen_all) = true;
-
 message BaggageRestriction {
   string baggage_key = 1;
   int32 max_value_length = 2;

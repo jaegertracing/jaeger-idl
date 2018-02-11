@@ -18,10 +18,10 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift baggage.thrift dependency.thrift aggregation_validator.thrift
 
-PROTOC_VER=0.1
+PROTOC_VER=latest
 PROTOC_IMG=znly/protoc:$(PROTOC_VER)
 PROTOC=$(DOCKER_RUN) $(PROTOC_IMG)
-PROTOBUF_DIRS=pb-go pb-java pb-py pb-js pb-cpp
+PROTOBUF_DIRS=pb-go pb-java pb-py pb-js pb-cpp pb-c
 PROTOBUF_FILES=agent.proto baggage.proto jaeger.proto sampling.proto
 
 test-ci: thrift swagger-validate protobuf
@@ -65,6 +65,7 @@ $(PROTOBUF_FILES): $(PROTOBUF_DIRS)
 		--grpc_out=/data/pb-cpp \
 		--plugin=protoc-gen-grpc=/usr/bin/grpc_cpp_plugin \
 		--cpp_out=/data/pb-cpp \
+		--c_out=/data/pb-c \
 		/data/protobuf/$@
 
 .PHONY: test-ci thrift-clean protobuf-clean clean \

@@ -15,11 +15,6 @@
 syntax = "proto3";
 package jaegertracing.protobuf.agent;
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-
-option (gogoproto.testgen_all) = true;
-option (gogoproto.benchgen_all) = true;
-
 import "jaeger.proto";
 
 message Empty {};
