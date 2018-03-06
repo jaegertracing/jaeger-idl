@@ -16,6 +16,7 @@ namespace cpp jaegertracing.thrift
 namespace java com.uber.jaeger.thriftjava
 namespace php Jaeger.Thrift
 namespace netcore Jaeger.Thrift
+namespace lua jaeger.thrift
 
 # TagType denotes the type of a Tag's value.
 enum TagType { STRING, DOUBLE, BOOL, LONG, BINARY }

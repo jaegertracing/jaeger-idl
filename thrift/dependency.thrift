@@ -16,6 +16,7 @@ namespace cpp jaegertracing.thrift
 namespace java com.uber.jaeger.thriftjava
 namespace php Jaeger.Thrift.Agent
 namespace netcore Jaeger.Thrift.Agent
+namespace lua jaeger.thrift.agent
 
 struct DependencyLink {
   // parent service name (caller)

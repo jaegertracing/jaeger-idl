@@ -19,6 +19,7 @@ namespace cpp jaegertracing.agent.thrift
 namespace java com.uber.jaeger.agent.thrift
 namespace php Jaeger.Thrift.Agent
 namespace netcore Jaeger.Thrift.Agent
+namespace lua jaeger.thrift.agent
 
 service Agent {
     oneway void emitZipkinBatch(1: list<zipkincore.Span> spans)

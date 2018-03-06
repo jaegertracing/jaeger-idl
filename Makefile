@@ -12,7 +12,7 @@ THRIFT_PY_ARGS=new_style,tornado
 THRIFT_JAVA_ARGS=private-members
 THRIFT_PHP_ARGS=psr4
 
-THRIFT_GEN=--gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node --gen cpp --gen php:$(THRIFT_PHP_ARGS)
+THRIFT_GEN=--gen lua --gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node --gen cpp --gen php:$(THRIFT_PHP_ARGS)
 THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
