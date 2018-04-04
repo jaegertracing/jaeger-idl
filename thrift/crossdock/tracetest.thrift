@@ -13,7 +13,7 @@
 # limitations under the License.
 
 namespace cpp jaegertracing.crossdock.thrift
-namespace java com.uber.jaeger.crossdock.thrift
+namespace java io.jaegertracing.crossdock.thrift
 namespace php Jaeger.Thrift.Crossdock
 namespace netcore Jaeger.Thrift.Crossdock
 

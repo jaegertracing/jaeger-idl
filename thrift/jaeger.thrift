@@ -13,7 +13,7 @@
 # limitations under the License.
 
 namespace cpp jaegertracing.thrift
-namespace java com.uber.jaeger.thriftjava
+namespace java io.jaegertracing.thriftjava
 namespace php Jaeger.Thrift
 namespace netcore Jaeger.Thrift
 
