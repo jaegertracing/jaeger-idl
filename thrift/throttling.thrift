@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-namespace java com.uber.jaeger.thrift.throttling
+namespace cpp jaegertracing.throttling.thrift
+namespace java io.jaegertracing.thrift.throttling
+namespace php Jaeger.Thrift.Agent
+namespace netcore Jaeger.Thrift.Agent
 
 // ThrottlingConfig describes the throttling behavior for a given service.
 // Throttling is controlled with a credit account per operation that is refilled
