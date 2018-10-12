@@ -60,6 +60,7 @@ struct Span {
   9:  required i64           duration
   10: optional list<Tag>     tags
   11: optional list<Log>     logs
+  12: optional bool          incomplete   # indicates whether this is the final span or an intermediate (incomplete) span
 }
 
 # Process describes the traced process/service that emits spans.
@@ -74,7 +75,7 @@ struct Batch {
   2: required list<Span> spans
 }
 
-# BatchSubmitResponse is the response on submitting a batch. 
+# BatchSubmitResponse is the response on submitting a batch.
 struct BatchSubmitResponse {
     1: required bool ok   # The Collector's client is expected to only log (or emit a counter) when not ok equals false
 }
