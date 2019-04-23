@@ -13,7 +13,7 @@
 # limitations under the License.
 
 namespace cpp jaegertracing.sampling_manager.thrift
-namespace java com.uber.jaeger.thrift.sampling_manager
+namespace java io.jaegertracing.thrift.sampling_manager
 namespace php Jaeger.Thrift.Agent
 namespace netcore Jaeger.Thrift.Agent
 namespace lua jaeger.thrift.agent
