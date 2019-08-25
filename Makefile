@@ -22,7 +22,7 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
-test-ci: thrift swagger-validate protogen
+test-ci: thrift swagger-validate protocompile
 
 swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
@@ -40,7 +40,7 @@ thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
-protogen:
-	$(PROTOTOOL) prototool generate proto
+protocompile:
+	$(PROTOTOOL) prototool compile proto --dry-run
 
-.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protogen
+.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protocompile
