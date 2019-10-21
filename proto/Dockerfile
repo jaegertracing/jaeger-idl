@@ -19,5 +19,22 @@ RUN set -ex; \
   git clone https://github.com/googleapis/googleapis.git "${GOPATH}/src/github.com/googleapis/googleapis";
 
 # Do Properly
-WORKDIR /usr/src/app
-CMD protoc -I=. -I=$GOPATH/src -I=$GOPATH/src/github.com/gogo/protobuf -I=$GOPATH/src/github.com/googleapis/googleapis --gofast_out=go/ --java_out=java/ --python_out=python/ proto/model.proto
+WORKDIR /work
+ENTRYPOINT [ \
+  "protoc", \
+  "-I=.", \
+  "-I=/go/src", \
+  "-I=/go/src/github.com/gogo/protobuf", \
+  "-I=/go/src/github.com/googleapis/googleapis", \
+  "--gofast_out=go/", \
+  "--java_out=java/", \
+  "--python_out=python/" \
+]
+CMD [ \
+  "proto/model_test.proto", \
+  "proto/api_v2/sampling.proto", \
+  "proto/api_v2/query.proto", \
+  "proto/api_v2/collector.proto", \
+  "proto/model.proto", \
+  "proto/zipkin.proto" \
+]
