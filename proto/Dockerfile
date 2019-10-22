@@ -3,6 +3,8 @@ FROM golang:1.13.2
 ENV PROTOBUF_VERSION="3.10.0"
 ENV PATH="/opt/protoc/bin:${PATH}"
 
+# go mod would stop us from cloning full repos below
+# something like https://github.com/uber/prototool/blob/dev/Dockerfile#L8-L14
 RUN set -ex; \
   apt-get update; \
   apt-get install -y \
@@ -13,28 +15,26 @@ RUN set -ex; \
   wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip; \
   unzip -d /opt/protoc protoc-${PROTOBUF_VERSION}-linux-x86_64.zip; \
   apt-get purge -y --auto-remove unzip; \
-  go get -u github.com/gogo/protobuf/protoc-gen-gogo; \
-  go get -u github.com/golang/protobuf/protoc-gen-go; \
+  GO111MODULE=on go get -u \
+    github.com/gogo/protobuf/protoc-gen-gogo; \
+  GO111MODULE=on go get -d -u \
+    github.com/grpc-ecosystem/grpc-gateway; \
   mkdir -p "${GOPATH}/src/github.com/googleapis"; \
-  git clone https://github.com/googleapis/googleapis.git "${GOPATH}/src/github.com/googleapis/googleapis";
+  git clone --depth 1 https://github.com/googleapis/googleapis.git "${GOPATH}/src/github.com/googleapis/googleapis";
 
 # Do Properly
 WORKDIR /work
 ENTRYPOINT [ \
   "protoc", \
-  "-I=.", \
+  "-I=./proto", \
   "-I=/go/src", \
-  "-I=/go/src/github.com/gogo/protobuf", \
+  "-I=/go/pkg/mod/github.com/gogo/protobuf@v1.3.1/", \
   "-I=/go/src/github.com/googleapis/googleapis", \
-  "--gofast_out=go/", \
-  "--java_out=java/", \
-  "--python_out=python/" \
+  "-I=/go/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/", \
+  "--gogo_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types,Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api,Mmodel.proto=github.com/jaegertracing/jaeger/model:go/" \
 ]
 CMD [ \
-  "proto/model_test.proto", \
   "proto/api_v2/sampling.proto", \
   "proto/api_v2/query.proto", \
-  "proto/api_v2/collector.proto", \
-  "proto/model.proto", \
-  "proto/zipkin.proto" \
+  "proto/api_v2/collector.proto" \
 ]
