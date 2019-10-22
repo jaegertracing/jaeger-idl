@@ -1,11 +1,7 @@
-protoc_includes:
-  # note vendor is .gitignored
-  - ../../vendor/github.com/gogo/protobuf
-  - ../../vendor/github.com/gogo/googleapis
-  - ../../vendor/github.com/grpc-ecosystem/grpc-gateway
-
 lint:
-  exclude_ids:
+  group: uber2
+  rules:
+    remove:
     - FILE_OPTIONS_EQUAL_GO_PACKAGE_PB_SUFFIX
     - FILE_OPTIONS_EQUAL_JAVA_PACKAGE_COM_PB
     - ENUM_FIELD_PREFIXES
