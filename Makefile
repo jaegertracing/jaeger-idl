@@ -46,9 +46,14 @@ protoc-image:
 protoc-gen-go-client: protoc-image
 	mkdir -p "${PWD}/go"
 	docker run -it --rm -v ${PWD}:/work jaegertracing/jaeger-idl-protoc
-	docker run -it --rm -v ${PWD}:/work jaegertracing/jaeger-idl-protoc proto/model.proto
-	docker run -it --rm -v ${PWD}:/work jaegertracing/jaeger-idl-protoc proto/model_test.proto
-	docker run -it --rm -v ${PWD}:/work jaegertracing/jaeger-idl-protoc proto/zipkin.proto
+	docker run -it --rm -v ${PWD}:/work jaegertracing/jaeger-idl-protoc \
+		"-I=./proto" \
+		"--gogo_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types,Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api,Mmodel.proto=github.com/jaegertracing/jaeger/model:go/" \
+		proto/model.proto
+	docker run -it --rm -v ${PWD}:/work jaegertracing/jaeger-idl-protoc \
+		"-I=./proto" \
+		"--gogo_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types,Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api,Mmodel.proto=github.com/jaegertracing/jaeger/model:go/" \
+		proto/zipkin.proto
 
 protoc-test-compile:
 	$(PROTOTOOL) prototool compile proto --dry-run

@@ -3,8 +3,9 @@ FROM golang:1.13.2
 ENV PROTOBUF_VERSION="3.10.0"
 ENV PATH="/opt/protoc/bin:${PATH}"
 
-# go mod would stop us from cloning full repos below
-# something like https://github.com/uber/prototool/blob/dev/Dockerfile#L8-L14
+# We need the binaries from protoc-gen-gogo, so we install it, but just download
+# the other repos.
+# googleapis.git has to be downloaded with git, because it has no go files.
 RUN set -ex; \
   apt-get update; \
   apt-get install -y \
@@ -26,14 +27,13 @@ RUN set -ex; \
 WORKDIR /work
 ENTRYPOINT [ \
   "protoc", \
-  "-I=./proto", \
-  "-I=/go/src", \
   "-I=/go/pkg/mod/github.com/gogo/protobuf@v1.3.1/", \
   "-I=/go/src/github.com/googleapis/googleapis", \
-  "-I=/go/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/", \
-  "--gogo_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types,Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api,Mmodel.proto=github.com/jaegertracing/jaeger/model:go/" \
+  "-I=/go/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/" \
 ]
 CMD [ \
+  "-I=./proto", \
+  "--gogo_out=plugins=grpc,Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types,Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api,Mmodel.proto=github.com/jaegertracing/jaeger/model:go/", \
   "proto/api_v2/sampling.proto", \
   "proto/api_v2/query.proto", \
   "proto/api_v2/collector.proto" \
