@@ -79,8 +79,8 @@ struct Process {
 # to the Jaeger backend components (agent or collector) where those same metrics
 # can be re-emitted with standardized naming scheme.
 struct ClientStats {
-  1: required int64 fullQueueDroppedSpans
-  2: required int64 tooLargeDroppedSpans
+  1: required i64 fullQueueDroppedSpans
+  2: required i64 tooLargeDroppedSpans
 }
 
 # Batch is a collection of spans reported out of process.
