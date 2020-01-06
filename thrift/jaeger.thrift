@@ -81,6 +81,7 @@ struct Process {
 struct ClientStats {
   1: required i64 fullQueueDroppedSpans
   2: required i64 tooLargeDroppedSpans
+  3: required i64 failedToEmitSpans
 }
 
 # Batch is a collection of spans reported out of process.
