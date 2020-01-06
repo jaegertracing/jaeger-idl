@@ -69,13 +69,40 @@ struct Process {
   2: optional list<Tag> tags
 }
 
-# Batch is a collection of spans reported out of process.
-struct Batch {
-  1: required Process    process
-  2: required list<Span> spans
+# ClientStats exposes some metrics from Jaeger client.
+#
+# Although Jaeger clients internally support integrations with metrics backends,
+# not all users actually configure those, and even if they do, the metrics are
+# often namespaced to the application, e.g. by including a tag service=xyz or
+# using a custom prefix, which makes it more difficult to observe across the site.
+# The ClientStats provides an alternative mechanism of reporting the same metrics
+# to the Jaeger backend components (agent or collector) where those same metrics
+# can be re-emitted with standardized naming scheme.
+struct ClientStats {
+  1: required int64 fullQueueDroppedSpans
+  2: required int64 tooLargeDroppedSpans
 }
 
-# BatchSubmitResponse is the response on submitting a batch. 
+# Batch is a collection of spans reported out of process.
+struct Batch {
+  # Since all spans submitted by a given client are produced by the same Process,
+  # it only needs to be sent once.
+  1: required Process     process
+
+  # List of spans produced by a process. There is no specific limitation on the
+  # size of this list, however some transports may impose a cap on the total size
+  # of the overall Batch message, e.g. 65,000 bytes cap for UDP messages.
+  2: required list<Span>  spans
+
+  # Jaeger clients are encouraged to assign an incrementing sequence number to
+  # each batch, so that the Jaeger backend components could detect and report
+  # missing packets (especially when using the UDP transport).
+  3: optional i64         seqNo
+
+  4: optional ClientStats stats
+}
+
+# BatchSubmitResponse is the response on submitting a batch.
 struct BatchSubmitResponse {
     1: required bool ok   # The Collector's client is expected to only log (or emit a counter) when not ok equals false
 }
