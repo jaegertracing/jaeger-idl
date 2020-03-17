@@ -4,4 +4,4 @@ gen-java/
 gen-nodejs/
 gen-py.tornado/
 gen-cpp/
-proto-gen/
+proto-gen-*/

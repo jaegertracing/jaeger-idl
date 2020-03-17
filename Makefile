@@ -22,7 +22,7 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
-test-ci: thrift swagger-validate protocompile proto
+test-ci: thrift swagger-validate protocompile proto proto-zipkin
 
 swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
@@ -58,32 +58,85 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mmodel.proto=github.com/jaegertracing/jaeger/model \
 	| sed 's/ //g')
 
-.PHONY: proto
+PROTO_GEN_GO_DIR ?= proto-gen-go
+PROTO_GEN_PYTHON_DIR ?= proto-gen-python
+PROTO_GEN_JAVA_DIR ?= proto-gen-java
+PROTO_GEN_JS_DIR ?= proto-gen-js
+PROTO_GEN_CPP_DIR ?= proto-gen-cpp
+PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
+
 proto:
-	mkdir -p proto-gen
+	mkdir -p ${PROTO_GEN_GO_DIR} \
+		${PROTO_GEN_JAVA_DIR} \
+		${PROTO_GEN_PYTHON_DIR} \
+		${PROTO_GEN_JS_DIR} \
+		${PROTO_GEN_CPP_DIR} \
+		${PROTO_GEN_CSHARP_DIR}
+
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/proto-gen \
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
+		--java_out=proto-gen-java \
+		--python_out=${PROTO_GEN_PYTHON_DIR} \
+		--js_out=${PROTO_GEN_JS_DIR} \
+		--cpp_out=${PROTO_GEN_CPP_DIR} \
+		--csharp_out=${PROTO_GEN_CSHARP_DIR} \
 		proto/api_v2/model.proto
 
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/proto-gen \
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
+		--java_out=${PROTO_GEN_JAVA_DIR} \
+		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
+		--python_out=${PROTO_GEN_PYTHON_DIR} \
+		--grpc-python_out=${PROTO_GEN_PYTHON_DIR} \
+		--js_out=${PROTO_GEN_JS_DIR} \
+		--grpc-js_out=${PROTO_GEN_JS_DIR} \
+		--cpp_out=${PROTO_GEN_CPP_DIR} \
+		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
+		--csharp_out=${PROTO_GEN_CSHARP_DIR} \
+		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR} \
 		proto/api_v2/query.proto
 
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/proto-gen \
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
+		--java_out=${PROTO_GEN_JAVA_DIR} \
+		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
+		--python_out=${PROTO_GEN_PYTHON_DIR} \
+		--grpc-python_out=${PROTO_GEN_PYTHON_DIR} \
+		--js_out=${PROTO_GEN_JS_DIR} \
+		--grpc-js_out=${PROTO_GEN_JS_DIR} \
+		--cpp_out=${PROTO_GEN_CPP_DIR} \
+		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
+		--csharp_out=${PROTO_GEN_CSHARP_DIR} \
+		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR} \
 		proto/api_v2/collector.proto
 
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/proto-gen \
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
+		--java_out=${PROTO_GEN_JAVA_DIR} \
+		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
+		--python_out=${PROTO_GEN_PYTHON_DIR} \
+		--grpc-python_out=${PROTO_GEN_PYTHON_DIR} \
+		--js_out=${PROTO_GEN_JS_DIR} \
+		--grpc-js_out=${PROTO_GEN_JS_DIR} \
+		--cpp_out=${PROTO_GEN_CPP_DIR} \
+		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
+		--csharp_out=${PROTO_GEN_CSHARP_DIR} \
+		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR} \
 		proto/api_v2/sampling.proto
 
+proto-zipkin:
 	$(PROTOC) \
-		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/proto-gen \
+		-Iproto \
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
+		--java_out=${PROTO_GEN_JAVA_DIR} \
+		--python_out=${PROTO_GEN_PYTHON_DIR} \
+		--js_out=${PROTO_GEN_JS_DIR} \
+		--cpp_out=${PROTO_GEN_CPP_DIR} \
+		--csharp_out=${PROTO_GEN_CSHARP_DIR} \
 		proto/zipkin.proto
 
-.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protocompile proto
+.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protocompile proto proto-zipkin
