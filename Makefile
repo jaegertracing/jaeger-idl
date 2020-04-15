@@ -49,6 +49,7 @@ protocompile:
 
 PROTO_INCLUDES := \
 	-Iproto/api_v2 \
+	-Iproto \
 	-I/usr/include/github.com/gogo/protobuf
 # Remapping of std types to gogo types (must not contain spaces)
 PROTO_GOGO_MAPPINGS := $(shell echo \
