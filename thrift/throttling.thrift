@@ -15,7 +15,7 @@
 namespace cpp jaegertracing.throttling.thrift
 namespace java io.jaegertracing.thrift.throttling
 namespace php Jaeger.Thrift.Agent
-namespace netcore Jaeger.Thrift.Agent
+namespace netstd Jaeger.Thrift.Agent
 
 // ThrottlingConfig describes the throttling behavior for a given service.
 // Throttling is controlled with a credit account per operation that is refilled
