@@ -71,7 +71,7 @@ PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
 PROTOC_WITHOUT_GRPC := $(PROTOC) \
 		$(PROTO_INCLUDES) \
 		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
-		--java_out=proto-gen-java \
+		--java_out=${PROTO_GEN_JAVA_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR} \
 		--js_out=${PROTO_GEN_JS_DIR} \
 		--cpp_out=${PROTO_GEN_CPP_DIR} \
