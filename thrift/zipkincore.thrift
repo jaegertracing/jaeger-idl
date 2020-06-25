@@ -16,6 +16,7 @@ namespace java com.twitter.zipkin.thriftjava
 #@namespace scala com.twitter.zipkin.thriftscala
 namespace rb Zipkin
 namespace php Jaeger.Thrift.Agent.Zipkin
+namespace netcore Jaeger.Thrift.Agent
 namespace netstd Jaeger.Thrift.Agent.Zipkin
 namespace lua jaeger.thrift.agent
 
