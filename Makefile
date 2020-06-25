@@ -1,7 +1,7 @@
 
 THRIFT_VER=0.9.2
 THRIFT_IMG=thrift:$(THRIFT_VER)
-THRIFT=docker run -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
+THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
 SWAGGER_VER=0.12.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
