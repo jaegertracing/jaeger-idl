@@ -1,7 +1,7 @@
 
-THRIFT_VER=0.9.2
-THRIFT_IMG=thrift:$(THRIFT_VER)
-THRIFT=docker run -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
+THRIFT_VER?=0.13
+THRIFT_IMG?=jaegertracing/thrift:$(THRIFT_VER)
+THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
 SWAGGER_VER=0.12.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
@@ -32,7 +32,7 @@ swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
 
 clean:
-	rm -rf gen-* || true
+	rm -rf *gen-* || true
 
 thrift:	thrift-image clean $(THRIFT_FILES)
 
