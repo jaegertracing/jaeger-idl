@@ -15,7 +15,7 @@
 namespace cpp jaegertracing.thrift
 namespace java io.jaegertracing.thriftjava
 namespace php Jaeger.Thrift
-namespace netcore Jaeger.Thrift
+namespace netstd Jaeger.Thrift
 namespace lua jaeger.thrift
 
 # TagType denotes the type of a Tag's value.

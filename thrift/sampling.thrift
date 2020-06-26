@@ -15,7 +15,7 @@
 namespace cpp jaegertracing.sampling_manager.thrift
 namespace java io.jaegertracing.thrift.sampling_manager
 namespace php Jaeger.Thrift.Agent
-namespace netcore Jaeger.Thrift.Agent
+namespace netstd Jaeger.Thrift.Agent
 namespace lua jaeger.thrift.agent
 
 enum SamplingStrategyType { PROBABILISTIC, RATE_LIMITING }
