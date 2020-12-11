@@ -86,7 +86,7 @@ PROTOC_WITH_GRPC := $(PROTOC_WITHOUT_GRPC) \
 
 PROTOC_INTERNAL := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR}
+		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR}
 
 proto:
