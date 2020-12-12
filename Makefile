@@ -84,9 +84,10 @@ PROTOC_WITH_GRPC := $(PROTOC_WITHOUT_GRPC) \
 		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
 		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR}
 
-PROTOC_CS_INTERNAL := $(PROTOC) \
+PROTOC_INTERNAL := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR}
+		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
+		--python_out=${PROTO_GEN_PYTHON_DIR}
 
 proto:
 	mkdir -p ${PROTO_GEN_GO_DIR} \
@@ -104,7 +105,7 @@ proto:
 		proto/api_v2/collector.proto \
 		proto/api_v2/sampling.proto
 
-	$(PROTOC_CS_INTERNAL) \
+	$(PROTOC_INTERNAL) \
 		google/api/annotations.proto \
 		google/api/http.proto \
 		protoc-gen-swagger/options/annotations.proto \
