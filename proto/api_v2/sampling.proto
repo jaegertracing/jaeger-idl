@@ -19,7 +19,6 @@ package jaeger.api_v2;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
-import "protoc-gen-swagger/options/annotations.proto";
 
 option go_package = "api_v2";
 option java_package = "io.jaegertracing.api_v2";
@@ -31,20 +30,6 @@ option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 // Enable custom Size method (Required by Marshal and Unmarshal).
 option (gogoproto.sizer_all) = true;
-// Enable registration with golang/protobuf for the grpc-gateway.
-option (gogoproto.goproto_registration) = true;
-
-option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
-  info: {
-    version: "1.0";
-  };
-  external_docs: {
-    url: "https://github.com/jaegertracing/jaeger";
-    description: "Jaeger API";
-  }
-  schemes: HTTP;
-  schemes: HTTPS;
-};
 
 enum SamplingStrategyType {
   PROBABILISTIC = 0;
