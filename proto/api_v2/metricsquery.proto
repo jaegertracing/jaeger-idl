@@ -1,0 +1,91 @@
+// Copyright (c) 2021 The Jaeger Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax="proto3";
+
+package jaeger.api_v2;
+
+import "model.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "opentelemetry/proto/metrics/v1/metrics.proto";
+
+option go_package = "api_v2";
+option java_package = "io.jaegertracing.api_v2";
+
+message GetMetricsRequest {
+  // The metric type to query on.
+  // Required.
+  AggregatedMetricType metric_type = 1;
+
+  // PromQL query string to filter on labels within a metric, excluding the `metric_name{}`.
+  // For example: `service_name="currencyservice",operation="/GetExchangeRate"`, which will
+  // form the full PromQL query:
+  //     `metric_name{service_name="currencyservice",operation="/GetExchangeRate"`
+  // Optional.
+  string query = 2;
+
+  // Return data points up to this time.
+  // Required.
+  google.protobuf.Timestamp end_time = 3 [
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false
+  ];
+
+  // The duration to lookback from the end_time for metrics data points.
+  // For example, if set to 1h, the query would span from end_time-1h to end_time.
+  // Optional.
+  google.protobuf.Duration lookback = 4 [
+    (gogoproto.stdduration) = true,
+    (gogoproto.nullable) = false
+  ];
+
+  // The step size of the query results.
+  // For example, if set to 5s, the results would produce a data point every 5 seconds
+  // from the start_time to end_time.
+  // Optional.
+  google.protobuf.Duration step = 5 [
+    (gogoproto.stdduration) = true,
+    (gogoproto.nullable) = false
+  ];
+}
+
+message GetMetricsResponse {
+  repeated opentelemetry.proto.metrics.v1.Metric metrics = 1 [
+    (gogoproto.nullable) = false
+  ];
+}
+
+// The type of aggregated metric.
+enum AggregatedMetricType {
+  // UNSPECIFIED is the default AggregatedMetricType, it MUST not be used.
+  UNSPECIFIED = 0;
+  // CALLS is the number of calls/requests made.
+  CALLS = 1;
+  // ERRORS is the number of errors recorded.
+  ERRORS = 2;
+  // LATENCY is the latency histogram consisting of a collection of counter metrics for each bucket,
+  // along with count and sum of values in the population.
+  LATENCY = 3;
+}
+
+service MetricsQueryService {
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse) {
+    option (google.api.http) = {
+      get: "/metrics"
+    };
+  }
+}

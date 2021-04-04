@@ -124,62 +124,6 @@ message GetDependenciesResponse {
   ];
 }
 
-message GetMetricsRequest {
-  // The metric type to query on.
-  // Required.
-  AggregatedMetricType metric_type = 1;
-
-  // PromQL query string to filter on labels within a metric, excluding the `metric_name{}`.
-  // For example: `service_name="currencyservice",operation="/GetExchangeRate"`, which will
-  // form the full PromQL query:
-  //     `metric_name{service_name="currencyservice",operation="/GetExchangeRate"`
-  // Optional.
-  string query = 2;
-
-  // Return data points up to this time.
-  // Required.
-  google.protobuf.Timestamp end_time = 3 [
-    (gogoproto.stdtime) = true,
-    (gogoproto.nullable) = false
-  ];
-
-  // The duration to lookback from the end_time for metrics data points.
-  // For example, if set to 1h, the query would span from end_time-1h to end_time.
-  // Optional.
-  google.protobuf.Duration lookback = 4 [
-    (gogoproto.stdduration) = true,
-    (gogoproto.nullable) = false
-  ];
-
-  // The step size of the query results.
-  // For example, if set to 5s, the results would produce a data point every 5 seconds
-  // from the start_time to end_time.
-  // Optional.
-  google.protobuf.Duration step = 5 [
-    (gogoproto.stdduration) = true,
-    (gogoproto.nullable) = false
-  ];
-}
-
-message GetMetricsResponse {
-  repeated jaeger.api_v2.Metric metrics = 1 [
-    (gogoproto.nullable) = false
-  ];
-}
-
-// The type of aggregated metric.
-enum AggregatedMetricType {
-  // The number of calls/requests made.
-  CALLS = 0;
-  // The number of errors recorded.
-  ERRORS = 1;
-  // The latency histogram consisting of a collection of counter metrics for each bucket,
-  // along with count of values in the population along with the sum of values.
-  LATENCY = 2;
-  // Custom promQL query.
-  CUSTOM = 3;
-}
-
 service QueryService {
     rpc GetTrace(GetTraceRequest) returns (stream SpansResponseChunk) {
         option (google.api.http) = {
@@ -216,11 +160,5 @@ service QueryService {
         option (google.api.http) = {
             get: "/dependencies"
         };
-    }
-
-    rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse) {
-      option (google.api.http) = {
-        get: "/metrics"
-      };
     }
 }
