@@ -26,26 +26,27 @@ import "opentelemetry/proto/metrics/v1/metrics.proto";
 option go_package = "api_v2";
 option java_package = "io.jaegertracing.api_v2";
 
+// GetMetricsRequest is the request parameter accompanying a GetMetrics RPC call.
 message GetMetricsRequest {
-  // The metric type to query on.
+  // AggregatedMetricType is the metric type to query on.
   // Required.
   AggregatedMetricType metric_type = 1;
 
-  // PromQL query string to filter on labels within a metric, excluding the `metric_name{}`.
-  // For example: `service_name="currencyservice",operation="/GetExchangeRate"`, which will
+  // labels are the labels or dimensions to search for within a metric.
+  // For example, the following labels `{service_name: "currencyservice", operation: "/GetExchangeRate"}` will
   // form the full PromQL query:
   //     `metric_name{service_name="currencyservice",operation="/GetExchangeRate"`
   // Optional.
-  string query = 2;
+  map<string, string> labels = 2;
 
-  // Return data points up to this time.
+  // end_time is the ending time of the time series query range.
   // Required.
   google.protobuf.Timestamp end_time = 3 [
     (gogoproto.stdtime) = true,
     (gogoproto.nullable) = false
   ];
 
-  // The duration to lookback from the end_time for metrics data points.
+  // lookback is the duration from the end_time to look back on for metrics data points.
   // For example, if set to 1h, the query would span from end_time-1h to end_time.
   // Optional.
   google.protobuf.Duration lookback = 4 [
@@ -53,7 +54,7 @@ message GetMetricsRequest {
     (gogoproto.nullable) = false
   ];
 
-  // The step size of the query results.
+  // step size is the duration between data points of the query results.
   // For example, if set to 5s, the results would produce a data point every 5 seconds
   // from the start_time to end_time.
   // Optional.
@@ -63,13 +64,15 @@ message GetMetricsRequest {
   ];
 }
 
+// GetMetricsResponse is the response returned from a GetMetricsRequest.
 message GetMetricsResponse {
+  // metrics is the collection of metrics returned in a response.
   repeated opentelemetry.proto.metrics.v1.Metric metrics = 1 [
     (gogoproto.nullable) = false
   ];
 }
 
-// The type of aggregated metric.
+// AggregatedMetricType is the type of aggregated metric to query for.
 enum AggregatedMetricType {
   // UNSPECIFIED is the default AggregatedMetricType, it MUST not be used.
   UNSPECIFIED = 0;
