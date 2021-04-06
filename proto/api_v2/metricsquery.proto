@@ -26,45 +26,41 @@ import "opentelemetry/proto/metrics/v1/metrics.proto";
 option go_package = "api_v2";
 option java_package = "io.jaegertracing.api_v2";
 
-// GetMetricsRequest is the request parameter accompanying a GetMetrics RPC call.
-message GetMetricsRequest {
-  // AggregatedMetricType is the metric type to query on.
-  // Required.
-  AggregatedMetricType metric_type = 1;
-
-  // labels are the labels or dimensions to search for within a metric.
-  // For example, the following labels `{service_name: "currencyservice", operation: "/GetExchangeRate"}` will
-  // form the full PromQL query:
-  //     `metric_name{service_name="currencyservice",operation="/GetExchangeRate"`
-  // Optional.
-  map<string, string> labels = 2;
-
+// MetricsQueryBaseRequest is the base request parameter accompanying a MetricsQueryService RPC call.
+message MetricsQueryBaseRequest {
   // end_time is the ending time of the time series query range.
-  // Required.
-  google.protobuf.Timestamp end_time = 3 [
+  // Optional. Default = now.
+  google.protobuf.Timestamp end_time = 1 [
     (gogoproto.stdtime) = true,
-    (gogoproto.nullable) = false
+    (gogoproto.nullable) = true
   ];
 
   // lookback is the duration from the end_time to look back on for metrics data points.
   // For example, if set to 1h, the query would span from end_time-1h to end_time.
-  // Optional.
-  google.protobuf.Duration lookback = 4 [
+  // Optional. Default = 1h.
+  google.protobuf.Duration lookback = 2 [
     (gogoproto.stdduration) = true,
-    (gogoproto.nullable) = false
+    (gogoproto.nullable) = true
   ];
 
   // step size is the duration between data points of the query results.
   // For example, if set to 5s, the results would produce a data point every 5 seconds
   // from the start_time to end_time.
-  // Optional.
-  google.protobuf.Duration step = 5 [
+  // Optional. Default = 5s.
+  google.protobuf.Duration step = 3 [
     (gogoproto.stdduration) = true,
-    (gogoproto.nullable) = false
+    (gogoproto.nullable) = true
+  ];
+
+  // rate is the duration in which the per-second rate of change is calculated for a cumulative counter metric.
+  // Optional. Default = 10m.
+  google.protobuf.Duration rate = 4 [
+    (gogoproto.stdduration) = true,
+    (gogoproto.nullable) = true
   ];
 }
 
-// GetMetricsResponse is the response returned from a GetMetricsRequest.
+// GetMetricsResponse is the MetricsQueryService response returned by RPC calls.
 message GetMetricsResponse {
   // metrics is the collection of metrics returned in a response.
   repeated opentelemetry.proto.metrics.v1.Metric metrics = 1 [
@@ -72,23 +68,91 @@ message GetMetricsResponse {
   ];
 }
 
-// AggregatedMetricType is the type of aggregated metric to query for.
-enum AggregatedMetricType {
-  // UNSPECIFIED is the default AggregatedMetricType, it MUST not be used.
-  UNSPECIFIED = 0;
-  // CALLS is the number of calls/requests made.
-  CALLS = 1;
-  // ERRORS is the number of errors recorded.
-  ERRORS = 2;
-  // LATENCY is the latency histogram consisting of a collection of counter metrics for each bucket,
-  // along with count and sum of values in the population.
-  LATENCY = 3;
+// GetServiceLatenciesRequest contains parameters for the GetServiceLatencies RPC call.
+message GetServiceLatenciesRequest {
+  MetricsQueryBaseRequest baseRequest = 1;
+  // quantile is the quantile to compute from latency histogram metrics.
+  // Required.
+  double quantile = 2;
+}
+
+// GetServiceCallRatesRequest contains parameters for the GetServiceCallRates RPC call.
+message GetServiceCallRatesRequest {
+  MetricsQueryBaseRequest baseRequest = 1;
+}
+
+// GetServiceErrorRatesRequest contains parameters for the GetServiceErrorRates RPC call.
+message GetServiceErrorRatesRequest {
+  MetricsQueryBaseRequest baseRequest = 1;
+}
+
+// GetOperationLatenciesRequest contains parameters for the GetOperationLatencies RPC call.
+message GetOperationLatenciesRequest {
+  MetricsQueryBaseRequest baseRequest = 1;
+  // service_name is the service name to fetch operation metrics from.
+  // Required.
+  string service_name = 2;
+  // quantile is the quantile to compute from latency histogram metrics.
+  // Required.
+  double quantile = 3;
+}
+
+// GetOperationCallRatesRequest contains parameters for the GetOperationCallRates RPC call.
+message GetOperationCallRatesRequest {
+  MetricsQueryBaseRequest baseRequest = 1;
+  // service_name is the service name to fetch operation metrics from.
+  // Required.
+  string service_name = 2;
+}
+
+// GetOperationErrorRatesRequest contains parameters for the GetOperationErrorRates RPC call.
+message GetOperationErrorRatesRequest {
+  MetricsQueryBaseRequest baseRequest = 1;
+  // service_name is the service name to fetch operation metrics from.
+  // Required.
+  string service_name = 2;
 }
 
 service MetricsQueryService {
-  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse) {
+  // GetServiceLatencies gets the per-service latencies.
+  rpc GetServiceLatencies(GetServiceLatenciesRequest) returns (GetMetricsResponse) {
     option (google.api.http) = {
-      get: "/metrics"
+      get: "/metrics/latencies"
+    };
+  }
+
+  // GetServiceCallRates gets the per-service call rates.
+  rpc GetServiceCallRates(GetServiceCallRatesRequest) returns (GetMetricsResponse) {
+    option (google.api.http) = {
+      get: "/metrics/calls"
+    };
+  }
+
+  // GetServiceErrorRates gets the per-service error rates.
+  rpc GetServiceErrorRates(GetServiceErrorRatesRequest) returns (GetMetricsResponse) {
+    option (google.api.http) = {
+      get: "/metrics/errors"
+    };
+  }
+
+  // GetOperationLatencies gets the per-operation latencies for a given service.
+  rpc GetOperationLatencies(GetOperationLatenciesRequest) returns (GetMetricsResponse) {
+    option (google.api.http) = {
+      get: "/metrics/latencies/{service_name}"
+    };
+  }
+
+  // GetOperationCallRates gets the per-operation call rates for a given service.
+  rpc GetOperationCallRates(GetOperationCallRatesRequest) returns (GetMetricsResponse) {
+    option (google.api.http) = {
+      get: "/metrics/calls/{service_name}"
+    };
+  }
+
+  // GetOperationErrorRates gets the per-operation error rates for a given service.
+  rpc GetOperationErrorRates(GetOperationErrorRatesRequest) returns (GetMetricsResponse) {
+    option (google.api.http) = {
+      get: "/metrics/errors/{service_name}"
     };
   }
 }
