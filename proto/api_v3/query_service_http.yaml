@@ -1,0 +1,14 @@
+# This is an API configuration to generate an HTTP/JSON -> gRPC gateway for the
+# OpenTelemetry service using github.com/grpc-ecosystem/grpc-gateway.
+type: google.api.Service
+config_version: 3
+http:
+  rules:
+    - selector: jaeger.api_v3.QueryService.GetTrace
+      get: /v3/traces/{trace_id}
+    - selector: jaeger.api_v3.QueryService.GetTraces
+      get: /v3/traces
+    - selector: jaeger.api_v3.QueryService.GetServices
+      get: /v3/services
+    - selector: jaeger.api_v3.QueryService.GetOperations
+      get: /v3/operations
