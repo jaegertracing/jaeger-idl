@@ -1,5 +1,4 @@
-// Copyright (c) 2019 The Jaeger Authors.
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2021 The Jaeger Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,55 +23,70 @@ import "google/protobuf/duration.proto";
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
 
+// Request object to get a trace.
 message GetTraceRequest {
   string trace_id = 1;
 }
 
+// A single response chunk holds a single trace.
 message SpansResponseChunk {
+  // OTLP resource spans
+  // see https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto
   repeated opentelemetry.proto.trace.v1.ResourceSpans resource_spans = 1;
 }
 
+// Query parameters to find traces.
 message TraceQueryParameters {
   string service_name = 1;
   string operation_name = 2;
-  map<string, string> tags = 3;
+  map<string, string> attributes = 3;
   google.protobuf.Timestamp start_time_min = 4;
   google.protobuf.Timestamp start_time_max = 5;
   google.protobuf.Duration duration_min = 6;
   google.protobuf.Duration duration_max = 7;
-  int32 search_depth = 8;
+  int32 num_traces = 8;
 }
 
+// Request object to search traces.
 message FindTracesRequest {
   TraceQueryParameters query = 1;
 }
 
+// Request object to get service names.
 message GetServicesRequest {}
 
+// Response object to get service names.
 message GetServicesResponse {
   repeated string services = 1;
 }
 
+// Request object to search for operation names.
 message GetOperationsRequest {
   string service = 1;
   string span_kind = 2;
 }
 
+// Operation encapsulates information about operation.
 message Operation {
   string name = 1;
   string span_kind = 2;
 }
 
+// Response object to get operation names.
 message GetOperationsResponse {
-  repeated Operation operations = 2;
+  repeated Operation operations = 1;
 }
 
 service QueryService {
+  // GetTraces returns single trace.
   rpc GetTrace(GetTraceRequest) returns (stream SpansResponseChunk) {}
 
+  // GetTraces searches for traces.
   rpc GetTraces(FindTracesRequest) returns (stream SpansResponseChunk) {}
 
+  // GetServices returns service names.
   rpc GetServices(GetServicesRequest) returns (GetServicesResponse) {}
 
+  // GetOperations returns operation names.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
 }
