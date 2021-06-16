@@ -29,6 +29,8 @@ message GetTraceRequest {
 }
 
 // A single response chunk holds a single trace.
+// Note that a subsequent request to get a trace might return a different result
+// because spans are reported in asynchronous chunks.
 message SpansResponseChunk {
   // OTLP resource spans
   // see https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto
