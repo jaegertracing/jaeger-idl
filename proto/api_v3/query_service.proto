@@ -25,6 +25,7 @@ option java_package = "io.jaegertracing.api_v3";
 
 // Request object to get a trace.
 message GetTraceRequest {
+  // Hex encoded 128 bit trace_id
   string trace_id = 1;
 }
 
@@ -34,6 +35,9 @@ message GetTraceRequest {
 message SpansResponseChunk {
   // OTLP resource spans
   // see https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto
+  // In case of JSON format the ids (trace_id, span_id, parent_id) are encoded in base64 even though OpenTelemetry specification
+  // mandates to use hex encoding (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/otlp.md#otlphttp).
+  // Base64 is chosen to keep compatibility with JSONPb codec.
   repeated opentelemetry.proto.trace.v1.ResourceSpans resource_spans = 1;
 }
 
@@ -81,9 +85,15 @@ message GetOperationsResponse {
 
 service QueryService {
   // GetTraces returns single trace.
+  // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
+  // and so the response cannot be directly unmarshalled. This can be fixed by standard JSON
+  // parsing libraries or string manipulation to remove the envelope.
   rpc GetTrace(GetTraceRequest) returns (stream SpansResponseChunk) {}
 
   // GetTraces searches for traces.
+  // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
+  // and so the response cannot be directly unmarshalled. This can be fixed by standard JSON
+  // parsing libraries or string manipulation to remove the envelope.
   rpc GetTraces(FindTracesRequest) returns (stream SpansResponseChunk) {}
 
   // GetServices returns service names.
