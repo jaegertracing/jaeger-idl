@@ -48,11 +48,13 @@ message TraceQueryParameters {
   // Attributes are matched against Span and Resource attributes.
   // At least one span in a trace must match all specified attributes.
   map<string, string> attributes = 3;
+  // Span min start time.
   google.protobuf.Timestamp start_time_min = 4;
+  // Span max start time.
   google.protobuf.Timestamp start_time_max = 5;
-  // Minimal duration of a span.
+  // Span max duration.
   google.protobuf.Duration duration_min = 6;
-  // Maximal duration of a span.
+  // Span min duration.
   google.protobuf.Duration duration_max = 7;
   // Maximum number of traces in the response.
   // Note that some storages (e.g. Cassandra) does not guarantee this parameter.
