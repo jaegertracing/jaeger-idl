@@ -29,7 +29,7 @@ message GetTraceRequest {
   string trace_id = 1;
 }
 
-// A single response chunk holds a single trace.
+// A single response chunk holds spans from a single trace.
 // Note that a subsequent request to get a trace might return a different result
 // because spans are reported in asynchronous chunks.
 message SpansResponseChunk {
@@ -45,11 +45,17 @@ message SpansResponseChunk {
 message TraceQueryParameters {
   string service_name = 1;
   string operation_name = 2;
+  // Attributes are matched against Span and Resource attributes.
+  // At least one span in a trace must match all specified attributes.
   map<string, string> attributes = 3;
   google.protobuf.Timestamp start_time_min = 4;
   google.protobuf.Timestamp start_time_max = 5;
+  // Minimal duration of a span.
   google.protobuf.Duration duration_min = 6;
+  // Maximal duration of a span.
   google.protobuf.Duration duration_max = 7;
+  // Maximum number of traces in the response.
+  // Note that some storages (e.g. Cassandra) does not guarantee this parameter.
   int32 num_traces = 8;
 }
 
@@ -68,7 +74,9 @@ message GetServicesResponse {
 
 // Request object to search for operation names.
 message GetOperationsRequest {
+  // Required service name.
   string service = 1;
+  // Optional span kind.
   string span_kind = 2;
 }
 
