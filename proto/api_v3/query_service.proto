@@ -41,7 +41,7 @@ message SpansResponseChunk {
 }
 
 // Query parameters to find traces.
-// Note that some storage implementations do not guarantee correct implementation of all parameters.
+// Note that some storage implementations do not guarantee the correct implementation of all parameters.
 message TraceQueryParameters {
   string service_name = 1;
   string operation_name = 2;
