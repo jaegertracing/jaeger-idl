@@ -31,7 +31,7 @@ message GetTraceRequest {
 
 // A single response chunk holds spans from a single trace.
 message SpansResponseChunk {
-  // OTLP resource spans [1].
+  // A list of OpenTelemetry ResourceSpans.
   // In case of JSON format the ids (trace_id, span_id, parent_id) are encoded in base64 even though OpenTelemetry specification
   // mandates to use hex encoding [2].
   // Base64 is chosen to keep compatibility with JSONPb codec.
@@ -73,7 +73,7 @@ message GetServicesResponse {
   repeated string services = 1;
 }
 
-// Request object to search for operation names.
+// Request object to get operation names.
 message GetOperationsRequest {
   // Required service name.
   string service = 1;
@@ -93,17 +93,15 @@ message GetOperationsResponse {
 }
 
 service QueryService {
-  // GetTraces returns single trace.
+  // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
-  // and so the response cannot be directly unmarshalled. This can be fixed by standard JSON
-  // parsing libraries or string manipulation to remove the envelope.
+  // It means that the JSON response cannot be directly unmarshalled using JSONPb.
+  // This can be fixed by first parsing into user-defined envelope with standard JSON library
+  // or string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.
   rpc GetTrace(GetTraceRequest) returns (stream SpansResponseChunk) {}
 
   // FindTraces searches for traces.
-  // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
-  // Hence the response cannot be directly unmarshalled into response protobuf type.
-  // This can be fixed by first unmarshalling into user defined envelope type using standard JSON library
-  // or by removing the envelope by string manipulation.
+  // See GetTrace for JSON unmarshalling.
   rpc FindTraces(FindTracesRequest) returns (stream SpansResponseChunk) {}
 
   // GetServices returns service names.
