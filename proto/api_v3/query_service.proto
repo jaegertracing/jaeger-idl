@@ -29,7 +29,7 @@ message GetTraceRequest {
   string trace_id = 1;
 }
 
-// A single response chunk holds spans from a single trace.
+// Response object with spans.
 message SpansResponseChunk {
   // A list of OpenTelemetry ResourceSpans.
   // In case of JSON format the ids (trace_id, span_id, parent_id) are encoded in base64 even though OpenTelemetry specification
