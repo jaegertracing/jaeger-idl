@@ -6,7 +6,7 @@ http:
   rules:
     - selector: jaeger.api_v3.QueryService.GetTrace
       get: /v3/traces/{trace_id}
-    - selector: jaeger.api_v3.QueryService.GetTraces
+    - selector: jaeger.api_v3.QueryService.FindTraces
       get: /v3/traces
     - selector: jaeger.api_v3.QueryService.GetServices
       get: /v3/services
