@@ -131,8 +131,8 @@ proto-zipkin:
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/zipkin.proto
 
-idl-submodule:
+init-submodule:
 	git submodule init
 	git submodule update
 
-.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protocompile proto proto-zipkin idl-submodule
+.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protocompile proto proto-zipkin init-submodule
