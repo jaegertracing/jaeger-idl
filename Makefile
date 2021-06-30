@@ -11,9 +11,9 @@ PROTOTOOL_VER=1.8.0
 PROTOTOOL_IMAGE=uber/prototool:$(PROTOTOOL_VER)
 PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(PROTOTOOL_IMAGE)
 
-PROTOC_VER=0.3.0
+PROTOC_VER=0.3.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
-PROTOC=docker run --rm -u ${shell id -u} -e LD_LIBRARY_PATH='/usr/lib:/usr/lib64:/usr/lib/local' -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
+PROTOC=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
 THRIFT_PY_ARGS=new_style,tornado
