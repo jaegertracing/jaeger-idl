@@ -12,5 +12,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Init git submodules
+      run: make init-submodule
+
     - name: Run unit tests
       run: make test-ci
