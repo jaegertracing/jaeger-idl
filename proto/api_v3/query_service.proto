@@ -48,13 +48,13 @@ message TraceQueryParameters {
   // Attributes are matched against Span and Resource attributes.
   // At least one span in a trace must match all specified attributes.
   map<string, string> attributes = 3;
-  // Span min start time in. RFC-3339ns format. Required.
+  // Span min start time in. REST API uses RFC-3339ns format. Required.
   google.protobuf.Timestamp start_time_min = 4;
-  // Span max start time. RFC-3339ns format. Required.
+  // Span max start time. REST API uses RFC-3339ns format. Required.
   google.protobuf.Timestamp start_time_max = 5;
-  // Span min duration. Golang duration format. Required.
+  // Span min duration. REST API uses Golang's time format e.g. 10s. Required.
   google.protobuf.Duration duration_min = 6;
-  // Span max duration. Golang duration format. Required.
+  // Span max duration. REST API uses Golang's time format 10s. Required.
   google.protobuf.Duration duration_max = 7;
   // Maximum number of traces in the response.
   int32 num_traces = 8;
