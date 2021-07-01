@@ -54,7 +54,7 @@ message TraceQueryParameters {
   google.protobuf.Timestamp start_time_max = 5;
   // Span min duration. REST API uses Golang's time format e.g. 10s. Required.
   google.protobuf.Duration duration_min = 6;
-  // Span max duration. REST API uses Golang's time format 10s. Required.
+  // Span max duration. REST API uses Golang's time format e.g. 10s. Required.
   google.protobuf.Duration duration_max = 7;
   // Maximum number of traces in the response.
   int32 num_traces = 8;
