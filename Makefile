@@ -27,6 +27,7 @@ THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossd
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
 test-ci: thrift swagger-validate protocompile proto proto-zipkin
+	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 
 swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
@@ -117,7 +118,7 @@ proto:
 	# Swagger
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--swagger_out=disable_default_errors=true,logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml:${PROTO_GEN_GO_DIR} \
+		--swagger_out=disable_default_errors=true,logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml:./swagger \
 		proto/api_v3/query_service.proto
 
 	$(PROTOC_INTERNAL) \
