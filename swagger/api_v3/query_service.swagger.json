@@ -11,7 +11,7 @@
     "application/json"
   ],
   "paths": {
-    "/v3/operations": {
+    "/api/v3/operations": {
       "get": {
         "summary": "GetOperations returns operation names.",
         "operationId": "QueryService_GetOperations",
@@ -44,7 +44,7 @@
         ]
       }
     },
-    "/v3/services": {
+    "/api/v3/services": {
       "get": {
         "summary": "GetServices returns service names.",
         "operationId": "QueryService_GetServices",
@@ -61,7 +61,7 @@
         ]
       }
     },
-    "/v3/traces": {
+    "/api/v3/traces": {
       "get": {
         "summary": "FindTraces searches for traces.\nSee GetTrace for JSON unmarshalling.",
         "operationId": "QueryService_FindTraces",
@@ -139,7 +139,7 @@
         ]
       }
     },
-    "/v3/traces/{trace_id}": {
+    "/api/v3/traces/{trace_id}": {
       "get": {
         "summary": "GetTrace returns a single trace.\nNote that the JSON response over HTTP is wrapped into result envelope \"{\"result\": ...}\"\nIt means that the JSON response cannot be directly unmarshalled using JSONPb.\nThis can be fixed by first parsing into user-defined envelope with standard JSON library\nor string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.",
         "operationId": "QueryService_GetTrace",
