@@ -5,10 +5,10 @@ config_version: 3
 http:
   rules:
     - selector: jaeger.api_v3.QueryService.GetTrace
-      get: /v3/traces/{trace_id}
+      get: /api/v3/traces/{trace_id}
     - selector: jaeger.api_v3.QueryService.FindTraces
-      get: /v3/traces
+      get: /api/v3/traces
     - selector: jaeger.api_v3.QueryService.GetServices
-      get: /v3/services
+      get: /api/v3/services
     - selector: jaeger.api_v3.QueryService.GetOperations
-      get: /v3/operations
+      get: /api/v3/operations
