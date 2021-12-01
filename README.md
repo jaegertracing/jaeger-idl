@@ -25,5 +25,5 @@ See [CONTRIBUTING](./CONTRIBUTING.md).
 [Apache 2.0 License](./LICENSE).
 
 
-[ci-img]: https://github.com/jaegertracing/jaeger-idl/workflows/Tests/badge.svg?branch=master
-[ci]: https://github.com/jaegertracing/jaeger-idl/actions?query=branch%3Amaster
+[ci-img]: https://github.com/jaegertracing/jaeger-idl/workflows/Tests/badge.svg?branch=main
+[ci]: https://github.com/jaegertracing/jaeger-idl/actions?query=branch%3Amain
