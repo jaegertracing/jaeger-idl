@@ -36,26 +36,39 @@ enum SamplingStrategyType {
   RATE_LIMITING = 1;
 };
 
+// ProbabilisticSamplingStrategy defines TraceIdRatioBased sampler configuration.
 message ProbabilisticSamplingStrategy {
+  // // Sampling rate between [0-1].
   double samplingRate = 1;
 }
 
+// RateLimitingSamplingStrategy defines RateLimiting sampling configuration.
 message RateLimitingSamplingStrategy {
+  // Traces per second.
   int32 maxTracesPerSecond = 1;
 }
 
+// OperationSamplingStrategy defines sampling configuration for a given operation/span name.
 message OperationSamplingStrategy {
+  // Operation name is a span name.
   string operation = 1;
+  // Probabilistic sampler configuration.
   ProbabilisticSamplingStrategy probabilisticSampling = 2;
 }
 
+// PerOperationSamplingStrategies defines sampling configuration for operations/span (names).
 message PerOperationSamplingStrategies {
+  // Default sampling probability for TraceIdRatioBased sampler.
   double defaultSamplingProbability = 1;
+  // Default lower bound for RateLimiting sampler.
   double defaultLowerBoundTracesPerSecond = 2;
+  // Per operation/span (name) sampling configuration.
   repeated OperationSamplingStrategy perOperationStrategies = 3;
+  // Default upper bound for rate limiting sampler.
   double defaultUpperBoundTracesPerSecond = 4;
 }
 
+// SamplingStrategyResponse defines sampling configuration for a service.
 message SamplingStrategyResponse {
   SamplingStrategyType strategyType = 1;
   ProbabilisticSamplingStrategy probabilisticSampling = 2;
@@ -63,10 +76,13 @@ message SamplingStrategyResponse {
   PerOperationSamplingStrategies operationSampling =4;
 }
 
+// SamplingStrategyParameters defines request parameters for remote sampler.
 message SamplingStrategyParameters {
+  // Service name.
   string serviceName = 1;
 }
 
+// SamplingManager defines service for the remote sampler.
 service SamplingManager {
   rpc GetSamplingStrategy(SamplingStrategyParameters) returns (SamplingStrategyResponse) {
     option (google.api.http) = {
