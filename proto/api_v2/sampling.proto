@@ -84,7 +84,7 @@ message PerOperationSamplingStrategies {
 }
 
 // SamplingStrategyResponse contains an overall sampling strategy for a given service.
-// This type should be considered a unit where only one of the strategy field is present.
+// This type should be treated as a union where only one of the strategy field is present.
 message SamplingStrategyResponse {
   // Legacy field that was meant to indicate which one of the strategy fields
   // below is present. This enum was not extended when per-operation strategy
@@ -103,11 +103,13 @@ message SamplingStrategyResponse {
   PerOperationSamplingStrategies operationSampling = 4;
 }
 
+// SamplingStrategyParameters defines request parameters for remote sampler.
 message SamplingStrategyParameters {
   // serviceName is a required argument.
   string serviceName = 1;
 }
 
+// SamplingManager defines service for the remote sampler.
 service SamplingManager {
   rpc GetSamplingStrategy(SamplingStrategyParameters) returns (SamplingStrategyResponse) {
     option (google.api.http) = {
