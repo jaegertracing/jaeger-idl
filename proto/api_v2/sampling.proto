@@ -37,26 +37,53 @@ enum SamplingStrategyType {
   RATE_LIMITING = 1;
 };
 
+// ProbabilisticSamplingStrategy samples traces with a fixed probability.
 message ProbabilisticSamplingStrategy {
+  // samplingRate is the sampling probability in the range [0.0, 1.0].
   double samplingRate = 1;
 }
 
+// RateLimitingSamplingStrategy samples a fixed number of traces per time interval.
+// The typical implementation is with the leaky bucket algorithm.
 message RateLimitingSamplingStrategy {
   int32 maxTracesPerSecond = 1;
 }
 
+// OperationSamplingStrategy is a probabilistic sampling strategy for a given operation
+// (aka endpoint, span name).
 message OperationSamplingStrategy {
   string operation = 1;
   ProbabilisticSamplingStrategy probabilisticSampling = 2;
 }
 
+// PerOperationSamplingStrategies is a combination of strategies for different endpoints
+// as well as some service-wide defaults. It is particularly useful for services whose
+// endpoints receive vastly different traffic, so that any single rate of sampling would
+// result in either too much data for some endpoints or almost no data for other endpoints.
 message PerOperationSamplingStrategies {
+  // defaultSamplingProbability is the sampling probability for spans that do not match
+  // any of the perOperationStrategies.
   double defaultSamplingProbability = 1;
+
+  // defaultLowerBoundTracesPerSecond defines a lower-bound rate limit used to ensure that
+  // there is some minimal amount of traces sampled for an endpoint that might otherwise
+  // be never sampled via probabilistic strategies. The limit is local to a service instance,
+  // so if a service is deployed with many (N) instances, the effective minimum rate of sampling
+  // will be N times higher. This setting applies to ALL operations, whether or not they match
+  // one of the perOperationStrategies.
   double defaultLowerBoundTracesPerSecond = 2;
+
+  // perOperationStrategies describes sampling strategiesf for individual operations within
+  // a given service.
   repeated OperationSamplingStrategy perOperationStrategies = 3;
+
+  // defaultUpperBoundTracesPerSecond defines an upper bound rate limit.
+  // However, almost no Jaeger SDKs support this parameter.
   double defaultUpperBoundTracesPerSecond = 4;
 }
 
+// SamplingStrategyResponse contains an overall sampling strategy for a given service.
+// This type should be considered a unit where only one of the strategy field is present.
 message SamplingStrategyResponse {
   // Legacy field that was meant to indicate which one of the strategy fields
   // below is present. This enum was not extended when per-operation strategy
@@ -76,6 +103,7 @@ message SamplingStrategyResponse {
 }
 
 message SamplingStrategyParameters {
+  // serviceName is a required argument.
   string serviceName = 1;
 }
 
