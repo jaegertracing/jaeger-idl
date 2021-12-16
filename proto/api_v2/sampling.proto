@@ -46,7 +46,7 @@ message ProbabilisticSamplingStrategy {
 // RateLimitingSamplingStrategy samples a fixed number of traces per time interval.
 // The typical implementations use the leaky bucket algorithm.
 message RateLimitingSamplingStrategy {
-  // TODO this field should really be double, to support rates like 1 per minute.
+  // TODO this field type should be changed to double, to support rates like 1 per minute.
   int32 maxTracesPerSecond = 1;
 }
 
