@@ -44,13 +44,14 @@ message ProbabilisticSamplingStrategy {
 }
 
 // RateLimitingSamplingStrategy samples a fixed number of traces per time interval.
-// The typical implementation is with the leaky bucket algorithm.
+// The typical implementations use the leaky bucket algorithm.
 message RateLimitingSamplingStrategy {
+  // TODO this field should really be double, to support rates like 1 per minute.
   int32 maxTracesPerSecond = 1;
 }
 
-// OperationSamplingStrategy is a probabilistic sampling strategy for a given operation
-// (aka endpoint, span name).
+// OperationSamplingStrategy is a sampling strategy for a given operation
+// (aka endpoint, span name). Only probabilistic sampling is currently supported.
 message OperationSamplingStrategy {
   string operation = 1;
   ProbabilisticSamplingStrategy probabilisticSampling = 2;
