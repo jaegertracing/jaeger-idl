@@ -193,7 +193,7 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "attributes is a collection of attribute key/value pairs on the event."
+          "description": "attributes is a collection of attribute key/value pairs on the event.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
         },
         "dropped_attributes_count": {
           "type": "integer",
@@ -225,7 +225,7 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "attributes is a collection of attribute key/value pairs on the link."
+          "description": "attributes is a collection of attribute key/value pairs on the link.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
         },
         "dropped_attributes_count": {
           "type": "integer",
@@ -247,29 +247,6 @@
       ],
       "default": "SPAN_KIND_UNSPECIFIED",
       "description": "SpanKind is the type of span. Can be used to specify additional relationships between spans\nin addition to a parent/child relationship.\n\n - SPAN_KIND_UNSPECIFIED: Unspecified. Do NOT use as default.\nImplementations MAY assume SpanKind to be INTERNAL when receiving UNSPECIFIED.\n - SPAN_KIND_INTERNAL: Indicates that the span represents an internal operation within an application,\nas opposed to an operation happening at the boundaries. Default value.\n - SPAN_KIND_SERVER: Indicates that the span covers server-side handling of an RPC or other\nremote network request.\n - SPAN_KIND_CLIENT: Indicates that the span describes a request to some remote service.\n - SPAN_KIND_PRODUCER: Indicates that the span describes a producer sending a message to a broker.\nUnlike CLIENT and SERVER, there is often no direct critical path latency relationship\nbetween producer and consumer spans. A PRODUCER span ends when the message was accepted\nby the broker while the logical processing of the message might span a much longer time.\n - SPAN_KIND_CONSUMER: Indicates that the span describes consumer receiving a message from a broker.\nLike the PRODUCER kind, there is often no direct critical path latency relationship\nbetween producer and consumer spans."
-    },
-    "StatusDeprecatedStatusCode": {
-      "type": "string",
-      "enum": [
-        "DEPRECATED_STATUS_CODE_OK",
-        "DEPRECATED_STATUS_CODE_CANCELLED",
-        "DEPRECATED_STATUS_CODE_UNKNOWN_ERROR",
-        "DEPRECATED_STATUS_CODE_INVALID_ARGUMENT",
-        "DEPRECATED_STATUS_CODE_DEADLINE_EXCEEDED",
-        "DEPRECATED_STATUS_CODE_NOT_FOUND",
-        "DEPRECATED_STATUS_CODE_ALREADY_EXISTS",
-        "DEPRECATED_STATUS_CODE_PERMISSION_DENIED",
-        "DEPRECATED_STATUS_CODE_RESOURCE_EXHAUSTED",
-        "DEPRECATED_STATUS_CODE_FAILED_PRECONDITION",
-        "DEPRECATED_STATUS_CODE_ABORTED",
-        "DEPRECATED_STATUS_CODE_OUT_OF_RANGE",
-        "DEPRECATED_STATUS_CODE_UNIMPLEMENTED",
-        "DEPRECATED_STATUS_CODE_INTERNAL_ERROR",
-        "DEPRECATED_STATUS_CODE_UNAVAILABLE",
-        "DEPRECATED_STATUS_CODE_DATA_LOSS",
-        "DEPRECATED_STATUS_CODE_UNAUTHENTICATED"
-      ],
-      "default": "DEPRECATED_STATUS_CODE_OK"
     },
     "StatusStatusCode": {
       "type": "string",
@@ -507,7 +484,7 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "A collection of key/value pairs of key-value pairs. The list may be empty (may\ncontain 0 elements)."
+          "description": "A collection of key/value pairs of key-value pairs. The list may be empty (may\ncontain 0 elements).\nThe keys MUST be unique (it is not allowed to have more than one\nvalue with the same key)."
         }
       },
       "description": "KeyValueList is a list of KeyValue messages. We need KeyValueList as a message\nsince `oneof` in AnyValue does not allow repeated fields. Everywhere else where we need\na list of KeyValue messages (e.g. in Span) we use `repeated KeyValue` directly to\navoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches\nare semantically equivalent."
@@ -520,7 +497,7 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "Set of labels that describe the resource."
+          "description": "Set of attributes that describe the resource.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
         },
         "dropped_attributes_count": {
           "type": "integer",
@@ -575,7 +552,7 @@
         },
         "name": {
           "type": "string",
-          "description": "A description of the span's operation.\n\nFor example, the name can be a qualified method name or a file name\nand a line number where the operation is called. A best practice is to use\nthe same display name at the same call point in an application.\nThis makes it easier to correlate spans in different traces.\n\nThis field is semantically required to be set to non-empty string.\nWhen null or empty string received - receiver may use string \"name\"\nas a replacement. There might be smarted algorithms implemented by\nreceiver to fix the empty span name.\n\nThis field is required."
+          "description": "A description of the span's operation.\n\nFor example, the name can be a qualified method name or a file name\nand a line number where the operation is called. A best practice is to use\nthe same display name at the same call point in an application.\nThis makes it easier to correlate spans in different traces.\n\nThis field is semantically required to be set to non-empty string.\nEmpty value is equivalent to an unknown span name.\n\nThis field is required."
         },
         "kind": {
           "$ref": "#/definitions/SpanSpanKind",
@@ -596,8 +573,8 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "\"/http/user_agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\"\n    \"/http/server_latency\": 300\n    \"abc.com/myattribute\": true\n    \"abc.com/score\": 10.239",
-          "title": "attributes is a collection of key/value pairs. The value can be a string,\nan integer, a double or the Boolean values `true` or `false`. Note, global attributes\nlike server name can be set using the resource API. Examples of attributes:"
+          "description": "\"/http/user_agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\"\n    \"/http/server_latency\": 300\n    \"abc.com/myattribute\": true\n    \"abc.com/score\": 10.239\n\nThe OpenTelemetry API specification further restricts the allowed value types:\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md#attributes\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key).",
+          "title": "attributes is a collection of key/value pairs. Note, global attributes\nlike server name can be set using the resource API. Examples of attributes:"
         },
         "dropped_attributes_count": {
           "type": "integer",
@@ -638,10 +615,6 @@
     "v1Status": {
       "type": "object",
       "properties": {
-        "deprecated_code": {
-          "$ref": "#/definitions/StatusDeprecatedStatusCode",
-          "description": "The deprecated status code. This is an optional field.\n\nThis field is deprecated and is replaced by the `code` field below. See backward\ncompatibility notes below. According to our stability guarantees this field\nwill be removed in 12 months, on Oct 22, 2021. All usage of old senders and\nreceivers that do not understand the `code` field MUST be phased out by then."
-        },
         "message": {
           "type": "string",
           "description": "A developer-facing human readable error message."
