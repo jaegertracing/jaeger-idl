@@ -96,10 +96,10 @@ paths:
           required: false
           description: |
              Ex. `http.uri=/foo and retried` - If key/value (has an `=`),
-             constrains against Span.tags entres. If just a word, constrains
-             against Span.annotations[].value or Span.tags[].key. Any values are
-             AND against eachother. This means a span in the trace must match
-             all of these.
+             constrains against Span.tags entries. If just a word, constrains
+             against Span.annotations[].value or Span.tags[].key. Any values
+             are AND'ed against each other; this means a span in the trace must
+             match all of these.
         - name: minDuration
           in: query
           type: integer
@@ -124,7 +124,7 @@ paths:
           format: int64
           in: query
           description: |
-            Only return traces where all  Span.timestamp are at or after (endTs
+            Only return traces where all Span.timestamp are at or after (endTs
             - * lookback) in milliseconds. Defaults to endTs, limited to a
             system parameter QUERY_LOOKBACK
         - name: limit
@@ -168,7 +168,7 @@ paths:
         - name: endTs
           in: query
           description: |
-            only return links from spans where `Span.timestamp`  are at or before
+            only return links from spans where `Span.timestamp` are at or before
             this time in epoch milliseconds.
           required: true
           type: integer
@@ -178,7 +178,7 @@ paths:
           description: |
             only return links where all Span.timestamp are at or after
             (`endTs - * lookback`) in milliseconds. Defaults to `endTs`, limited
-            to a system parameter `QUERY_LOOKBACK`
+            to a system parameter `QUERY_LOOKBACK`.
           type: integer
           format: int64
       responses:
