@@ -43,6 +43,7 @@ message SpansResponseChunk {
 // Query parameters to find traces.
 // Note that some storage implementations do not guarantee the correct implementation of all parameters.
 message TraceQueryParameters {
+  // Service name as shown in the frontend. Required.
   string service_name = 1;
   string operation_name = 2;
   // Attributes are matched against Span and Resource attributes.
