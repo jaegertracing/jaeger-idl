@@ -27,10 +27,10 @@ option java_package = "io.jaegertracing.api_v3";
 message GetTraceRequest {
   // Hex encoded 64 or 128 bit trace ID.
   string trace_id = 1;
-  // Optional. The start time to search trace id
-  google.protobuf.Timestamp start = 2;
-  // Optional. The end time to search trace id
-  google.protobuf.Timestamp end = 3;
+  // Optional. The start time to search trace ID.
+  google.protobuf.Timestamp start_time = 2;
+  // Optional. The end time to search trace ID.
+  google.protobuf.Timestamp end_time = 3;
 }
 
 // Response object with spans.
