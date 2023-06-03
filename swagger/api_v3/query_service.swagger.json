@@ -167,6 +167,22 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "start_time",
+            "description": "Optional. The start time to search trace ID.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "end_time",
+            "description": "Optional. The end time to search trace ID.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
           }
         ],
         "tags": [
