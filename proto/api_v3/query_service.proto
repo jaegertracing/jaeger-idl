@@ -54,7 +54,8 @@ message SpansResponseChunk {
 // interpret it this way. For instance, in Cassandra this limits the number of _spans_
 // that match the conditions, and the resulting number of traces can be less.
 //
-// Note that some storage implementations do not guarantee the correct implementation of all parameters.
+// Note: some storage implementations do not guarantee the correct implementation of all parameters.
+//
 message TraceQueryParameters {
   string service_name = 1;
   string operation_name = 2;
