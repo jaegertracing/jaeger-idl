@@ -48,6 +48,11 @@ message SpansResponseChunk {
 // as forming a conjunction, e.g., "service_name='X' AND operation_name='Y' AND ...".
 // All fields are matched against individual spans, not at the trace level.
 // The returned results contain traces where at least one span matches the conditions.
+// When num_traces results in fewer traces returned, there is no required ordering.
+//
+// Note: num_traces should restrict the number of traces returned, but not all backends
+// interpret it this way. For instance, in Cassandra this limits the number of _spans_
+// that match the conditions, and the resulting number of traces can be less.
 //
 // Note that some storage implementations do not guarantee the correct implementation of all parameters.
 message TraceQueryParameters {
