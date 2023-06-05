@@ -364,7 +364,7 @@
           "description": "Maximum number of traces in the response."
         }
       },
-      "description": "Query parameters to find traces.\nNote that some storage implementations do not guarantee the correct implementation of all parameters."
+      "description": "Query parameters to find traces. Except for num_traces, all fields should be treated\nas forming a conjunction, e.g., \"service_name='X' AND operation_name='Y' AND ...\".\nAll fields are matched against individual spans, not at the trace level.\nThe returned results contain traces where at least one span matches the conditions.\nWhen num_traces results in fewer traces returned, there is no required ordering.\n\nNote: num_traces should restrict the number of traces returned, but not all backends\ninterpret it this way. For instance, in Cassandra this limits the number of _spans_\nthat match the conditions, and the resulting number of traces can be less.\n\nNote: some storage implementations do not guarantee the correct implementation of all parameters."
     },
     "protobufAny": {
       "type": "object",
