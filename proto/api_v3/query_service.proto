@@ -44,7 +44,11 @@ message SpansResponseChunk {
   repeated opentelemetry.proto.trace.v1.ResourceSpans resource_spans = 1;
 }
 
-// Query parameters to find traces.
+// Query parameters to find traces. Except for num_traces, all fields should be treated
+// as forming a conjunction, e.g., "service_name='X' AND operation_name='Y' AND ...".
+// All fields are matched against individual spans, not at the trace level.
+// The returned results contain traces where at least one span matches the conditions.
+//
 // Note that some storage implementations do not guarantee the correct implementation of all parameters.
 message TraceQueryParameters {
   string service_name = 1;
@@ -60,6 +64,7 @@ message TraceQueryParameters {
   google.protobuf.Duration duration_min = 6;
   // Span max duration. REST API uses Golang's time format e.g. 10s.
   google.protobuf.Duration duration_max = 7;
+
   // Maximum number of traces in the response.
   int32 num_traces = 8;
 }
