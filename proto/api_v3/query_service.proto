@@ -17,6 +17,7 @@ syntax="proto3";
 package jaeger.api_v3;
 
 import "opentelemetry/proto/trace/v1/trace.proto";
+import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
