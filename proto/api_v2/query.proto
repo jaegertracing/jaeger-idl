@@ -41,9 +41,13 @@ message GetTraceRequest {
     (gogoproto.customname) = "TraceID"
   ];
   // Optional. The start time to search trace ID.
-  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp start_time = 2 [
+    (gogoproto.stdtime) = true
+  ];
   // Optional. The end time to search trace ID.
-  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Timestamp end_time = 3 [
+    (gogoproto.stdtime) = true
+  ];
 }
 
 message SpansResponseChunk {
@@ -59,9 +63,13 @@ message ArchiveTraceRequest {
     (gogoproto.customname) = "TraceID"
   ];
   // Optional. The start time to search trace ID.
-  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp start_time = 2 [
+    (gogoproto.stdtime) = true
+  ];
   // Optional. The end time to search trace ID.
-  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Timestamp end_time = 3 [
+    (gogoproto.stdtime) = true
+  ];
 }
 
 message ArchiveTraceResponse {
