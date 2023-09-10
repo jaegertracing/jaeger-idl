@@ -29,11 +29,11 @@ message GetTraceRequest {
   string trace_id = 1;
   // Optional. The start time to search trace ID.
   google.protobuf.Timestamp start_time = 2 [
-    (gogoproto.stdtime) = true,
+    (gogoproto.stdtime) = true
   ];
   // Optional. The end time to search trace ID.
   google.protobuf.Timestamp end_time = 3 [
-    (gogoproto.stdtime) = true,
+    (gogoproto.stdtime) = true
   ];
 }
 
