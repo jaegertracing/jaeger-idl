@@ -17,6 +17,7 @@ syntax="proto3";
 package jaeger.api_v3;
 
 import "opentelemetry/proto/trace/v1/trace.proto";
+import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
@@ -28,21 +29,25 @@ message GetTraceRequest {
   // Hex encoded 64 or 128 bit trace ID.
   string trace_id = 1;
   // Optional. The start time to search trace ID.
-  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp start_time = 2 [
+    (gogoproto.stdtime) = true
+  ];
   // Optional. The end time to search trace ID.
-  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Timestamp end_time = 3 [
+    (gogoproto.stdtime) = true
+  ];
 }
 
 // Response object with spans.
-message SpansResponseChunk {
+//message unused_SpansResponseChunk {
   // A list of OpenTelemetry ResourceSpans.
   // In case of JSON format the ids (trace_id, span_id, parent_id) are encoded in base64 even though OpenTelemetry specification
   // mandates to use hex encoding [2].
   // Base64 is chosen to keep compatibility with JSONPb codec.
   // [1]: https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto
   // [2]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/otlp.md#otlphttp
-  repeated opentelemetry.proto.trace.v1.ResourceSpans resource_spans = 1;
-}
+//  repeated opentelemetry.proto.trace.v1.ResourceSpans resource_spans = 1;
+//}
 
 // Query parameters to find traces. Except for num_traces, all fields should be treated
 // as forming a conjunction, e.g., "service_name='X' AND operation_name='Y' AND ...".
@@ -113,11 +118,11 @@ service QueryService {
   // It means that the JSON response cannot be directly unmarshalled using JSONPb.
   // This can be fixed by first parsing into user-defined envelope with standard JSON library
   // or string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.
-  rpc GetTrace(GetTraceRequest) returns (stream SpansResponseChunk) {}
+  rpc GetTrace(GetTraceRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {}
 
   // FindTraces searches for traces.
   // See GetTrace for JSON unmarshalling.
-  rpc FindTraces(FindTracesRequest) returns (stream SpansResponseChunk) {}
+  rpc FindTraces(FindTracesRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {}
 
   // GetServices returns service names.
   rpc GetServices(GetServicesRequest) returns (GetServicesResponse) {}
@@ -125,3 +130,30 @@ service QueryService {
   // GetOperations returns operation names.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
 }
+
+// Below are some helper types when using APIv3 via HTTP endpoints implemented via grpc-gateway.
+
+// GRPCGatewayError is the type returned when GRPC server returns an error.
+// Note that for streaming responses it would be wrapped in GRPCGatewayWrapper below.
+// Example: {"error":{"grpcCode":2,"httpCode":500,"message":"...","httpStatus":"text..."}}.
+message GRPCGatewayError {
+  message GRPCGatewayErrorDetails {
+    int32 grpcCode = 1;
+    int32 httpCode = 2;
+    string message = 3;
+    string httpStatus = 4;
+  }
+
+  GRPCGatewayErrorDetails error = 1;
+}
+
+// GRPCGatewayWrapper is a type returned when GRPC service returns a stream.
+// For some unknown reason grpc-gateway/v1 wraps chunk responses in {"result": {actual output}}.
+// See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189
+// TODO: it's not clear what happens when the server returns more than one chunk.
+//       The gateway will presumably combine then into a single HTTP response.
+//       Currently this is not possible because even though APIv3 GRPC Service is using output stream,
+//       its implementation reads all spans from QueryService at once and forms only a single chunk.
+// message GRPCGatewayWrapper {
+//  SpansResponseChunk result = 1;
+// }
