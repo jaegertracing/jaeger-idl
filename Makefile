@@ -91,7 +91,11 @@ PROTOC_INTERNAL := $(PROTOC) \
 		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR}
 
-proto:
+.PHONY: proto
+proto: proto-prepare proto-api-v2 proto-api-v3
+
+.PHONY: proto-prepare
+proto-prepare:
 	mkdir -p ${PROTO_GEN_GO_DIR} \
 		${PROTO_GEN_JAVA_DIR} \
 		${PROTO_GEN_PYTHON_DIR} \
@@ -99,14 +103,18 @@ proto:
 		${PROTO_GEN_CPP_DIR} \
 		${PROTO_GEN_CSHARP_DIR}
 
+.PHONY: proto-api-v2
+proto-api-v2:
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/api_v2/model.proto
-	
+
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v2/query.proto \
 		proto/api_v2/collector.proto \
 		proto/api_v2/sampling.proto
 
+.PHONY: proto-api-v3
+proto-api-v3:
 	# API v3
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v3/query_service.proto
