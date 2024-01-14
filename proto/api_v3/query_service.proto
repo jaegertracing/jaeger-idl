@@ -120,10 +120,9 @@ service QueryService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
 }
 
-// Below are some helper types when using APIv3 via HTTP endpoints implemented via grpc-gateway.
+// Below are some helper types when using APIv3 via HTTP endpoints.
 
 // GRPCGatewayError is the type returned when GRPC server returns an error.
-// Note that for streaming responses it would be wrapped in GRPCGatewayWrapper below.
 // Example: {"error":{"grpcCode":2,"httpCode":500,"message":"...","httpStatus":"text..."}}.
 message GRPCGatewayError {
   message GRPCGatewayErrorDetails {
@@ -140,8 +139,10 @@ message GRPCGatewayError {
 // Today there is always only one response because internally the HTTP server gets
 // data from QueryService that does not support multiple responses. But in the
 // future the server may return multiple responeses using Transfer-Encoding: chunked.
+// In case of errors, GRPCGatewayError above is used.
 //
-// Example: {"result": {"resourceSpans": ...}}
+// Example:
+//     {"result": {"resourceSpans": ...}}
 //
 // See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189
 //
