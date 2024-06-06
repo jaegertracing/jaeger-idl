@@ -72,13 +72,13 @@
               "type": "object",
               "properties": {
                 "result": {
-                  "$ref": "#/definitions/api_v3SpansResponseChunk"
+                  "$ref": "#/definitions/v1TracesData"
                 },
                 "error": {
                   "$ref": "#/definitions/runtimeStreamError"
                 }
               },
-              "title": "Stream result of api_v3SpansResponseChunk"
+              "title": "Stream result of v1TracesData"
             }
           }
         },
@@ -150,13 +150,13 @@
               "type": "object",
               "properties": {
                 "result": {
-                  "$ref": "#/definitions/api_v3SpansResponseChunk"
+                  "$ref": "#/definitions/v1TracesData"
                 },
                 "error": {
                   "$ref": "#/definitions/runtimeStreamError"
                 }
               },
-              "title": "Stream result of api_v3SpansResponseChunk"
+              "title": "Stream result of v1TracesData"
             }
           }
         },
@@ -247,6 +247,11 @@
           "type": "integer",
           "format": "int64",
           "description": "dropped_attributes_count is the number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
+        },
+        "flags": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Flags, a bit field. 8 least significant bits are the trace\nflags as defined in W3C Trace Context specification. Readers\nMUST not assume that 24 most significant bits will be zero.\nWhen creating new spans, the most-significant 24-bits MUST be\nzero.  To read the 8-bit W3C trace flag (use flags \u0026\nSPAN_FLAGS_TRACE_FLAGS_MASK).  [Optional].\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions."
         }
       },
       "description": "A pointer from the current span to another span in the same trace or in a\ndifferent trace. For example, this can be used in batching operations,\nwhere a single batch handler processes multiple requests from different\ntraces or when the handler receives a request from a different project."
@@ -310,19 +315,6 @@
         }
       },
       "description": "Operation encapsulates information about operation."
-    },
-    "api_v3SpansResponseChunk": {
-      "type": "object",
-      "properties": {
-        "resource_spans": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1ResourceSpans"
-          },
-          "title": "A list of OpenTelemetry ResourceSpans.\nIn case of JSON format the ids (trace_id, span_id, parent_id) are encoded in base64 even though OpenTelemetry specification\nmandates to use hex encoding [2].\nBase64 is chosen to keep compatibility with JSONPb codec.\n[1]: https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto\n[2]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/otlp.md#otlphttp"
-        }
-      },
-      "description": "Response object with spans."
     },
     "api_v3TraceQueryParameters": {
       "type": "object",
@@ -529,7 +521,7 @@
         },
         "schema_url": {
           "type": "string",
-          "description": "This schema_url applies to the data in the \"resource\" field. It does not apply\nto the data in the \"scope_spans\" field which have their own schema_url field."
+          "description": "The Schema URL, if known. This is the identifier of the Schema that the resource data\nis recorded in. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url\nThis schema_url applies to the data in the \"resource\" field. It does not apply\nto the data in the \"scope_spans\" field which have their own schema_url field."
         }
       },
       "description": "A collection of ScopeSpans from a Resource."
@@ -550,7 +542,7 @@
         },
         "schema_url": {
           "type": "string",
-          "description": "This schema_url applies to all spans and span events in the \"spans\" field."
+          "description": "The Schema URL, if known. This is the identifier of the Schema that the span data\nis recorded in. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url\nThis schema_url applies to all spans and span events in the \"spans\" field."
         }
       },
       "description": "A collection of Spans produced by an InstrumentationScope."
@@ -576,6 +568,11 @@
           "type": "string",
           "format": "byte",
           "description": "The `span_id` of this span's parent span. If this is a root span, then this\nfield must be empty. The ID is an 8-byte array."
+        },
+        "flags": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Flags, a bit field. 8 least significant bits are the trace\nflags as defined in W3C Trace Context specification. Readers\nMUST not assume that 24 most significant bits will be zero.\nTo read the 8-bit W3C trace flag, use `flags \u0026 SPAN_FLAGS_TRACE_FLAGS_MASK`.\n\nWhen creating span messages, if the message is logically forwarded from another source\nwith an equivalent flags fields (i.e., usually another OTLP span message), the field SHOULD\nbe copied as-is. If creating from a source that does not have an equivalent flags field\n(such as a runtime representation of an OpenTelemetry span), the high 24 bits MUST\nbe set to zero.\n\n[Optional].\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions."
         },
         "name": {
           "type": "string",
@@ -652,6 +649,19 @@
         }
       },
       "description": "The Status type defines a logical error model that is suitable for different\nprogramming environments, including REST APIs and RPC APIs."
+    },
+    "v1TracesData": {
+      "type": "object",
+      "properties": {
+        "resource_spans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1ResourceSpans"
+          },
+          "description": "An array of ResourceSpans.\nFor data coming from a single resource this array will typically contain\none element. Intermediary nodes that receive data from multiple origins\ntypically batch the data before forwarding further and in that case this\narray will contain multiple elements."
+        }
+      },
+      "description": "TracesData represents the traces data that can be stored in a persistent storage,\nOR can be embedded by other protocols that transfer OTLP traces data but do\nnot implement the OTLP protocol.\n\nThe main difference between this message and collector protocol is that\nin this message there will not be any \"control\" or \"metadata\" specific to\nOTLP protocol.\n\nWhen new fields are added into this message, the OTLP request MUST be updated\nas well."
     }
   }
 }
