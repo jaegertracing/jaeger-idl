@@ -74,13 +74,40 @@ message PerOperationSamplingStrategies {
   // one of the perOperationStrategies.
   double defaultLowerBoundTracesPerSecond = 2;
 
-  // perOperationStrategies describes sampling strategiesf for individual operations within
+  // perOperationStrategies describes sampling strategies for individual operations within
   // a given service.
   repeated OperationSamplingStrategy perOperationStrategies = 3;
 
   // defaultUpperBoundTracesPerSecond defines an upper bound rate limit.
   // However, almost no Jaeger SDKs support this parameter.
   double defaultUpperBoundTracesPerSecond = 4;
+}
+
+// Dimension is a key-value pair that represents a single arbitrary combinations of dimensions.
+message Dimension {
+  string key = 1;
+  string value = 2;
+}
+
+// MultiDimensionalSamplingStrategy is a sampling strategy that takes into account arbitrary
+// combinations of dimensions (aka user session). Only probabilistic sampling is currently supported.
+message MultiDimensionalSamplingStrategy {
+  repeated Dimension dimensions = 1;
+  ProbabilisticSamplingStrategy probabilisticSampling = 2;
+}
+
+// PerMultiDimensionalSamplingStrategy is a combination of strategies for different dimensions
+// as well as some service-wide defaults. It is particularly useful for services whose
+// dimensions receive vastly different traffic, so that any single rate of sampling would
+// result in either too much data for some dimensions or almost no data for other dimensions.
+message PerMultiDimensionalSamplingStrategy {
+  // defaultSamplingProbability is the sampling probability for spans that do not match
+  // any of the perOperationStrategies.
+  double defaultSamplingProbability = 1;
+
+  // perMultiDimensionalStrategies describes sampling strategies for arbitrary combinations
+  // of dimensions within a given service.
+  repeated MultiDimensionalSamplingStrategy perMultiDimensionalStrategies = 2;
 }
 
 // SamplingStrategyResponse contains an overall sampling strategy for a given service.
@@ -92,8 +119,8 @@ message SamplingStrategyResponse {
   // The recommended approach for consumers is to ignore this field and instead
   // checks the other fields being not null (starting with operationSampling).
   // For producers, it is recommended to set this field correctly for probabilistic
-  // and rate-limiting strategies, but if per-operation strategy is returned,
-  // the enum can be set to 0 (probabilistic).
+  // and rate-limiting strategies, but if per-operation or per-multi-dimensional
+  // strategy is returned, the enum can be set to 0 (probabilistic).
   SamplingStrategyType strategyType = 1;
 
   ProbabilisticSamplingStrategy probabilisticSampling = 2;
@@ -101,6 +128,8 @@ message SamplingStrategyResponse {
   RateLimitingSamplingStrategy rateLimitingSampling = 3;
 
   PerOperationSamplingStrategies operationSampling = 4;
+
+  PerMultiDimensionalSamplingStrategy multiDimensionalSampling = 5;
 }
 
 // SamplingStrategyParameters defines request parameters for remote sampler.
