@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax="proto3";
+syntax = "proto3";
 
 package jaeger.api_v2;
 
@@ -83,17 +83,30 @@ message PerOperationSamplingStrategies {
   double defaultUpperBoundTracesPerSecond = 4;
 }
 
-// Dimension is a key-value pair that represents a single arbitrary combinations of dimensions.
-message Dimension {
-  string key = 1;
-  string value = 2;
+// DimensionMatcher is a key-value pair that defines a dimension and a matching strategy.
+message DimensionMatcher {
+  enum Type {
+    EQ = 0; // Equals
+    NEQ = 1; // Not equals
+    RE = 2; // Regular expression match
+    NRE = 3; // Not regular expression match
+  }
+  Type type = 1;
+  string key = 2;
+  string value = 3;
 }
 
 // MultiDimensionalSamplingStrategy is a sampling strategy that takes into account arbitrary
 // combinations of dimensions (aka user session). Only probabilistic sampling is currently supported.
 message MultiDimensionalSamplingStrategy {
-  repeated Dimension dimensions = 1;
-  ProbabilisticSamplingStrategy probabilisticSampling = 2;
+  // Whether to match any or all conditions.
+  bool anyOrConjunction = 1;
+
+  // List of dimension matchers.
+  repeated DimensionMatcher matchers = 2;
+
+  // Probabilistic sampling strategy.
+  ProbabilisticSamplingStrategy probabilisticSampling = 3;
 }
 
 // PerMultiDimensionalSamplingStrategy is a combination of strategies for different dimensions
@@ -142,8 +155,8 @@ message SamplingStrategyParameters {
 service SamplingManager {
   rpc GetSamplingStrategy(SamplingStrategyParameters) returns (SamplingStrategyResponse) {
     option (google.api.http) = {
-            post: "/api/v2/samplingStrategy"
-            body: "*"
-        };
+      post: "/api/v2/samplingStrategy"
+      body: "*"
+    };
   }
 }
