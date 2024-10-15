@@ -83,44 +83,67 @@ message PerOperationSamplingStrategies {
   double defaultUpperBoundTracesPerSecond = 4;
 }
 
-// DimensionMatcher is a key-value pair that defines a dimension and a matching strategy.
-message DimensionMatcher {
-  enum Type {
-    EQ = 0; // Equals
-    NEQ = 1; // Not equals
-    RE = 2; // Regular expression match
-    NRE = 3; // Not regular expression match
-  }
-  Type type = 1;
-  string key = 2;
-  string value = 3;
-}
-
-// MultiDimensionalSamplingStrategy is a sampling strategy that takes into account arbitrary
-// combinations of dimensions (aka user session). Only probabilistic sampling is currently supported.
-message MultiDimensionalSamplingStrategy {
-  // Whether to match any or all conditions.
-  bool anyOrConjunction = 1;
-
-  // List of dimension matchers.
-  repeated DimensionMatcher matchers = 2;
+// RuleBasedSamplingStrategy defines rule-based sampling strategy.
+message RuleBasedSamplingStrategy {
+  // Logical expression combining conditions
+  LogicalExpression expression = 1;
 
   // Probabilistic sampling strategy.
-  ProbabilisticSamplingStrategy probabilisticSampling = 3;
+  ProbabilisticSamplingStrategy probabilisticSampling = 2;
 }
 
-// PerMultiDimensionalSamplingStrategy is a combination of strategies for different dimensions
-// as well as some service-wide defaults. It is particularly useful for services whose
-// dimensions receive vastly different traffic, so that any single rate of sampling would
-// result in either too much data for some dimensions or almost no data for other dimensions.
-message PerMultiDimensionalSamplingStrategy {
+// LogicalExpression represents a logical expression which could be a single condition
+// or a combination of conditions.
+message LogicalExpression {
+  oneof expression {
+    Condition condition = 1;
+    AndExpression and_expression = 2;
+    OrExpression or_expression = 3;
+    NotExpression not_expression = 4;
+  }
+}
+
+message AndExpression {
+  repeated LogicalExpression expressions = 1;
+}
+
+message OrExpression {
+  repeated LogicalExpression expressions = 1;
+}
+
+message NotExpression {
+  LogicalExpression expression = 1;
+}
+
+// Condition represents the enum for comparison operators in conditions,
+message Condition {
+  string attribute = 1;
+  Operator operator = 2;
+  oneof value {
+    int32 int_value = 3;
+    string string_value = 4;
+    bool bool_value = 5;
+    double double_value = 6;
+  }
+}
+
+enum Operator {
+  EQUALS = 0;
+  GREATER_THAN = 1;
+  LESS_THAN = 2;
+  REGEX_MATCH = 3;
+}
+
+// PerRuleBasedSamplingStrategy defines the default sampling probability and multiple
+// rule-based sampling strategies.
+message PerRuleBasedSamplingStrategy {
   // defaultSamplingProbability is the sampling probability for spans that do not match
   // any of the perOperationStrategies.
   double defaultSamplingProbability = 1;
 
   // perMultiDimensionalStrategies describes sampling strategies for arbitrary combinations
   // of dimensions within a given service.
-  repeated MultiDimensionalSamplingStrategy perMultiDimensionalStrategies = 2;
+  repeated RuleBasedSamplingStrategy ruleBasedSamplingStrategies = 2;
 }
 
 // SamplingStrategyResponse contains an overall sampling strategy for a given service.
@@ -132,7 +155,7 @@ message SamplingStrategyResponse {
   // The recommended approach for consumers is to ignore this field and instead
   // checks the other fields being not null (starting with operationSampling).
   // For producers, it is recommended to set this field correctly for probabilistic
-  // and rate-limiting strategies, but if per-operation or per-multi-dimensional
+  // and rate-limiting strategies, but if per-operation or per-rule
   // strategy is returned, the enum can be set to 0 (probabilistic).
   SamplingStrategyType strategyType = 1;
 
@@ -142,7 +165,7 @@ message SamplingStrategyResponse {
 
   PerOperationSamplingStrategies operationSampling = 4;
 
-  PerMultiDimensionalSamplingStrategy multiDimensionalSampling = 5;
+  PerRuleBasedSamplingStrategy ruleBasedSampling = 5;
 }
 
 // SamplingStrategyParameters defines request parameters for remote sampler.
