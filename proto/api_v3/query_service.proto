@@ -26,6 +26,9 @@ option java_package = "io.jaegertracing.api_v3";
 
 // Request object to get a trace.
 message GetTraceRequest {
+  option (gogoproto.marshaler) = true;
+  option (gogoproto.unmarshaler) = true;
+  option (gogoproto.sizer) = true;
   // Hex encoded 64 or 128 bit trace ID.
   string trace_id = 1;
   // Optional. The start time to search trace ID.
