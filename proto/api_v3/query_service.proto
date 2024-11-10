@@ -17,7 +17,6 @@ syntax="proto3";
 package jaeger.api_v3;
 
 import "opentelemetry/proto/trace/v1/trace.proto";
-import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
@@ -26,19 +25,12 @@ option java_package = "io.jaegertracing.api_v3";
 
 // Request object to get a trace.
 message GetTraceRequest {
-  option (gogoproto.marshaler) = true;
-  option (gogoproto.unmarshaler) = true;
-  option (gogoproto.sizer) = true;
   // Hex encoded 64 or 128 bit trace ID.
   string trace_id = 1;
   // Optional. The start time to search trace ID.
-  google.protobuf.Timestamp start_time = 2 [
-    (gogoproto.stdtime) = true
-  ];
+  google.protobuf.Timestamp start_time = 2;
   // Optional. The end time to search trace ID.
-  google.protobuf.Timestamp end_time = 3 [
-    (gogoproto.stdtime) = true
-  ];
+  google.protobuf.Timestamp end_time = 3;
 }
 
 // Query parameters to find traces. Except for num_traces, all fields should be treated
