@@ -3,7 +3,7 @@ THRIFT_VER?=0.13
 THRIFT_IMG?=jaegertracing/thrift:$(THRIFT_VER)
 THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
-SWAGGER_VER=0.12.0
+SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
