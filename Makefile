@@ -1,9 +1,11 @@
+# Copyright (c) 2023 The Jaeger Authors.
+# SPDX-License-Identifier: Apache-2.0
 
-THRIFT_VER?=0.13
+THRIFT_VER?=0.19
 THRIFT_IMG?=jaegertracing/thrift:$(THRIFT_VER)
 THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
-SWAGGER_VER=0.12.0
+SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
@@ -91,7 +93,11 @@ PROTOC_INTERNAL := $(PROTOC) \
 		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR}
 
-proto:
+.PHONY: proto
+proto: proto-prepare proto-api-v2 proto-api-v3
+
+.PHONY: proto-prepare
+proto-prepare:
 	mkdir -p ${PROTO_GEN_GO_DIR} \
 		${PROTO_GEN_JAVA_DIR} \
 		${PROTO_GEN_PYTHON_DIR} \
@@ -99,14 +105,18 @@ proto:
 		${PROTO_GEN_CPP_DIR} \
 		${PROTO_GEN_CSHARP_DIR}
 
+.PHONY: proto-api-v2
+proto-api-v2:
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/api_v2/model.proto
-	
+
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v2/query.proto \
 		proto/api_v2/collector.proto \
 		proto/api_v2/sampling.proto
 
+.PHONY: proto-api-v3
+proto-api-v3:
 	# API v3
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v3/query_service.proto
