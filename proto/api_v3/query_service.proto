@@ -24,6 +24,14 @@ import "google/protobuf/duration.proto";
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
 
+// Enable gogoprotobuf extensions (https://github.com/gogo/protobuf/blob/master/extensions.md).
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+
 // Request object to get a trace.
 message GetTraceRequest {
   // Hex encoded 64 or 128 bit trace ID.
@@ -55,20 +63,40 @@ message GetTraceRequest {
 message TraceQueryParameters {
   string service_name = 1;
   string operation_name = 2;
+
   // Attributes are matched against Span and Resource attributes.
   // At least one span in a trace must match all specified attributes.
   map<string, string> attributes = 3;
-  // Span min start time in. REST API uses RFC-3339ns format. Required.
-  google.protobuf.Timestamp start_time_min = 4;
-  // Span max start time. REST API uses RFC-3339ns format. Required.
-  google.protobuf.Timestamp start_time_max = 5;
-  // Span min duration. REST API uses Golang's time format e.g. 10s.
-  google.protobuf.Duration duration_min = 6;
-  // Span max duration. REST API uses Golang's time format e.g. 10s.
-  google.protobuf.Duration duration_max = 7;
 
-  // Maximum number of traces in the response.
-  int32 num_traces = 8;
+  // Span min start time in. REST API uses RFC-3339ns format. Required.
+  google.protobuf.Timestamp start_time_min = 4 [
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false
+  ];
+
+  // Span max start time. REST API uses RFC-3339ns format. Required.
+  google.protobuf.Timestamp start_time_max = 5 [
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false
+  ];
+
+  // Span min duration. REST API uses Golang's time format e.g. 10s.
+  google.protobuf.Duration duration_min = 6 [
+    (gogoproto.stdduration) = true,
+    (gogoproto.nullable) = false
+  ];
+
+  // Span max duration. REST API uses Golang's time format e.g. 10s.
+  google.protobuf.Duration duration_max = 7 [
+    (gogoproto.stdduration) = true,
+    (gogoproto.nullable) = false
+  ];
+
+  // Maximum depth of search. Depending on the backend storage
+  // implementtaion this could be like a regular LIMIT clause in SQL,
+  // but not all implementations support such accuracy and for those
+  // the larger depth value simply means more traces returned.
+  int32 search_depth = 8;
 }
 
 // Request object to search traces.
