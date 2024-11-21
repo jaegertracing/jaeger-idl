@@ -17,7 +17,6 @@ syntax="proto3";
 package jaeger.api_v3;
 
 import "opentelemetry/proto/trace/v1/trace.proto";
-import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
@@ -28,16 +27,12 @@ option java_package = "io.jaegertracing.api_v3";
 message GetTraceRequest {
   // Hex encoded 64 or 128 bit trace ID.
   string trace_id = 1;
+
   // Optional. The start time to search trace ID.
-  google.protobuf.Timestamp start_time = 2 [
-    (gogoproto.stdtime) = true,
-    (gogoproto.nullable) = false
-  ];
+  google.protobuf.Timestamp start_time = 2;
+
   // Optional. The end time to search trace ID.
-  google.protobuf.Timestamp end_time = 3 [
-    (gogoproto.stdtime) = true,
-    (gogoproto.nullable) = false
-  ];
+  google.protobuf.Timestamp end_time = 3;
 }
 
 // Query parameters to find traces. Except for num_traces, all fields should be treated
@@ -55,20 +50,28 @@ message GetTraceRequest {
 message TraceQueryParameters {
   string service_name = 1;
   string operation_name = 2;
+
   // Attributes are matched against Span and Resource attributes.
   // At least one span in a trace must match all specified attributes.
   map<string, string> attributes = 3;
+
   // Span min start time in. REST API uses RFC-3339ns format. Required.
   google.protobuf.Timestamp start_time_min = 4;
+
   // Span max start time. REST API uses RFC-3339ns format. Required.
   google.protobuf.Timestamp start_time_max = 5;
+
   // Span min duration. REST API uses Golang's time format e.g. 10s.
   google.protobuf.Duration duration_min = 6;
+
   // Span max duration. REST API uses Golang's time format e.g. 10s.
   google.protobuf.Duration duration_max = 7;
 
-  // Maximum number of traces in the response.
-  int32 num_traces = 8;
+  // Maximum depth of search. Depending on the backend storage
+  // implementtaion this could be like a regular LIMIT clause in SQL,
+  // but not all implementations support such accuracy and for those
+  // the larger depth value simply means more traces returned.
+  int32 search_depth = 8;
 }
 
 // Request object to search traces.
