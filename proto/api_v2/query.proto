@@ -66,11 +66,13 @@ message ArchiveTraceRequest {
   ];
   // Optional. The start time to search trace ID.
   google.protobuf.Timestamp start_time = 2 [
-    (gogoproto.stdtime) = true
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false
   ];
   // Optional. The end time to search trace ID.
   google.protobuf.Timestamp end_time = 3 [
-    (gogoproto.stdtime) = true
+    (gogoproto.stdtime) = true,
+    (gogoproto.nullable) = false
   ];
 }
 
