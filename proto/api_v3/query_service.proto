@@ -33,6 +33,11 @@ message GetTraceRequest {
 
   // Optional. The end time to search trace ID.
   google.protobuf.Timestamp end_time = 3;
+
+  // Optional. If set to true, the response will not include any
+  // enrichments to the trace, such as clock skew adjustment.
+  // Instead, the trace will be returned exactly as stored.
+  bool raw_traces = 4;
 }
 
 // Query parameters to find traces. Except for num_traces, all fields should be treated
@@ -72,6 +77,11 @@ message TraceQueryParameters {
   // but not all implementations support such accuracy and for those
   // the larger depth value simply means more traces returned.
   int32 search_depth = 8;
+
+  // Optional. If set to true, the response will not include any
+  // enrichments to the trace, such as clock skew adjustment.
+  // Instead, the trace will be returned exactly as stored.
+  bool raw_traces = 9;
 }
 
 // Request object to search traces.
