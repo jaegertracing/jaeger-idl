@@ -183,6 +183,13 @@
             "required": false,
             "type": "string",
             "format": "date-time"
+          },
+          {
+            "name": "raw_traces",
+            "description": "If set to true, the response will not perform any enrichments to the trace, such as clock skew adjustment. Instead, the trace will be returned exactly as stored.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -354,6 +361,10 @@
           "type": "integer",
           "format": "int32",
           "description": "Maximum depth of search. Depending on the backend storage\nimplementtaion this could be like a regular LIMIT clause in SQL,\nbut not all implementations support such accuracy and for those\nthe larger depth value simply means more traces returned."
+        },
+        "raw_traces": {
+          "type": "boolean",
+          "description": "If set to true, the response will not perform any enrichments to the trace, such as clock skew adjustment. Instead, the trace will be returned exactly as stored."
         }
       },
       "description": "Query parameters to find traces. Except for num_traces, all fields should be treated\nas forming a conjunction, e.g., \"service_name='X' AND operation_name='Y' AND ...\".\nAll fields are matched against individual spans, not at the trace level.\nThe returned results contain traces where at least one span matches the conditions.\nWhen num_traces results in fewer traces returned, there is no required ordering.\n\nNote: num_traces should restrict the number of traces returned, but not all backends\ninterpret it this way. For instance, in Cassandra this limits the number of _spans_\nthat match the conditions, and the resulting number of traces can be less.\n\nNote: some storage implementations do not guarantee the correct implementation of all parameters."
