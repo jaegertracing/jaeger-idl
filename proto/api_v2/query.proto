@@ -116,6 +116,9 @@ message TraceQueryParameters {
     (gogoproto.nullable) = false
   ];
   int32 search_depth = 8;
+  // Optional. If set to true, the response will not perform any 
+  // enrichments to the trace, such as clock skew adjustment.
+  // Instead, the trace will be returned exactly as stored.
   bool raw_traces = 9;
 }
 
