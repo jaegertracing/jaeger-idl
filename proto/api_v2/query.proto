@@ -50,6 +50,9 @@ message GetTraceRequest {
     (gogoproto.stdtime) = true,
     (gogoproto.nullable) = false
   ];
+  // Optional. If set to true, the response will not perform any 
+  // adjustments to the trace. 
+  bool raw_traces = 4;
 }
 
 message SpansResponseChunk {
@@ -112,6 +115,7 @@ message TraceQueryParameters {
     (gogoproto.nullable) = false
   ];
   int32 search_depth = 8;
+  bool raw_traces = 9;
 }
 
 message FindTracesRequest {
