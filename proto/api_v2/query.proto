@@ -51,7 +51,8 @@ message GetTraceRequest {
     (gogoproto.nullable) = false
   ];
   // Optional. If set to true, the response will not perform any 
-  // adjustments to the trace. 
+  // enrichments to the trace, such as clock skew adjustment.
+  // Instead, the trace will be returned exactly as stored.
   bool raw_traces = 4;
 }
 
