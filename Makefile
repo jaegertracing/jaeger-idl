@@ -72,21 +72,36 @@ PROTO_GEN_JS_DIR ?= proto-gen-js
 PROTO_GEN_CPP_DIR ?= proto-gen-cpp
 PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
 
-PROTOC_WITHOUT_GRPC := $(PROTOC) \
+# The jaegertracing/protobuf container image does not
+# include Java/C#/C++ plugins for Apple Silicon (arm64).
+
+PROTOC_WITHOUT_GRPC_common := $(PROTOC) \
 		$(PROTO_INCLUDES) \
 		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
-		--java_out=${PROTO_GEN_JAVA_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR} \
-		--js_out=${PROTO_GEN_JS_DIR} \
+		--js_out=${PROTO_GEN_JS_DIR}
+
+ifeq ($(shell uname -m),arm64)
+PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common)
+else
+PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common) \
+		--java_out=${PROTO_GEN_JAVA_DIR} \
 		--cpp_out=${PROTO_GEN_CPP_DIR} \
 		--csharp_out=base_namespace:${PROTO_GEN_CSHARP_DIR}
+endif
 
-PROTOC_WITH_GRPC := $(PROTOC_WITHOUT_GRPC) \
-		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
+PROTOC_WITH_GRPC_common := $(PROTOC_WITHOUT_GRPC) \
 		--grpc-python_out=${PROTO_GEN_PYTHON_DIR} \
-		--grpc-js_out=${PROTO_GEN_JS_DIR} \
+		--grpc-js_out=${PROTO_GEN_JS_DIR}
+
+ifeq ($(shell uname -m),arm64)
+PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common)
+else
+PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common) \
+		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
 		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
 		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR}
+endif
 
 PROTOC_INTERNAL := $(PROTOC) \
 		$(PROTO_INCLUDES) \
