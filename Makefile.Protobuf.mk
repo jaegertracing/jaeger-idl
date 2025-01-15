@@ -23,7 +23,6 @@ PATCHED_OTEL_PROTO_DIR = proto-gen/.patched-otel-proto
 
 PROTO_INCLUDES := \
 	-Iproto/api_v2 \
-	-Imodel/proto/metrics \
 	-I/usr/include/github.com/gogo/protobuf
 
 # Remapping of std types to gogo types (must not contain spaces)
@@ -35,8 +34,6 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api \
 		Mmodel.proto=github.com/jaegertracing/jaeger/model \
 	| $(SED) 's/  */,/g')
-
-OPENMETRICS_PROTO_FILES=$(wildcard model/proto/metrics/*.proto)
 
 # The source directory for OTLP Protobufs from the sub-sub-module.
 OTEL_PROTO_SRC_DIR=opentelemetry-proto/opentelemetry/proto
@@ -78,18 +75,7 @@ define proto_compile
 endef
 
 .PHONY: new-proto
-new-proto: new-proto-model \
-	new-proto-api-v2 \
-	new-proto-storage-v1 \
-	new-proto-zipkin \
-	new-proto-openmetrics \
-	new-proto-api-v3
-
-.PHONY: new-proto-model
-new-proto-model:
-	mkdir -p model
-	$(call proto_compile, model, proto/api_v2/model.proto)
-	$(PROTOC) -Imodel/proto --go_out=$(PWD)/model/ model/proto/model_test.proto
+new-proto: new-proto-api-v2
 
 .PHONY: new-proto-api-v2
 new-proto-api-v2:
@@ -97,50 +83,3 @@ new-proto-api-v2:
 	$(call proto_compile, proto-gen/api_v2, proto/api_v2/query.proto)
 	$(call proto_compile, proto-gen/api_v2, proto/api_v2/collector.proto)
 	$(call proto_compile, proto-gen/api_v2, proto/api_v2/sampling.proto)
-
-.PHONY: new-proto-openmetrics
-new-proto-openmetrics:
-	mkdir -p proto-gen/api_v2/metrics
-	$(call print_caption, Processing OpenMetrics Protos)
-	$(foreach file,$(OPENMETRICS_PROTO_FILES),$(call proto_compile, proto-gen/api_v2/metrics, $(file)))
-	@# TODO why is this file included in model/proto/metrics/ in the first place?
-	rm proto-gen/api_v2/metrics/otelmetric.pb.go
-
-.PHONY: new-proto-storage-v1
-new-proto-storage-v1:
-	mkdir -p proto-gen/storage_v1
-	$(call proto_compile, proto-gen/storage_v1, plugin/storage/grpc/proto/storage.proto, -Iplugin/storage/grpc/proto)
-	$(PROTOC) \
-		-Iplugin/storage/grpc/proto \
-		--go_out=$(PWD)/plugin/storage/grpc/proto/ \
-		plugin/storage/grpc/proto/storage_test.proto
-
-.PHONY: new-proto-zipkin
-new-proto-zipkin:
-	mkdir -p proto-gen/zipkin
-	$(call proto_compile, proto-gen/zipkin, proto/zipkin.proto, -Iproto)
-
-# The API v3 service uses official OTEL type opentelemetry.proto.trace.v1.TracesData,
-# which at runtime is mapped to a custom type in cmd/query/app/internal/api_v3/traces.go
-# Unfortunately, gogoproto.customtype annotation cannot be applied to a method's return type,
-# only to fields in a struct, so we use regex search/replace to swap it.
-# Note that the .pb.go types must be generated into the same internal package $(API_V3_PATH)
-# where a manually defined traces.go file is located.
-API_V3_PATH=internal/proto/api_v3
-API_V3_PATCHED_DIR=proto-gen/.patched/api_v3
-API_V3_PATCHED=$(API_V3_PATCHED_DIR)/query_service.proto
-.PHONY: patch-api-v3
-patch-api-v3:
-	mkdir -p $(API_V3_PATCHED_DIR)
-	cat proto/api_v3/query_service.proto | \
-		$(SED) -f ./proto-gen/patch-api-v3.sed \
-		> $(API_V3_PATCHED)
-
-.PHONY: new-proto-api-v3
-new-proto-api-v3: patch-api-v3
-	mkdir -p $(API_V3_PATH)
-	$(call proto_compile, $(API_V3_PATH), $(API_V3_PATCHED), -I$(API_V3_PATCHED_DIR) -Iopentelemetry-proto)
-	@echo "🏗️  replace TracesData with internal custom type"
-	$(SED) -i 's/v1.TracesData/TracesData/g' $(API_V3_PATH)/query_service.pb.go
-	@echo "🏗️  remove OTEL import because we're not using any other OTLP types"
-	$(SED) -i 's+^.*v1 "go.opentelemetry.io/proto/otlp/trace/v1".*$$++' $(API_V3_PATH)/query_service.pb.go
