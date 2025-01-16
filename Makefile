@@ -108,6 +108,21 @@ PROTOC_INTERNAL := $(PROTOC) \
 		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR}
 
+GO=go
+GOOS ?= $(shell $(GO) env GOOS)
+GOARCH ?= $(shell $(GO) env GOARCH)
+
+# sed on Mac does not support the same syntax for in-place updates as sed on Linux
+# When running on MacOS it's best to install gsed and run Makefile with SED=gsed
+ifeq ($(GOOS),darwin)
+	SED=gsed
+else
+	SED=sed
+endif
+
+# import other Makefiles after the variables are defined
+include Makefile.Protobuf.mk
+
 .PHONY: proto
 proto: proto-prepare proto-api-v2 proto-api-v3
 
