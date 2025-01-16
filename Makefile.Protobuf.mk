@@ -14,26 +14,11 @@
 # instead of the go_package's declared by the imported protof files.
 #
 
-DOCKER=docker
 DOCKER_PROTOBUF_VERSION=0.5.0
 DOCKER_PROTOBUF=jaegertracing/protobuf:$(DOCKER_PROTOBUF_VERSION)
-PROTOC := ${DOCKER} run --rm -u ${shell id -u} -v${PWD}:${PWD} -w${PWD} ${DOCKER_PROTOBUF} --proto_path=${PWD}
+# PROTOC := ${DOCKER} run --rm -u ${shell id -u} -v${PWD}:${PWD} -w${PWD} ${DOCKER_PROTOBUF} --proto_path=${PWD}
 
 PATCHED_OTEL_PROTO_DIR = proto-gen/.patched-otel-proto
-
-PROTO_INCLUDES := \
-	-Iproto/api_v2 \
-	-I/usr/include/github.com/gogo/protobuf
-
-# Remapping of std types to gogo types (must not contain spaces)
-PROTO_GOGO_MAPPINGS := $(shell echo \
-		Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types \
-		Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types \
-		Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types \
-		Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types \
-		Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api \
-		Mmodel.proto=github.com/jaegertracing/jaeger/model \
-	| $(SED) 's/  */,/g')
 
 # The source directory for OTLP Protobufs from the sub-sub-module.
 OTEL_PROTO_SRC_DIR=opentelemetry-proto/opentelemetry/proto
