@@ -71,7 +71,8 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mmodel.proto=github.com/jaegertracing/jaeger-idl/model/v1 \
 	| sed 's/ //g')
 
-PROTO_GEN_GO_DIR ?= proto-gen-go
+PROTO_GEN_GO_DIR ?= proto-gen
+PROTO_GEN_GO_DIR_OLD ?= proto-gen-go #temporary arrangement, will be removed once api_v3 is migrated to idl
 PROTO_GEN_PYTHON_DIR ?= proto-gen-python
 PROTO_GEN_JAVA_DIR ?= proto-gen-java
 PROTO_GEN_JS_DIR ?= proto-gen-js
@@ -83,9 +84,9 @@ PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
 
 PROTOC_WITHOUT_GRPC_common := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
 		--python_out=${PROTO_GEN_PYTHON_DIR} \
-		--js_out=${PROTO_GEN_JS_DIR}
+		--js_out=${PROTO_GEN_JS_DIR} \
+		# --gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
 
 ifeq ($(shell uname -m),arm64)
 PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common)
@@ -126,8 +127,22 @@ else
 	SED=sed
 endif
 
-# import other Makefiles after the variables are defined
-include Makefile.Protobuf.mk
+# Macro to compile Protobuf $(2) into directory $(1). $(3) can provide additional flags.
+# DO NOT DELETE EMPTY LINE at the end of the macro, it's required to separate commands.
+# Arguments:
+#  $(1) - output directory
+#  $(2) - path to the .proto file
+#  $(3) - additional flags to pass to protoc, e.g. extra -Ixxx
+#  $(4) - additional options to pass to gogo plugin
+define proto_compile
+  $(call print_caption, "Processing $(2) --> $(1)")
+
+  $(PROTOC) \
+    $(PROTO_INCLUDES) \
+    --gogo_out=plugins=grpc,$(strip $(4)),$(PROTO_GOGO_MAPPINGS):$(PWD)/$(strip $(1)) \
+    $(3) $(2)
+
+endef
 
 .PHONY: test-ci
 test-ci:
@@ -155,6 +170,12 @@ proto-api-v2:
 		proto/api_v2/collector.proto \
 		proto/api_v2/sampling.proto
 
+	mkdir -p ${PROTO_GEN_GO_DIR}/${API_V2_PATH}
+	$(call proto_compile, model/v1, proto/api_v2/model.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/query.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/collector.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/sampling.proto)
+
 .PHONY: proto-api-v3
 proto-api-v3:
 	# API v3
@@ -163,7 +184,7 @@ proto-api-v3:
 	# GRPC gateway
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
- 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR} \
+ 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR_OLD} \
 		proto/api_v3/query_service.proto
 	# Swagger
 	$(PROTOC) \

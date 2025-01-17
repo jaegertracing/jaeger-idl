@@ -31,4 +31,4 @@ jobs:
           submodules: recursive
 
       - name: Verify Protobuf types are up to date
-        run: make new-proto && git diff --name-status --exit-code
+        run: make proto && git diff --name-status --exit-code
