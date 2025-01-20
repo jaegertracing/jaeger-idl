@@ -44,13 +44,15 @@ func TestProcessEqual(t *testing.T) {
 	assert.False(t, p1.Equal(p5))
 }
 
-func Hash(w io.Writer) {
-	w.Write([]byte("hello"))
+func Hash(w io.Writer) error {
+	_, err := w.Write([]byte("hello"))
+	return err
 }
 
-func TestX(*testing.T) {
+func TestX(t *testing.T) {
 	h := fnv.New64a()
-	Hash(h)
+	err := Hash(h)
+	require.NoError(t, err)
 }
 
 func TestProcessHash(t *testing.T) {
