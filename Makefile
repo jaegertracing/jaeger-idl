@@ -39,6 +39,7 @@ swagger-validate:
 .PHONY: clean
 clean:
 	rm -rf *gen-* || true
+	rm -rf .*gen-* || true
 
 .PHONY: thrift
 thrift:	thrift-image clean $(THRIFT_FILES)
@@ -72,12 +73,13 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 	| sed 's/ //g')
 
 PROTO_GEN_GO_DIR ?= proto-gen
-PROTO_GEN_GO_DIR_OLD ?= proto-gen-go #temporary arrangement, will be removed once api_v3 is migrated to idl
-PROTO_GEN_PYTHON_DIR ?= proto-gen-python
-PROTO_GEN_JAVA_DIR ?= proto-gen-java
-PROTO_GEN_JS_DIR ?= proto-gen-js
-PROTO_GEN_CPP_DIR ?= proto-gen-cpp
-PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
+POLYGLOT_DIR_ROOT ?= .proto-gen-polyglot
+PROTO_GEN_GO_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-go
+PROTO_GEN_PYTHON_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-python
+PROTO_GEN_JAVA_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-java
+PROTO_GEN_JS_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-js
+PROTO_GEN_CPP_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-cpp
+PROTO_GEN_CSHARP_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-csharp
 
 API_V2_PATH ?= api_v2
 
@@ -86,35 +88,36 @@ API_V2_PATH ?= api_v2
 
 PROTOC_WITHOUT_GRPC_common := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--python_out=${PROTO_GEN_PYTHON_DIR} \
-		--js_out=${PROTO_GEN_JS_DIR} \
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR_POLYGLOT} \
+		--python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
+		--js_out=${PROTO_GEN_JS_DIR_POLYGLOT}
 
 ifeq ($(shell uname -m),arm64)
 PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common)
 else
 PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common) \
-		--java_out=${PROTO_GEN_JAVA_DIR} \
-		--cpp_out=${PROTO_GEN_CPP_DIR} \
-		--csharp_out=base_namespace:${PROTO_GEN_CSHARP_DIR}
+		--java_out=${PROTO_GEN_JAVA_DIR_POLYGLOT} \
+		--cpp_out=${PROTO_GEN_CPP_DIR_POLYGLOT} \
+		--csharp_out=base_namespace:${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 endif
 
 PROTOC_WITH_GRPC_common := $(PROTOC_WITHOUT_GRPC) \
-		--grpc-python_out=${PROTO_GEN_PYTHON_DIR} \
-		--grpc-js_out=${PROTO_GEN_JS_DIR}
+		--grpc-python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
+		--grpc-js_out=${PROTO_GEN_JS_DIR_POLYGLOT}
 
 ifeq ($(shell uname -m),arm64)
 PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common)
 else
 PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common) \
-		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
-		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
-		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR}
+		--grpc-java_out=${PROTO_GEN_JAVA_DIR_POLYGLOT} \
+		--grpc-cpp_out=${PROTO_GEN_CPP_DIR_POLYGLOT} \
+		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 endif
 
 PROTOC_INTERNAL := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
-		--python_out=${PROTO_GEN_PYTHON_DIR}
+		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR_POLYGLOT} \
+		--python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT}
 
 GO=go
 GOOS ?= $(shell $(GO) env GOOS)
@@ -150,20 +153,34 @@ test-ci:
 	go test -v -coverprofile=coverage.txt ./...
 
 .PHONY: proto
-proto: proto-prepare proto-api-v2 proto-api-v3
+proto: proto-prepare proto-api-v2
+
+.PHONY: proto-all
+proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all
+
+.PHONY: proto-prepare-all
+proto-prepare-all:
+	mkdir -p ${PROTO_GEN_GO_DIR_POLYGLOT} \
+		${PROTO_GEN_JAVA_DIR_POLYGLOT} \
+		${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
+		${PROTO_GEN_JS_DIR_POLYGLOT} \
+		${PROTO_GEN_CPP_DIR_POLYGLOT} \
+		${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 
 .PHONY: proto-prepare
 proto-prepare:
-	mkdir -p ${PROTO_GEN_GO_DIR} \
-		${PROTO_GEN_GO_DIR_OLD} \
-		${PROTO_GEN_JAVA_DIR} \
-		${PROTO_GEN_PYTHON_DIR} \
-		${PROTO_GEN_JS_DIR} \
-		${PROTO_GEN_CPP_DIR} \
-		${PROTO_GEN_CSHARP_DIR}
+	mkdir -p ${PROTO_GEN_GO_DIR}
 
 .PHONY: proto-api-v2
 proto-api-v2:
+	mkdir -p ${PROTO_GEN_GO_DIR}/${API_V2_PATH}
+	$(call proto_compile, model/v1, proto/api_v2/model.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/query.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/collector.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/sampling.proto)
+
+.PHONY: proto-api-v2-all
+proto-api-v2-all:
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/api_v2/model.proto
 
@@ -172,21 +189,16 @@ proto-api-v2:
 		proto/api_v2/collector.proto \
 		proto/api_v2/sampling.proto
 
-	mkdir -p ${PROTO_GEN_GO_DIR}/${API_V2_PATH}
-	$(call proto_compile, model/v1, proto/api_v2/model.proto)
-	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/query.proto)
-	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/collector.proto)
-	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/sampling.proto)
 
-.PHONY: proto-api-v3
-proto-api-v3:
+.PHONY: proto-api-v3-all
+proto-api-v3-all:
 	# API v3
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v3/query_service.proto
 	# GRPC gateway
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
- 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR_OLD} \
+ 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR_POLYGLOT} \
 		proto/api_v3/query_service.proto
 	# Swagger
 	$(PROTOC) \

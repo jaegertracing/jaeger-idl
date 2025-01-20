@@ -1,3 +1,4 @@
 .idea/
 gen-*/
 proto-gen-*/
+.proto-gen-polyglot/
