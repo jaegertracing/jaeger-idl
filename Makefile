@@ -28,25 +28,31 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
-test-ci: thrift swagger-validate protocompile proto proto-zipkin
+.PHONY: test-code-gen
+test-code-gen: thrift swagger-validate protocompile proto proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 
+.PHONY: swagger-validate
 swagger-validate:
 	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
 
+.PHONY: clean
 clean:
 	rm -rf *gen-* || true
 
+.PHONY: thrift
 thrift:	thrift-image clean $(THRIFT_FILES)
 
 $(THRIFT_FILES):
 	@echo Compiling $@
 	$(THRIFT_CMD) /data/thrift/$@
 
+.PHONY: thrift-image
 thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
+.PHONY: protocompile
 protocompile:
 	$(PROTOTOOL) prototool compile proto --dry-run
 
@@ -62,7 +68,7 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api, \
-		Mmodel.proto=github.com/jaegertracing/jaeger/model \
+		Mmodel.proto=github.com/jaegertracing/jaeger-idl/model/v1 \
 	| sed 's/ //g')
 
 PROTO_GEN_GO_DIR ?= proto-gen-go
@@ -123,6 +129,10 @@ endif
 # import other Makefiles after the variables are defined
 include Makefile.Protobuf.mk
 
+.PHONY: test-ci
+test-ci:
+	go test -v ./...
+
 .PHONY: proto
 proto: proto-prepare proto-api-v2 proto-api-v3
 
@@ -168,12 +178,12 @@ proto-api-v3:
 		protoc-gen-swagger/options/openapiv2.proto \
 		gogoproto/gogo.proto
 
+.PHONY: proto-zipkin
 proto-zipkin:
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/zipkin.proto
 
+.PHONY: init-submodule
 init-submodule:
 	git submodule init
-	git submodule update
-
-.PHONY: test-ci clean thrift thrift-image $(THRIFT_FILES) swagger-validate protocompile proto proto-zipkin init-submodule
+	git submodule update --recursive
