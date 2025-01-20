@@ -214,7 +214,7 @@ proto-api-v3-all:
 		gogoproto/gogo.proto
 
 .PHONY: proto-zipkin
-proto-zipkin:
+proto-zipkin: proto-prepare-all
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/zipkin.proto
 
