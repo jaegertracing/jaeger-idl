@@ -131,7 +131,7 @@ include Makefile.Protobuf.mk
 
 .PHONY: test-ci
 test-ci:
-	go test -v ./...
+	go test -v -coverprofile=coverage.txt ./...
 
 .PHONY: proto
 proto: proto-prepare proto-api-v2 proto-api-v3
