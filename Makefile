@@ -79,6 +79,8 @@ PROTO_GEN_JS_DIR ?= proto-gen-js
 PROTO_GEN_CPP_DIR ?= proto-gen-cpp
 PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
 
+API_V2_PATH ?= api_v2
+
 # The jaegertracing/protobuf container image does not
 # include Java/C#/C++ plugins for Apple Silicon (arm64).
 
@@ -86,7 +88,6 @@ PROTOC_WITHOUT_GRPC_common := $(PROTOC) \
 		$(PROTO_INCLUDES) \
 		--python_out=${PROTO_GEN_PYTHON_DIR} \
 		--js_out=${PROTO_GEN_JS_DIR} \
-		# --gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
 
 ifeq ($(shell uname -m),arm64)
 PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common)
@@ -154,6 +155,7 @@ proto: proto-prepare proto-api-v2 proto-api-v3
 .PHONY: proto-prepare
 proto-prepare:
 	mkdir -p ${PROTO_GEN_GO_DIR} \
+		${PROTO_GEN_GO_DIR_OLD} \
 		${PROTO_GEN_JAVA_DIR} \
 		${PROTO_GEN_PYTHON_DIR} \
 		${PROTO_GEN_JS_DIR} \
