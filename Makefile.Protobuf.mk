@@ -65,6 +65,7 @@ new-proto: new-proto-api-v2
 .PHONY: new-proto-api-v2
 new-proto-api-v2:
 	mkdir -p proto-gen/api_v2
+	$(call proto_compile, model/v1, proto/api_v2/model.proto)
 	$(call proto_compile, proto-gen/api_v2, proto/api_v2/query.proto)
 	$(call proto_compile, proto-gen/api_v2, proto/api_v2/collector.proto)
 	$(call proto_compile, proto-gen/api_v2, proto/api_v2/sampling.proto)

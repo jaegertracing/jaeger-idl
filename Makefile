@@ -62,7 +62,7 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api, \
-		Mmodel.proto=github.com/jaegertracing/jaeger/model \
+		Mmodel.proto=github.com/jaegertracing/jaeger-idl/model/v1 \
 	| sed 's/ //g')
 
 PROTO_GEN_GO_DIR ?= proto-gen-go
