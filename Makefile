@@ -28,6 +28,33 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 
+# All .go files that are not auto-generated and should be auto-formatted and linted.
+ALL_SRC = $(shell find . -name '*.go' \
+				   -not -name '_*' \
+				   -not -name '.*' \
+				   -not -name 'mocks*' \
+				   -not -name '*.pb.go' \
+				   -not -path '*/gen-*/*' \
+				   -not -path '*/thrift-0.9.2/*' \
+				   -type f | \
+				sort)
+
+# All .sh or .py or Makefile or .mk files that should be auto-formatted and linted.
+SCRIPTS_SRC = $(shell find . \( -name '*.sh' -o -name '*.py' -o -name '*.mk' -o -name 'Makefile*' -o -name 'Dockerfile*' \) \
+						-not -path './.git/*' \
+						-not -path '*/gen-*/*' \
+						-not -path '*/scripts/*' \
+						-not -name '_*' \
+						-type f | \
+					sort)
+
+FMT_LOG=.fmt.log
+IMPORT_LOG=.import.log
+
+.PHONY: test
+test: 
+	echo $(SCRIPTS_SRC)
+
 .PHONY: test-code-gen
 test-code-gen: thrift swagger-validate protocompile proto proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
@@ -128,6 +155,38 @@ endif
 
 # import other Makefiles after the variables are defined
 include Makefile.Protobuf.mk
+
+.PHONY: lint
+lint: lint-imports lint-nocommit lint-license
+
+.PHONY: lint-license
+lint-license:
+	@echo Verifying that all files have license headers
+	@./scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC) > $(FMT_LOG)
+
+.PHONY: lint-nocommit 
+lint-nocommit:
+	@if git diff origin/main | grep '@no''commit' ; then \
+		echo "❌ Cannot merge PR that contains @no""commit string" ; \
+		false ; \
+	fi
+
+.PHONY: lint-imports
+lint-imports:
+	@echo Verifying that all files have correctly ordered imports
+	@./scripts/lint/import-order-cleanup.py -o stdout -t $(ALL_SRC) > $(IMPORT_LOG)
+	@[ ! -s "$(IMPORT_LOG)" ] || (echo "Import ordering failures, run 'make fmt'" | cat - $(IMPORT_LOG) && false)
+
+.PHONY: fmt
+fmt: $(GOFUMPT)
+	@echo Running import-order-cleanup on ALL_SRC ...
+	@./scripts/lint/import-order-cleanup.py -o inplace -t $(ALL_SRC)
+	@echo Running gofmt on ALL_SRC ...
+	@$(GOFMT) -e -s -l -w $(ALL_SRC)
+	@echo Running gofumpt on ALL_SRC ...
+	@$(GOFUMPT) -e -l -w $(ALL_SRC)
+	@echo Running updateLicense.py on ALL_SRC ...
+	@./scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC)
 
 .PHONY: test-ci
 test-ci:
