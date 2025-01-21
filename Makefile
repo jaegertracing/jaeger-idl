@@ -39,6 +39,7 @@ swagger-validate:
 .PHONY: clean
 clean:
 	rm -rf *gen-* || true
+	rm -rf .*gen-* || true
 
 .PHONY: thrift
 thrift:	thrift-image clean $(THRIFT_FILES)
@@ -71,48 +72,52 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mmodel.proto=github.com/jaegertracing/jaeger-idl/model/v1 \
 	| sed 's/ //g')
 
-PROTO_GEN_GO_DIR ?= proto-gen-go
-PROTO_GEN_PYTHON_DIR ?= proto-gen-python
-PROTO_GEN_JAVA_DIR ?= proto-gen-java
-PROTO_GEN_JS_DIR ?= proto-gen-js
-PROTO_GEN_CPP_DIR ?= proto-gen-cpp
-PROTO_GEN_CSHARP_DIR ?= proto-gen-csharp
+PROTO_GEN_GO_DIR ?= proto-gen
+POLYGLOT_DIR_ROOT ?= .proto-gen-polyglot
+PROTO_GEN_GO_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-go
+PROTO_GEN_PYTHON_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-python
+PROTO_GEN_JAVA_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-java
+PROTO_GEN_JS_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-js
+PROTO_GEN_CPP_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-cpp
+PROTO_GEN_CSHARP_DIR_POLYGLOT ?= $(POLYGLOT_DIR_ROOT)/proto-gen-csharp
+
+API_V2_PATH ?= api_v2
 
 # The jaegertracing/protobuf container image does not
 # include Java/C#/C++ plugins for Apple Silicon (arm64).
 
 PROTOC_WITHOUT_GRPC_common := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR} \
-		--python_out=${PROTO_GEN_PYTHON_DIR} \
-		--js_out=${PROTO_GEN_JS_DIR}
+		--gogo_out=plugins=grpc,$(PROTO_GOGO_MAPPINGS):$(PWD)/${PROTO_GEN_GO_DIR_POLYGLOT} \
+		--python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
+		--js_out=${PROTO_GEN_JS_DIR_POLYGLOT}
 
 ifeq ($(shell uname -m),arm64)
 PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common)
 else
 PROTOC_WITHOUT_GRPC := $(PROTOC_WITHOUT_GRPC_common) \
-		--java_out=${PROTO_GEN_JAVA_DIR} \
-		--cpp_out=${PROTO_GEN_CPP_DIR} \
-		--csharp_out=base_namespace:${PROTO_GEN_CSHARP_DIR}
+		--java_out=${PROTO_GEN_JAVA_DIR_POLYGLOT} \
+		--cpp_out=${PROTO_GEN_CPP_DIR_POLYGLOT} \
+		--csharp_out=base_namespace:${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 endif
 
 PROTOC_WITH_GRPC_common := $(PROTOC_WITHOUT_GRPC) \
-		--grpc-python_out=${PROTO_GEN_PYTHON_DIR} \
-		--grpc-js_out=${PROTO_GEN_JS_DIR}
+		--grpc-python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
+		--grpc-js_out=${PROTO_GEN_JS_DIR_POLYGLOT}
 
 ifeq ($(shell uname -m),arm64)
 PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common)
 else
 PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common) \
-		--grpc-java_out=${PROTO_GEN_JAVA_DIR} \
-		--grpc-cpp_out=${PROTO_GEN_CPP_DIR} \
-		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR}
+		--grpc-java_out=${PROTO_GEN_JAVA_DIR_POLYGLOT} \
+		--grpc-cpp_out=${PROTO_GEN_CPP_DIR_POLYGLOT} \
+		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 endif
 
 PROTOC_INTERNAL := $(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR} \
-		--python_out=${PROTO_GEN_PYTHON_DIR}
+		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR_POLYGLOT} \
+		--python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT}
 
 GO=go
 GOOS ?= $(shell $(GO) env GOOS)
@@ -126,27 +131,64 @@ else
 	SED=sed
 endif
 
-# import other Makefiles after the variables are defined
-include Makefile.Protobuf.mk
+# DO NOT DELETE EMPTY LINE at the end of the macro, it's required to separate commands.
+define print_caption
+  @echo "🏗️ "
+  @echo "🏗️ " $1
+  @echo "🏗️ "
+
+endef
+
+# Macro to compile Protobuf $(2) into directory $(1). $(3) can provide additional flags.
+# DO NOT DELETE EMPTY LINE at the end of the macro, it's required to separate commands.
+# Arguments:
+#  $(1) - output directory
+#  $(2) - path to the .proto file
+#  $(3) - additional flags to pass to protoc, e.g. extra -Ixxx
+#  $(4) - additional options to pass to gogo plugin
+define proto_compile
+  $(call print_caption, "Processing $(2) --> $(1)")
+
+  $(PROTOC) \
+    $(PROTO_INCLUDES) \
+    --gogo_out=plugins=grpc,$(strip $(4)),$(PROTO_GOGO_MAPPINGS):$(PWD)/$(strip $(1)) \
+    $(3) $(2)
+
+endef
 
 .PHONY: test-ci
 test-ci:
 	go test -v -coverprofile=coverage.txt ./...
 
-.PHONY: proto
-proto: proto-prepare proto-api-v2 proto-api-v3
+# proto target is used to generate source code that is released as part of this library
+proto: proto-prepare proto-api-v2
+
+# proto-all target is used to generate code for all languages as a validation step.
+proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all
+
+.PHONY: proto-prepare-all
+proto-prepare-all:
+	mkdir -p ${PROTO_GEN_GO_DIR_POLYGLOT} \
+		${PROTO_GEN_JAVA_DIR_POLYGLOT} \
+		${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
+		${PROTO_GEN_JS_DIR_POLYGLOT} \
+		${PROTO_GEN_CPP_DIR_POLYGLOT} \
+		${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 
 .PHONY: proto-prepare
 proto-prepare:
-	mkdir -p ${PROTO_GEN_GO_DIR} \
-		${PROTO_GEN_JAVA_DIR} \
-		${PROTO_GEN_PYTHON_DIR} \
-		${PROTO_GEN_JS_DIR} \
-		${PROTO_GEN_CPP_DIR} \
-		${PROTO_GEN_CSHARP_DIR}
+	mkdir -p ${PROTO_GEN_GO_DIR}
 
 .PHONY: proto-api-v2
 proto-api-v2:
+	mkdir -p ${PROTO_GEN_GO_DIR}/${API_V2_PATH}
+	$(call proto_compile, model/v1, proto/api_v2/model.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/query.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/collector.proto)
+	$(call proto_compile, ${PROTO_GEN_GO_DIR}/${API_V2_PATH}, proto/api_v2/sampling.proto)
+
+.PHONY: proto-api-v2-all
+proto-api-v2-all:
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/api_v2/model.proto
 
@@ -155,15 +197,16 @@ proto-api-v2:
 		proto/api_v2/collector.proto \
 		proto/api_v2/sampling.proto
 
-.PHONY: proto-api-v3
-proto-api-v3:
+
+.PHONY: proto-api-v3-all
+proto-api-v3-all:
 	# API v3
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v3/query_service.proto
 	# GRPC gateway
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
- 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR} \
+ 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR_POLYGLOT} \
 		proto/api_v3/query_service.proto
 	# Swagger
 	$(PROTOC) \
@@ -179,7 +222,7 @@ proto-api-v3:
 		gogoproto/gogo.proto
 
 .PHONY: proto-zipkin
-proto-zipkin:
+proto-zipkin: proto-prepare-all
 	$(PROTOC_WITHOUT_GRPC) \
 		proto/zipkin.proto
 
