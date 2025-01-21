@@ -124,10 +124,7 @@ func marshalBytes(dst []byte, src []byte) (n int, err error) {
 // Example: {high:2, low:1} => "AAAAAAAAAAIAAAAAAAAAAQ==".
 func (t TraceID) MarshalJSON() ([]byte, error) {
 	var b [16]byte
-	_, err := t.MarshalTo(b[:]) // can only error on incorrect buffer size
-	if err != nil {
-		return nil, err
-	}
+	t.MarshalTo(b[:]) // can only error on incorrect buffer size
 	s := make([]byte, 24+2)
 	base64.StdEncoding.Encode(s[1:25], b[:])
 	s[0], s[25] = '"', '"'
@@ -213,10 +210,7 @@ func (s *SpanID) Unmarshal(data []byte) error {
 // Example: {1} => "AAAAAAAAAAE=".
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	var b [8]byte
-	_, err := s.MarshalTo(b[:]) // can only error on incorrect buffer size
-	if err != nil {
-		return nil, err
-	}
+	s.MarshalTo(b[:]) // can only error on incorrect buffer size
 	v := make([]byte, 12+2)
 	base64.StdEncoding.Encode(v[1:13], b[:])
 	v[0], v[13] = '"', '"'

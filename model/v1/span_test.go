@@ -264,8 +264,7 @@ func BenchmarkSpanHash(b *testing.B) {
 	buf := &bytes.Buffer{}
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		err := span.Hash(buf)
-		require.NoError(b, err)
+		span.Hash(buf)
 	}
 }
 
@@ -306,8 +305,7 @@ func BenchmarkBatchSerialization(b *testing.B) {
 
 	b.Run("marshal", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, err := proto.Marshal(batch)
-			require.NoError(b, err)
+			proto.Marshal(batch)
 		}
 	})
 
@@ -316,8 +314,7 @@ func BenchmarkBatchSerialization(b *testing.B) {
 	b.Run("unmarshal", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var batch2 model.Batch
-			err := proto.Unmarshal(data, &batch2)
-			require.NoError(b, err)
+			proto.Unmarshal(data, &batch2)
 		}
 	})
 }
