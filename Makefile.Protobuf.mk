@@ -14,10 +14,9 @@
 # instead of the go_package's declared by the imported protof files.
 #
 
-DOCKER=docker
 DOCKER_PROTOBUF_VERSION=0.5.0
 DOCKER_PROTOBUF=jaegertracing/protobuf:$(DOCKER_PROTOBUF_VERSION)
-PROTOC := ${DOCKER} run --rm -u ${shell id -u} -v${PWD}:${PWD} -w${PWD} ${DOCKER_PROTOBUF} --proto_path=${PWD}
+#PROTOC := ${DOCKER} run --rm -u ${shell id -u} -v${PWD}:${PWD} -w${PWD} ${DOCKER_PROTOBUF} --proto_path=${PWD}
 
 PATCHED_OTEL_PROTO_DIR = proto-gen/.patched-otel-proto
 
@@ -67,7 +66,7 @@ new-proto: new-proto-api-v2 \
 .PHONY: proto-model
 proto-model:
 	$(call proto_compile, model/v1, proto/api_v2/model.proto)
-	$(PROTOC) -Imodel/proto --go_out=$(PWD)/model/v1/ model/v1/proto/model_test.proto
+	$(PROTOC) -Imodel/proto --go_out=$(PWD)/model/v1/ model/v1/prototest/model_test.proto
 
 
 .PHONY: new-proto-api-v2
