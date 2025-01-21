@@ -131,6 +131,14 @@ else
 	SED=sed
 endif
 
+# DO NOT DELETE EMPTY LINE at the end of the macro, it's required to separate commands.
+define print_caption
+  @echo "🏗️ "
+  @echo "🏗️ " $1
+  @echo "🏗️ "
+
+endef
+
 # Macro to compile Protobuf $(2) into directory $(1). $(3) can provide additional flags.
 # DO NOT DELETE EMPTY LINE at the end of the macro, it's required to separate commands.
 # Arguments:
@@ -152,10 +160,10 @@ endef
 test-ci:
 	go test -v -coverprofile=coverage.txt ./...
 
-.PHONY: proto
+# proto target is used to generate source code that is released as part of this library
 proto: proto-prepare proto-api-v2
 
-.PHONY: proto-all
+# proto-all target is used to generate code for all languages as a validation step.
 proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all
 
 .PHONY: proto-prepare-all
