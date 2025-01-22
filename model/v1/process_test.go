@@ -10,9 +10,10 @@ import (
 	"io"
 	"testing"
 
-	"github.com/jaegertracing/jaeger-idl/model/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/jaegertracing/jaeger-idl/model/v1"
 )
 
 func TestProcessEqual(t *testing.T) {
@@ -44,15 +45,13 @@ func TestProcessEqual(t *testing.T) {
 	assert.False(t, p1.Equal(p5))
 }
 
-func Hash(w io.Writer) error {
-	_, err := w.Write([]byte("hello"))
-	return err
+func Hash(w io.Writer) {
+	w.Write([]byte("hello"))
 }
 
-func TestX(t *testing.T) {
+func TestX(*testing.T) {
 	h := fnv.New64a()
-	err := Hash(h)
-	require.NoError(t, err)
+	Hash(h)
 }
 
 func TestProcessHash(t *testing.T) {
