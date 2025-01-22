@@ -2,6 +2,14 @@
 
 A set of shared Thrift and Protobuf data model definitions used by the Jaeger components.
 
+As of Jan 2025 this repository also hosts Go code:
+  * implementation of Jaeger-v1 domain model
+    * Previous import path `"github.com/jaegertracing/jaeger/model"`
+    * New import part is `"github.com/jaegertracing/jaeger-idl/model/v1"`
+  * `protoc`-generated Go types for `api_v2`
+    * Previous import path `"github.com/jaegertracing/jaeger/proto-gen/api_v2"`
+    * New import part is `"github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"`
+
 ## Generating code
 
 This repository does not publish the generated code, but it does run Thrift and `protoc` generators as part of the CI to verify all IDL files. See the [Makefile](./Makefile) for example. In particular, the classes for different languages can be compiled using the `jaegertracing/protobuf` Docker image (see [README](https://github.com/jaegertracing/docker-protobuf/blob/master/README.md)).
