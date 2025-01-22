@@ -51,6 +51,18 @@ SCRIPTS_SRC = $(shell find . \( -name '*.sh' -o -name '*.py' -o -name '*.mk' -o 
 FMT_LOG=.fmt.log
 IMPORT_LOG=.import.log
 
+# SRC_ROOT is the top of the source tree.
+SRC_ROOT := $(shell git rev-parse --show-toplevel)
+TOOLS_MOD_DIR   := $(SRC_ROOT)/internal/tools
+TOOLS_BIN_DIR   := $(SRC_ROOT)/.tools
+LINT         := $(TOOLS_BIN_DIR)/golangci-lint
+
+$(TOOLS_BIN_DIR):
+	mkdir -p $@
+
+$(LINT): $(TOOLS_BIN_DIR)
+	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/cmd/golangci-lint
+
 .PHONY: test
 test: 
 	echo $(SCRIPTS_SRC)
@@ -183,8 +195,18 @@ define proto_compile
 
 endef
 
+.PHONY: setup-scripts
+setup-scripts: 
+	rm -rf /tmp/jaeger	&&	rm -rf ./scripts
+	git clone --depth 1 https://github.com/jaegertracing/jaeger.git /tmp/jaeger
+	cp -r /tmp/jaeger/scripts ./scripts
+
 .PHONY: lint
-lint: lint-imports lint-nocommit lint-license
+lint: lint-imports lint-nocommit lint-license lint-go
+
+.PHONY: lint-go
+lint-go: $(LINT)
+	$(LINT) -v run
 
 .PHONY: lint-license
 lint-license:

@@ -25,8 +25,7 @@ jobs:
           egress-policy: audit
       - name: Clone Jaeger main repo scripts
         run: |
-          git clone --depth 1 https://github.com/jaegertracing/jaeger.git /tmp/jaeger
-          cp -r /tmp/jaeger/scripts ./scripts
+          make setup-scripts
 
   lint:
     needs: setup-scripts
@@ -42,22 +41,6 @@ jobs:
       - name: Run lint checks
         run: |
           make lint
-
-  dco-check:
-    needs: setup-scripts
-    runs-on: ubuntu-latest
-    steps:
-      - uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Run DCO check
-        run: python3 scripts/lint/dco_check.py -b main -v --exclude-pattern '@users\.noreply\.github\.com'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   generated-files-check:
     runs-on: ubuntu-latest

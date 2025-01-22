@@ -4,3 +4,5 @@ proto-gen-*/
 .fmt.log
 .import.log
 .proto-gen-polyglot/
+scripts/
+.tools/
