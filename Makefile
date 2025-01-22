@@ -161,7 +161,7 @@ test-ci:
 	go test -v -coverprofile=coverage.txt ./...
 
 # proto target is used to generate source code that is released as part of this library
-proto: proto-prepare proto-api-v2 proto-model
+proto: proto-prepare proto-api-v2 proto-prototest
 
 # proto-all target is used to generate code for all languages as a validation step.
 proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all
@@ -179,9 +179,8 @@ proto-prepare-all:
 proto-prepare:
 	mkdir -p ${PROTO_GEN_GO_DIR}
 
-.PHONY: proto-model
-proto-model:
-	$(call proto_compile, model/v1, proto/api_v2/model.proto)
+.PHONY: proto-prototest
+proto-prototest:
 	$(PROTOC) -Imodel/proto --go_out=$(PWD)/model/v1/ model/v1/prototest/model_test.proto
 
 .PHONY: proto-api-v2
