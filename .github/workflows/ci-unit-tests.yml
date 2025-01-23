@@ -35,13 +35,11 @@ jobs:
     - name: Run unit tests
       run: make test-ci
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
+    - name: Upload coverage to codecov
+      uses: ./.github/actions/upload-codecov
       with:
-        slug: jaegertracing/jaeger-idl
-        verbose: true
-        fail_ci_if_error: true
-        token: 95fab3d9-8038-40ba-ac56-0d8bd91390a4
+        files: coverage.txt
+        flags: unittests
 
   test-code-gen:
     runs-on: ubuntu-latest

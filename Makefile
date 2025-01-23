@@ -40,6 +40,7 @@ swagger-validate:
 clean:
 	rm -rf *gen-* || true
 	rm -rf .*gen-* || true
+	rm -rf coverage.txt
 
 .PHONY: thrift
 thrift:	thrift-image clean $(THRIFT_FILES)
@@ -158,7 +159,7 @@ endef
 
 .PHONY: test-ci
 test-ci:
-	go test -v -coverprofile=coverage.txt ./...
+	go test -v -coverprofile=coverage.txt ./... && sed -i '/^github.com\/jaegertracing\/jaeger-idl\/model\/v1\/model.pb.go/d' coverage.txt
 
 # proto target is used to generate source code that is released as part of this library
 proto: proto-prepare proto-api-v2 proto-prototest
