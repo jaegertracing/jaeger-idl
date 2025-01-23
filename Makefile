@@ -32,21 +32,10 @@ THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossd
 ALL_SRC = $(shell find . -name '*.go' \
 				   -not -name '_*' \
 				   -not -name '.*' \
-				   -not -name 'mocks*' \
 				   -not -name '*.pb.go' \
-				   -not -path '*/gen-*/*' \
-				   -not -path '*/thrift-0.9.2/*' \
 				   -type f | \
 				sort)
 
-# All .sh or .py or Makefile or .mk files that should be auto-formatted and linted.
-SCRIPTS_SRC = $(shell find . \( -name '*.sh' -o -name '*.py' -o -name '*.mk' -o -name 'Makefile*' -o -name 'Dockerfile*' \) \
-						-not -path './.git/*' \
-						-not -path '*/gen-*/*' \
-						-not -path '*/scripts/*' \
-						-not -name '_*' \
-						-type f | \
-					sort)
 
 FMT_LOG=.fmt.log
 IMPORT_LOG=.import.log
@@ -62,10 +51,6 @@ $(TOOLS_BIN_DIR):
 
 $(LINT): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/cmd/golangci-lint
-
-.PHONY: test
-test: 
-	echo $(SCRIPTS_SRC)
 
 .PHONY: test-code-gen
 test-code-gen: thrift swagger-validate protocompile proto proto-zipkin
@@ -197,9 +182,11 @@ endef
 
 .PHONY: setup-scripts
 setup-scripts: 
-	rm -rf /tmp/jaeger	&&	rm -rf ./scripts
-	git clone --depth 1 https://github.com/jaegertracing/jaeger.git /tmp/jaeger
-	cp -r /tmp/jaeger/scripts ./scripts
+	rm -rf .scripts/lint
+	mkdir -p .scripts/lint
+	curl -o .scripts/lint/updateLicense.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/make /updateLicense.py
+	curl -o .scripts/lint/import-order-cleanup.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/import-order-cleanup.py
+	chmod +x .scripts/lint/*.py
 
 .PHONY: lint
 lint: lint-imports lint-nocommit lint-license lint-go
@@ -211,7 +198,7 @@ lint-go: $(LINT)
 .PHONY: lint-license
 lint-license:
 	@echo Verifying that all files have license headers
-	@./scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC) > $(FMT_LOG)
+	@./.scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC) > $(FMT_LOG)
 
 .PHONY: lint-nocommit 
 lint-nocommit:
@@ -223,19 +210,19 @@ lint-nocommit:
 .PHONY: lint-imports
 lint-imports:
 	@echo Verifying that all files have correctly ordered imports
-	@./scripts/lint/import-order-cleanup.py -o stdout -t $(ALL_SRC) > $(IMPORT_LOG)
+	@./.scripts/lint/import-order-cleanup.py -o stdout -t $(ALL_SRC) > $(IMPORT_LOG)
 	@[ ! -s "$(IMPORT_LOG)" ] || (echo "Import ordering failures, run 'make fmt'" | cat - $(IMPORT_LOG) && false)
 
 .PHONY: fmt
 fmt: $(GOFUMPT)
 	@echo Running import-order-cleanup on ALL_SRC ...
-	@./scripts/lint/import-order-cleanup.py -o inplace -t $(ALL_SRC)
+	@./.scripts/lint/import-order-cleanup.py -o inplace -t $(ALL_SRC)
 	@echo Running gofmt on ALL_SRC ...
 	@$(GOFMT) -e -s -l -w $(ALL_SRC)
 	@echo Running gofumpt on ALL_SRC ...
 	@$(GOFUMPT) -e -l -w $(ALL_SRC)
 	@echo Running updateLicense.py on ALL_SRC ...
-	@./scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC)
+	@./.scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC)
 
 .PHONY: test-ci
 test-ci:

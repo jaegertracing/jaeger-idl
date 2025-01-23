@@ -1,8 +1,7 @@
 .idea/
 gen-*/
-proto-gen-*/
 .fmt.log
 .import.log
 .proto-gen-polyglot/
-scripts/
+.scripts/
 .tools/
