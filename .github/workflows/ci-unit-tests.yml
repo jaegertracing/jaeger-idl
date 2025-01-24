@@ -36,19 +36,10 @@ jobs:
       run: make test-ci
 
     - name: upload code coverage
-      uses: Wandalen/wretry.action@v3.8.0
+      uses: ./.github/actions/upload-codecov
       with:
-        attempt_limit: 6
-        # sleep 10 seconds between retries
-        attempt_delay: 10000
-        action: codecov/codecov-action@v5
-        with: |
-          slug: jaegertracing/jaeger-idl
-          files: coverage.txt
-          flags: unittests
-          verbose: true
-          fail_ci_if_error: true
-          token: 95fab3d9-8038-40ba-ac56-0d8bd91390a4
+        files: coverage.txt
+        flags: unittests
 
   test-code-gen:
     runs-on: ubuntu-latest
