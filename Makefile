@@ -184,7 +184,7 @@ endef
 setup-scripts: 
 	rm -rf .scripts/lint
 	mkdir -p .scripts/lint
-	curl -o .scripts/lint/updateLicense.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/make /updateLicense.py
+	curl -o .scripts/lint/updateLicense.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/updateLicense.py
 	curl -o .scripts/lint/import-order-cleanup.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/import-order-cleanup.py
 	chmod +x .scripts/lint/*.py
 
