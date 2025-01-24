@@ -159,7 +159,7 @@ endef
 
 .PHONY: test-ci
 test-ci:
-	go test -v -coverprofile=coverage.txt ./... && sed -i '/^github.com\/jaegertracing\/jaeger-idl\/model\/v1\/model.pb.go/d' coverage.txt
+	go test -v -coverprofile=coverage.txt ./...
 
 # proto target is used to generate source code that is released as part of this library
 proto: proto-prepare proto-api-v2 proto-prototest
