@@ -64,6 +64,7 @@ swagger-validate:
 clean:
 	rm -rf *gen-* || true
 	rm -rf .*gen-* || true
+	rm -rf coverage.txt
 
 .PHONY: thrift
 thrift:	thrift-image clean $(THRIFT_FILES)

@@ -5,3 +5,5 @@ gen-*/
 .proto-gen-polyglot/
 .scripts/
 .tools/
+coverage.txt
+

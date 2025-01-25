@@ -1,4 +1,4 @@
-# jaeger-idl [![Build Status][ci-img]][ci]
+# jaeger-idl [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
 A set of shared Thrift and Protobuf data model definitions used by the Jaeger components.
 
@@ -35,3 +35,5 @@ See [CONTRIBUTING](./CONTRIBUTING.md).
 
 [ci-img]: https://github.com/jaegertracing/jaeger-idl/actions/workflows/ci-unit-tests.yml/badge.svg
 [ci]: https://github.com/jaegertracing/jaeger-idl/actions/workflows/ci-unit-tests.yml
+[cov-img]: https://codecov.io/gh/jaegertracing/jaeger-idl/branch/main/graph/badge.svg
+[cov]: https://codecov.io/gh/jaegertracing/jaeger-idl/branch/main/
