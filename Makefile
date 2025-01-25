@@ -182,7 +182,7 @@ proto-prepare:
 
 .PHONY: proto-prototest
 proto-prototest:
-	$(PROTOC) -Imodel/proto --go_out=$(PWD)/model/v1/ model/v1/prototest/model_test.proto
+	$(PROTOC) --go_out=$(PWD)/model/v1/ model/v1/prototest/model_test.proto
 
 .PHONY: proto-api-v2
 proto-api-v2:
