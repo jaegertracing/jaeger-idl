@@ -1,5 +1,4 @@
-# jaeger-idl [![Build Status][ci-img]][ci]
-[![Coverage Status][cov-img]][cov]
+# jaeger-idl [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
 A set of shared Thrift and Protobuf data model definitions used by the Jaeger components.
 
