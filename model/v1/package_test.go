@@ -6,9 +6,9 @@ package model
 import (
 	"testing"
 
-	"github.com/jaegertracing/jaeger/pkg/testutils"
+	"go.uber.org/goleak"
 )
 
 func TestMain(m *testing.M) {
-	testutils.VerifyGoLeaks(m)
+	goleak.VerifyTestMain(m)
 }

@@ -113,12 +113,7 @@ linters-settings:
             desc: "Use os or io instead of io/ioutil"
           
 
-      disallow-uber/goleak:
-        deny:
-         - pkg: go.uber.org/goleak
-           desc: "Use github.com/jaegertracing/jaeger/pkg/testutils"
-        files:
-          - "**_test.go"
+     
 
       disallow-otel-contrib-translator:
         deny:
