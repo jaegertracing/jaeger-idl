@@ -42,7 +42,15 @@ clean:
 	rm -rf .*gen-* || true
 
 .PHONY: thrift
-thrift:	thrift-image clean $(THRIFT_FILES)
+thrift: thrift/zipkincore.thrift thrift/jaeger.thrift thrift/agent.thrift thrift-image
+	[ -d $(THRIFT_GEN_DIR) ] || mkdir $(THRIFT_GEN_DIR)
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) --out /data/thrift-gen /data/thrift/zipkincore.thrift
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) --out /data/thrift-gen /data/thrift/jaeger.thrift
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) --out /data/thrift-gen /data/thrift/agent.thrift
+	$(SED) -i.bak 's|"zipkincore"|"$(JAEGER_IMPORT_PATH)/thrift-gen/zipkincore"|g' thrift-gen/agent/*.go
+	$(SED) -i.bak 's|"jaeger"|"$(JAEGER_IMPORT_PATH)/thrift-gen/jaeger"|g' thrift-gen/agent/*.go
+	rm -rf thrift-gen/*/*-remote thrift-gen/*/*.bak
+
 
 $(THRIFT_FILES):
 	@echo Compiling $@
