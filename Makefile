@@ -30,7 +30,7 @@ THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossd
 THRIFT_GEN_DIR=thrift-gen
 
 .PHONY: test-code-gen
-test-code-gen: thrift swagger-validate protocompile proto proto-zipkin
+test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 
 .PHONY: swagger-validate
@@ -44,10 +44,13 @@ clean:
 	rm -rf coverage.txt
 
 .PHONY: thrift
-thrift: thrift-image clean $(THRIFT_FILES)
+thrift:
 	[ -d $(THRIFT_GEN_DIR) ] || mkdir $(THRIFT_GEN_DIR)
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/zipkincore.thrift
 	rm -rf thrift-gen/*/*-remote thrift-gen/*/*.bak
+
+.PHONY: thrift-all
+thrift-all: thrift-image clean $(THRIFT_FILES)
 
 $(THRIFT_FILES):
 	@echo Compiling $@

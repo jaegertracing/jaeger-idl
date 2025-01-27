@@ -16,7 +16,7 @@ This repository does not publish the generated code, but it does run Thrift and 
 
 To generate the stubs for your own purposes:
   * clone the repository
-  * run `make proto` or `make thrift`
+  * run `make proto-all` or `make thrift-all`
   * the stubs will be generated under `gen-{lang}` for Thrift and `proto-gen-{lang}` for Protobuf
 
 
