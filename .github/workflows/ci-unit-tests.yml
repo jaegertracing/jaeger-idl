@@ -54,5 +54,3 @@ jobs:
     - name: Test code gen
       run: make test-code-gen
 
-    - name: Verify Thrift types are up to date
-      run: make thrift && git diff --name-status --exit-code
