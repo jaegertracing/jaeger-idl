@@ -44,7 +44,7 @@ clean:
 	rm -rf coverage.txt
 
 .PHONY: thrift
-thrift: thrift-image clean
+thrift: thrift-image clean $(THRIFT_FILES)
 	[ -d $(THRIFT_GEN_DIR) ] || mkdir $(THRIFT_GEN_DIR)
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/zipkincore.thrift
 	rm -rf thrift-gen/*/*-remote thrift-gen/*/*.bak
