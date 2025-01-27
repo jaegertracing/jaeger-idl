@@ -1,6 +1,8 @@
 # Copyright (c) 2023 The Jaeger Authors.
 # SPDX-License-Identifier: Apache-2.0
 
+JAEGER_IMPORT_PATH = github.com/jaegertracing/jaeger-idl
+
 THRIFT_VER?=0.19
 THRIFT_IMG?=jaegertracing/thrift:$(THRIFT_VER)
 THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
@@ -46,9 +48,11 @@ clean:
 .PHONY: thrift
 thrift:
 	[ -d $(THRIFT_GEN_DIR) ] || mkdir $(THRIFT_GEN_DIR)
-	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/agent.thrift
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/jaeger.thrift
 	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/zipkincore.thrift
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/agent.thrift
+	$(SED) -i.bak 's|"zipkincore"|"$(JAEGER_IMPORT_PATH)/thrift-gen/zipkincore"|g' $(THRIFT_GEN_DIR)/agent/*.go
+	$(SED) -i.bak 's|"jaeger"|"$(JAEGER_IMPORT_PATH)/thrift-gen/jaeger"|g' $(THRIFT_GEN_DIR)/agent/*.go
 	rm -rf thrift-gen/*/*-remote thrift-gen/*/*.bak
 
 .PHONY: thrift-all
