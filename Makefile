@@ -27,6 +27,7 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
+THRIFT_GEN_DIR=thrift-gen
 
 .PHONY: test-code-gen
 test-code-gen: thrift swagger-validate protocompile proto proto-zipkin
@@ -43,7 +44,10 @@ clean:
 	rm -rf coverage.txt
 
 .PHONY: thrift
-thrift:	thrift-image clean $(THRIFT_FILES)
+thrift: thrift-image clean
+	[ -d $(THRIFT_GEN_DIR) ] || mkdir $(THRIFT_GEN_DIR)
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/zipkincore.thrift
+	rm -rf thrift-gen/*/*-remote thrift-gen/*/*.bak
 
 $(THRIFT_FILES):
 	@echo Compiling $@
