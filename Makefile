@@ -1,6 +1,8 @@
 # Copyright (c) 2023 The Jaeger Authors.
 # SPDX-License-Identifier: Apache-2.0
 
+JAEGER_IMPORT_PATH = github.com/jaegertracing/jaeger-idl
+
 THRIFT_VER?=0.19
 THRIFT_IMG?=jaegertracing/thrift:$(THRIFT_VER)
 THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
@@ -27,6 +29,7 @@ THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
 
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
+THRIFT_GEN_DIR=thrift-gen
 
 # All .go files that are not auto-generated and should be auto-formatted and linted.
 ALL_SRC = $(shell find . -name '*.go' \
@@ -53,7 +56,7 @@ $(LINT): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/cmd/golangci-lint
 
 .PHONY: test-code-gen
-test-code-gen: thrift swagger-validate protocompile proto proto-zipkin
+test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 
 .PHONY: swagger-validate
@@ -67,7 +70,17 @@ clean:
 	rm -rf coverage.txt
 
 .PHONY: thrift
-thrift:	thrift-image clean $(THRIFT_FILES)
+thrift:
+	[ -d $(THRIFT_GEN_DIR) ] || mkdir $(THRIFT_GEN_DIR)
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/jaeger.thrift
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/zipkincore.thrift
+	$(THRIFT) -o /data --gen go:$(THRIFT_GO_ARGS) -out /data/$(THRIFT_GEN_DIR) /data/thrift/agent.thrift
+	$(SED) -i.bak 's|"zipkincore"|"$(JAEGER_IMPORT_PATH)/thrift-gen/zipkincore"|g' $(THRIFT_GEN_DIR)/agent/*.go
+	$(SED) -i.bak 's|"jaeger"|"$(JAEGER_IMPORT_PATH)/thrift-gen/jaeger"|g' $(THRIFT_GEN_DIR)/agent/*.go
+	rm -rf thrift-gen/*/*-remote thrift-gen/*/*.bak
+
+.PHONY: thrift-all
+thrift-all: thrift-image clean $(THRIFT_FILES)
 
 $(THRIFT_FILES):
 	@echo Compiling $@

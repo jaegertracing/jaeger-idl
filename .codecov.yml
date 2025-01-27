@@ -6,6 +6,7 @@ codecov:
 ignore:
   - "model/v1/model.pb.go"
   - "proto-gen/*/*"
+  - "thrift-gen/*/*"
 
 coverage:
   precision: 2
