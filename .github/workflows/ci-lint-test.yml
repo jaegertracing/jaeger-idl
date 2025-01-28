@@ -17,16 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  setup-scripts:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup lint scripts
-        run: make setup-scripts
-
-
   lint:
-    needs: setup-scripts
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7

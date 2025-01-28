@@ -194,14 +194,6 @@ define proto_compile
 
 endef
 
-.PHONY: setup-scripts
-setup-scripts: 
-	rm -rf .scripts/lint
-	mkdir -p .scripts/lint
-	curl -o .scripts/lint/updateLicense.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/updateLicense.py
-	curl -o .scripts/lint/import-order-cleanup.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/import-order-cleanup.py
-	chmod +x .scripts/lint/*.py
-
 .PHONY: lint
 lint: lint-imports lint-nocommit lint-license lint-go
 
@@ -212,7 +204,12 @@ lint-go: $(LINT)
 .PHONY: lint-license
 lint-license:
 	@echo Verifying that all files have license headers
+	@mkdir -p .scripts/lint
+	@curl -s -o .scripts/lint/updateLicense.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/updateLicense.py
+	@chmod +x .scripts/lint/updateLicense.py
 	@./.scripts/lint/updateLicense.py $(ALL_SRC) $(SCRIPTS_SRC) > $(FMT_LOG)
+	@[ -s "$(FMT_LOG)" ] || echo "✅ All files have license headers"
+
 
 .PHONY: lint-nocommit 
 lint-nocommit:
@@ -224,6 +221,9 @@ lint-nocommit:
 .PHONY: lint-imports
 lint-imports:
 	@echo Verifying that all files have correctly ordered imports
+	@mkdir -p .scripts/lint
+	@curl -s -o .scripts/lint/import-order-cleanup.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/import-order-cleanup.py
+	@chmod +x .scripts/lint/import-order-cleanup.py
 	@./.scripts/lint/import-order-cleanup.py -o stdout -t $(ALL_SRC) > $(IMPORT_LOG)
 	@[ ! -s "$(IMPORT_LOG)" ] || (echo "Import ordering failures, run 'make fmt'" | cat - $(IMPORT_LOG) && false)
 	@[ -s "$(IMPORT_LOG)" ] || echo "✅ All files have correctly ordered imports"
