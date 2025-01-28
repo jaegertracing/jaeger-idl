@@ -226,6 +226,7 @@ lint-imports:
 	@echo Verifying that all files have correctly ordered imports
 	@./.scripts/lint/import-order-cleanup.py -o stdout -t $(ALL_SRC) > $(IMPORT_LOG)
 	@[ ! -s "$(IMPORT_LOG)" ] || (echo "Import ordering failures, run 'make fmt'" | cat - $(IMPORT_LOG) && false)
+	@[ -s "$(IMPORT_LOG)" ] || echo "✅ All files have correctly ordered imports"
 
 .PHONY: fmt
 fmt: $(GOFUMPT)
