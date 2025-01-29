@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/gob"
 	"io"
+	"unsafe"
 )
 
 type SamplerType int
@@ -17,6 +18,8 @@ const (
 	SamplerTypeLowerBound
 	SamplerTypeRateLimiting
 	SamplerTypeConst
+	// Should part of jptrace HashinAttribute
+	SpanHashKey = "@jaeger@hash"
 )
 
 var toSamplerType = map[string]SamplerType{
@@ -54,6 +57,24 @@ func (s *Span) Hash(w io.Writer) (err error) {
 	// See BenchmarkSpanHash in span_test.go
 	enc := gob.NewEncoder(w)
 	return enc.Encode(s)
+}
+
+// GetHashTag returns hash keyValue from Tags and wether the hash was found
+func (s *Span) GetHashTag() (hashCode int64, found bool) {
+	if tag, ok := KeyValues(s.Tags).FindByKey(SpanHashKey); ok {
+		return tag.GetVInt64(), true
+	}
+	return 0, false
+}
+
+func (s *Span) SetHashTag() (hashCode int64, err error) {
+	hCode, err := HashCode(s)
+	if err != nil {
+		return -1, err
+	}
+	spanHash := uint64ToInt64Bits(hCode)
+	s.Tags = append(s.Tags, Int64(SpanHashKey, spanHash))
+	return spanHash, err
 }
 
 // HasSpanKind returns true if the span has a `span.kind` tag set to `kind`.
@@ -138,4 +159,8 @@ func (s *Span) ReplaceParentID(newParentID SpanID) {
 		}
 	}
 	s.References = MaybeAddParentSpanID(s.TraceID, newParentID, s.References)
+}
+
+func uint64ToInt64Bits(value uint64) int64 {
+	return *(*int64)(unsafe.Pointer(&value))
 }
