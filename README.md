@@ -9,15 +9,18 @@ As of Jan 2025 this repository also hosts Go code:
   * `protoc`-generated Go types for `api_v2`
     * Previous import path `"github.com/jaegertracing/jaeger/proto-gen/api_v2"`
     * New import part is `"github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"`
+  * All Thrift-generated types
+    * Previous import path `"github.com/jaegertracing/jaeger/thrift-gen/{agent,jaeger,sampling,zipkincore}"`
+    * New import part is `"github.com/jaegertracing/jaeger-idl/thrift-gen/..."`
 
 ## Generating code
 
-This repository does not publish the generated code, but it does run Thrift and `protoc` generators as part of the CI to verify all IDL files. See the [Makefile](./Makefile) for example. In particular, the classes for different languages can be compiled using the `jaegertracing/protobuf` Docker image (see [README](https://github.com/jaegertracing/docker-protobuf/blob/master/README.md)).
+This repository only include Go code for some of the Thrift and Protobuf modules. It also runs Thrift and `protoc` generators as part of the CI to verify all IDL files. See the [Makefile](./Makefile) for example. In particular, the classes for different languages can be compiled using the `jaegertracing/protobuf` Docker image (see [README](https://github.com/jaegertracing/docker-protobuf/blob/master/README.md)).
 
 To generate the stubs for your own purposes:
   * clone the repository
   * run `make proto-all` or `make thrift-all`
-  * the stubs will be generated under `gen-{lang}` for Thrift and `proto-gen-{lang}` for Protobuf
+  * the stubs will be generated under `.thrift-gen-polyglot/gen-{lang}` for Thrift and `.proto-gen-polyglot/{lang}` for Protobuf
 
 
 ## Compatibility
@@ -29,7 +32,7 @@ The Jaeger repositories that use these IDL files usually import this repository 
 See [CONTRIBUTING](./CONTRIBUTING.md).
 
 ## License
-  
+
 [Apache 2.0 License](./LICENSE).
 
 
