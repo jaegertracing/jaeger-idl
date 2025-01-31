@@ -1,5 +1,6 @@
 # Copyright (c) 2023 The Jaeger Authors.
 # SPDX-License-Identifier: Apache-2.0
+SCRIPTS_URL = https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts
 
 JAEGER_IMPORT_PATH = github.com/jaegertracing/jaeger-idl
 
@@ -230,9 +231,9 @@ lint-imports: setup-lint-scripts
 .PHONY: setup-lint-scripts
 setup-lint-scripts:
 	@mkdir -p .scripts/lint
-	@curl -s -o .scripts/lint/import-order-cleanup.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/import-order-cleanup.py
+	@curl -s -o .scripts/lint/import-order-cleanup.py $(SCRIPTS_URL)/lint/import-order-cleanup.py
 	@chmod +x .scripts/lint/import-order-cleanup.py
-	@curl -s -o .scripts/lint/updateLicense.py https://raw.githubusercontent.com/jaegertracing/jaeger/main/scripts/lint/updateLicense.py
+	@curl -s -o .scripts/lint/updateLicense.py $(SCRIPTS_URL)/lint/updateLicense.py
 	@chmod +x .scripts/lint/updateLicense.py
 
 .PHONY: fmt
