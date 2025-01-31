@@ -16,6 +16,16 @@
   ],
   "packageRules": [
     {
+      "groupName": "All Protobuf/gRPC packages",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchSourceUrls": [
+        "google.golang.org{/,}**",
+        "github.com/gogo/{/,}**"
+      ]
+    },
+    {
       "matchManagers": [
         "github-actions"
       ],
