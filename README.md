@@ -9,6 +9,9 @@ As of Jan 2025 this repository also hosts Go code:
   * `protoc`-generated Go types for `api_v2`
     * Previous import path `"github.com/jaegertracing/jaeger/proto-gen/api_v2"`
     * New import part is `"github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"`
+  * All Thrift-generated types
+    * Previous import path `"github.com/jaegertracing/jaeger/thrift-gen/{agent,jaeger,sampling,zipkincore}"`
+    * New import part is `"github.com/jaegertracing/jaeger-idl/thrift-gen/..."`
 
 ## Generating code
 
