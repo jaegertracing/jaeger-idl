@@ -5,6 +5,7 @@ go 1.22.7
 toolchain go1.23.5
 
 require (
+	github.com/apache/thrift v0.21.0
 	github.com/gogo/googleapis v1.4.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/stretchr/testify v1.10.0
@@ -14,7 +15,6 @@ require (
 )
 
 require (
-	github.com/apache/thrift v0.21.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
