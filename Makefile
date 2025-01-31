@@ -24,9 +24,6 @@ THRIFT_PY_ARGS=new_style,tornado
 THRIFT_JAVA_ARGS=private-members
 THRIFT_PHP_ARGS=psr4
 
-THRIFT_GEN=--gen lua --gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node --gen cpp --gen php:$(THRIFT_PHP_ARGS)
-THRIFT_CMD=$(THRIFT) -o /data $(THRIFT_GEN)
-
 THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
 	baggage.thrift dependency.thrift aggregation_validator.thrift
 THRIFT_GEN_DIR=thrift-gen
@@ -66,7 +63,6 @@ swagger-validate:
 
 .PHONY: clean
 clean:
-	rm -rf *gen-* || true
 	rm -rf .*gen-* || true
 	rm -rf coverage.txt
 
@@ -84,9 +80,11 @@ thrift:
 .PHONY: thrift-all
 thrift-all: thrift-image clean $(THRIFT_FILES)
 
+THRIFT_GEN_ARGS=--gen lua --gen go:$(THRIFT_GO_ARGS) --gen py:$(THRIFT_PY_ARGS) --gen java:$(THRIFT_JAVA_ARGS) --gen js:node --gen cpp --gen php:$(THRIFT_PHP_ARGS)
 $(THRIFT_FILES):
 	@echo Compiling $@
-	$(THRIFT_CMD) /data/thrift/$@
+	@mkdir -p .thrift-gen-polyglot
+	$(THRIFT) -o /data/.thrift-gen-polyglot $(THRIFT_GEN_ARGS) /data/thrift/$@
 
 .PHONY: thrift-image
 thrift-image:
@@ -213,7 +211,7 @@ lint-license: setup-lint-scripts
 	@[ -s "$(FMT_LOG)" ] || echo "✅ All files have license headers"
 
 
-.PHONY: lint-nocommit 
+.PHONY: lint-nocommit
 lint-nocommit:
 	@if git diff origin/main | grep '@no''commit' ; then \
 		echo "❌ Cannot merge PR that contains @no""commit string" ; \
