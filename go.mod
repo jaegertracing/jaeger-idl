@@ -1,6 +1,6 @@
 module github.com/jaegertracing/jaeger-idl
 
-go 1.22.7
+go 1.23.6
 
 toolchain go1.24.0
 
