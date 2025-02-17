@@ -378,7 +378,7 @@
           "description": "If set to true, the response will exclude any enrichments to the trace, such as clock skew adjustments.\nThe trace will be returned exactly as stored.\n\nThis field is optional."
         }
       },
-      "description": "Query parameters to find traces. All fields should be treated\nas forming a conjunction, e.g., \"service_name='X' AND operation_name='Y' AND ...\",\nwith the exception of `search_depth` and `raw_traces`.\n\nAll fields are matched against individual spans, not at the trace level.\nThe returned results contain traces where at least one span matches the conditions.\nThere is no guaranteed ordering of the returned results.\n\nNote: Some storage implementations do not guarantee the correct implementation of all parameters."
+      "description": "Query parameters to find traces.\n\nAll fields form a conjunction (e.g., \"service_name='X' AND operation_name='Y' AND ...\"),\nexcept for `search_depth` and `raw_traces`.\n\nFields are matched against individual spans, not the trace level. The results include\ntraces with at least one matching span.\n\nThe results have no guaranteed ordering. Additionally, some storage implementations\nmay not fully support all parameters."
     },
     "protobufAny": {
       "type": "object",
