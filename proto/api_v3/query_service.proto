@@ -41,7 +41,7 @@ message GetTraceRequest {
 }
 
 // Query parameters to find traces. All fields should be treated
-// as forming a conjunction, e.g., "service_name='X' AND operation_name='Y' AND ..."
+// as forming a conjunction, e.g., "service_name='X' AND operation_name='Y' AND ...",
 // with the exception of `search_depth` and `raw_traces`.
 //
 // All fields are matched against individual spans, not at the trace level.
@@ -61,37 +61,37 @@ message TraceQueryParameters {
   // span and resource attributes. At least one span must match all specified attributes.
   map<string, string> attributes = 3;
 
-  // `start_time_min` is the start of the time interval for the query. Only traces with spans
-  // that started after this time will be returned.
+  // `start_time_min` is the start of the time interval (inclusive) for the query.
+  // Only traces with spans that started on or after this time will be returned.
   //
   // The HTTP API uses RFC-3339ns format.
   //
   // This field is required.
   google.protobuf.Timestamp start_time_min = 4;
 
-  // `start_time_max` is the end of the time interval for the query. Only traces with spans
-  // that started before this time will be returned.
+  // `start_time_max` is the end of the time interval (exclusive) for the query.
+  // Only traces with spans that started before this time will be returned.
   //
   // The HTTP API uses RFC-3339ns format.
   //
   // This field is required.
   google.protobuf.Timestamp start_time_max = 5;
 
-  // `duration_min` is the minimum duration of the trace. Only traces with spans that lasted
-  // at least this long will be returned.
+  // `duration_min` is the minimum duration of a span in the trace.
+  // Only traces with spans that lasted at least this long will be returned.
   //
   // The HTTP API uses Golang's time format (e.g., "10s").
   google.protobuf.Duration duration_min = 6;
 
-  // `duration_max` is the maximum duration of the trace. Only traces with spans that lasted
-  // at most this long will be returned.
+  // `duration_max` is the maximum duration of a span in the trace.
+  // Only traces with spans that lasted at most this long will be returned.
   //
   // The HTTP API uses Golang's time format (e.g., "10s").
   google.protobuf.Duration duration_max = 7;
 
-  // `search_depth` defines the maximum number of results to return. The behavior depends on the
-  // backend storage implementation: some treat it like an SQL `LIMIT` clause, while others may
-  // return more traces when set to higher values.
+  // `search_depth` defines the maximum search depth. Depending on the backend storage implementation,
+  // this may behave like an SQL `LIMIT` clause. However, some implementations might not support
+  // precise limits, and a larger value generally results in more traces being returned.
   int32 search_depth = 8;
 
   // If set to true, the response will exclude any enrichments to the trace, such as clock skew adjustments.
