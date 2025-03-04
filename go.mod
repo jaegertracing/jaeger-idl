@@ -2,7 +2,7 @@ module github.com/jaegertracing/jaeger-idl
 
 go 1.23.6
 
-toolchain go1.24.0
+toolchain go1.24.1
 
 require (
 	github.com/apache/thrift v0.21.0
