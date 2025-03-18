@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax="proto3";
+syntax = "proto3";
 
 package jaeger.api_v2;
 
@@ -74,13 +74,76 @@ message PerOperationSamplingStrategies {
   // one of the perOperationStrategies.
   double defaultLowerBoundTracesPerSecond = 2;
 
-  // perOperationStrategies describes sampling strategiesf for individual operations within
+  // perOperationStrategies describes sampling strategies for individual operations within
   // a given service.
   repeated OperationSamplingStrategy perOperationStrategies = 3;
 
   // defaultUpperBoundTracesPerSecond defines an upper bound rate limit.
   // However, almost no Jaeger SDKs support this parameter.
   double defaultUpperBoundTracesPerSecond = 4;
+}
+
+// RuleBasedSamplingStrategy defines rule-based sampling strategy.
+message RuleBasedSamplingStrategy {
+  // Logical expression combining conditions
+  LogicalExpression expression = 1;
+
+  // Probabilistic sampling strategy.
+  ProbabilisticSamplingStrategy probabilisticSampling = 2;
+}
+
+// LogicalExpression represents a logical expression which could be a single condition
+// or a combination of conditions.
+message LogicalExpression {
+  oneof expression {
+    Condition condition = 1;
+    AndExpression and_expression = 2;
+    OrExpression or_expression = 3;
+    NotExpression not_expression = 4;
+  }
+}
+
+message AndExpression {
+  repeated LogicalExpression expressions = 1;
+}
+
+message OrExpression {
+  repeated LogicalExpression expressions = 1;
+}
+
+message NotExpression {
+  LogicalExpression expression = 1;
+}
+
+// Condition represents the enum for comparison operators in conditions,
+message Condition {
+  string attribute = 1;
+  Operator operator = 2;
+  oneof value {
+    int32 int_value = 3;
+    string string_value = 4;
+    bool bool_value = 5;
+    double double_value = 6;
+  }
+}
+
+enum Operator {
+  EQUALS = 0;
+  GREATER_THAN = 1;
+  LESS_THAN = 2;
+  REGEX_MATCH = 3;
+}
+
+// PerRuleBasedSamplingStrategy defines the default sampling probability and multiple
+// rule-based sampling strategies.
+message PerRuleBasedSamplingStrategy {
+  // defaultSamplingProbability is the sampling probability for spans that do not match
+  // any of the perOperationStrategies.
+  double defaultSamplingProbability = 1;
+
+  // perMultiDimensionalStrategies describes sampling strategies for arbitrary combinations
+  // of dimensions within a given service.
+  repeated RuleBasedSamplingStrategy ruleBasedSamplingStrategies = 2;
 }
 
 // SamplingStrategyResponse contains an overall sampling strategy for a given service.
@@ -92,8 +155,8 @@ message SamplingStrategyResponse {
   // The recommended approach for consumers is to ignore this field and instead
   // checks the other fields being not null (starting with operationSampling).
   // For producers, it is recommended to set this field correctly for probabilistic
-  // and rate-limiting strategies, but if per-operation strategy is returned,
-  // the enum can be set to 0 (probabilistic).
+  // and rate-limiting strategies, but if per-operation or per-rule
+  // strategy is returned, the enum can be set to 0 (probabilistic).
   SamplingStrategyType strategyType = 1;
 
   ProbabilisticSamplingStrategy probabilisticSampling = 2;
@@ -101,6 +164,8 @@ message SamplingStrategyResponse {
   RateLimitingSamplingStrategy rateLimitingSampling = 3;
 
   PerOperationSamplingStrategies operationSampling = 4;
+
+  PerRuleBasedSamplingStrategy ruleBasedSampling = 5;
 }
 
 // SamplingStrategyParameters defines request parameters for remote sampler.
@@ -113,8 +178,8 @@ message SamplingStrategyParameters {
 service SamplingManager {
   rpc GetSamplingStrategy(SamplingStrategyParameters) returns (SamplingStrategyResponse) {
     option (google.api.http) = {
-            post: "/api/v2/samplingStrategy"
-            body: "*"
-        };
+      post: "/api/v2/samplingStrategy"
+      body: "*"
+    };
   }
 }
