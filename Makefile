@@ -25,8 +25,7 @@ THRIFT_PY_ARGS=new_style,tornado
 THRIFT_JAVA_ARGS=private-members
 THRIFT_PHP_ARGS=psr4
 
-THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift \
-	baggage.thrift dependency.thrift aggregation_validator.thrift
+THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift
 THRIFT_GEN_DIR=thrift-gen
 
 # All .go files that are not auto-generated and should be auto-formatted and linted.
