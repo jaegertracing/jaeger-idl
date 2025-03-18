@@ -9,7 +9,7 @@ issues:
     - linters: [gocritic]
       text: "exitAfterDefer"
     - linters: [gocritic]
-      text: "appendAssign"  
+      text: "appendAssign"
 
   exclude-dirs-use-default: false
   exclude-files:
@@ -108,11 +108,12 @@ linters-settings:
       main:
         files: ["$all"]
         allow:
-          - "$gostd"  
+          - "$gostd"
           - "github.com/stretchr/testify"
           - "github.com/gogo/protobuf"
           - "github.com/jaegertracing/jaeger-idl"
-        
+          - "go.uber.org/goleak"
+
 run:
-  go: "1.22"
+  go: "1.23"
   timeout: 20m
