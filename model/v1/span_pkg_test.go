@@ -13,5 +13,5 @@ func TestSamplerTypeToString(t *testing.T) {
 	for kStr, vEnum := range toSamplerType {
 		assert.Equal(t, kStr, vEnum.String())
 	}
-	assert.Equal(t, "", SamplerType(-1).String())
+	assert.Empty(t, SamplerType(-1).String())
 }
