@@ -70,7 +70,7 @@ func TestSortTraces(t *testing.T) {
 	}
 	SortTrace(t1)
 	SortTrace(t2)
-	assert.EqualValues(t, t1, t2)
+	assert.Equal(t, t1, t2)
 }
 
 func TestSortListOfTraces(t *testing.T) {
@@ -104,7 +104,7 @@ func TestSortListOfTraces(t *testing.T) {
 	list2 := []*Trace{t4, t2, t1, t3}
 	SortTraces(list1)
 	SortTraces(list2)
-	assert.EqualValues(t, list1, list2)
+	assert.Equal(t, list1, list2)
 }
 
 func TestSortByTraceID(t *testing.T) {
@@ -125,5 +125,5 @@ func TestSortByTraceID(t *testing.T) {
 	// Expect ascending order
 	tracesExpected := []*TraceID{traceID3, traceID, traceID2}
 	SortTraceIDs(traces)
-	assert.EqualValues(t, tracesExpected, traces)
+	assert.Equal(t, tracesExpected, traces)
 }
