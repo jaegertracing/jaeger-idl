@@ -51,7 +51,7 @@ $(TOOLS_BIN_DIR):
 	mkdir -p $@
 
 $(LINT): $(TOOLS_BIN_DIR)
-	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/cmd/golangci-lint
+	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 .PHONY: test-code-gen
 test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
