@@ -1,119 +1,80 @@
-issues:
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters: [gosec, bodyclose, noctx]
-    - linters: [gocritic]
-      text: "dupArg"
-    - linters: [gocritic]
-      text: "exitAfterDefer"
-    - linters: [gocritic]
-      text: "appendAssign"
-
-  exclude-dirs-use-default: false
-  exclude-files:
-    - ".*.pb.go$"
-    - "proto-gen/.*"
-    - "model/v1/prototest/.*"
-
-  max-issues-per-linter: 0
-  max-same-issues: 0
-
+version: "2"
+run:
+  go: "1.23"
 linters:
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - decorder
+    - depguard
+    - durationcheck
+    - errname
+    - errorlint
+    - gocritic
+    - gosec
+    - misspell
+    - nakedret
+    - nilerr
+    - noctx
+    - nolintlint
+    - perfsprint
+    - revive
+    - testifylint
+    - usestdlibvars
   disable:
     - errcheck
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          allow:
+            - $gostd
+            - github.com/stretchr/testify
+            - github.com/gogo/protobuf
+            - github.com/jaegertracing/jaeger-idl
+            - go.uber.org/goleak
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - gosec
+          - noctx
+        path: _test\.go
+      - linters:
+          - gocritic
+        text: dupArg
+      - linters:
+          - gocritic
+        text: exitAfterDefer
+      - linters:
+          - gocritic
+        text: appendAssign
+    paths:
+      - .*.pb.go$
+      - proto-gen/.*
+      - model/v1/prototest/.*
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
   enable:
-    # Plain ASCII identifiers.
-    - asciicheck
-
-    # Checks for dangerous unicode character sequences.
-    - bidichk
-
-    # Checks whether HTTP response body is closed successfully.
-    # TODO enable this but maybe find a way to disable in tests.
-    - bodyclose
-
-    # Check whether the function uses a non-inherited context.
-    - contextcheck
-
-    # Check declaration order of types, consts, vars and funcs.
-    - decorder
-
-    # Checks if package imports are in a list of acceptable packages (see cfg below).
-    - depguard
-
-    # Check for two durations multiplied together.
-    - durationcheck
-
-    # Checks `Err-` prefix for var and `-Error` suffix for error type.
-    - errname
-
-    # Suggests to use `%w` for error-wrapping.
-    - errorlint
-
-    # Checks for pointers to enclosing loop variables.
-    - copyloopvar
-
-    - gocritic
     - gofmt
     - gofumpt
     - goimports
-
-    # Allow or ban replace directives in go.mod
-    # or force explanation for retract directives.
-    # Maybe enable once we get rid of old sarama.
-    # - gomoddirectives
-
-    - gosec
-
-    # Linter that specializes in simplifying code.
-    - gosimple
-    - govet
-
-    # Detects when assignments to existing variables are not used.
-    - ineffassign
-
-    - misspell
-
-    # Finds naked/bare returns and requires change them.
-    - nakedret
-
-    # Require a bit more explicit returns.
-    - nilerr
-
-    # Finds sending HTTP request without context.Context.
-    - noctx
-
-    # Reports ill-formed or insufficient nolint directives.
-    - nolintlint
-
-    # Checks that fmt.Sprintf can be replaced with a faster alternative.
-    - perfsprint
-
-    # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
-    - revive
-
-    # Checks usage of github.com/stretchr/testify.
-    - testifylint
-
-    # Detects the possibility to use variables/constants from the Go standard library.
-    - usestdlibvars
-
-    # TODO consider adding more linters, cf. https://olegk.dev/go-linters-configuration-the-right-version
-
-linters-settings:
-  depguard:
-    rules:
-      main:
-        files: ["$all"]
-        allow:
-          - "$gostd"
-          - "github.com/stretchr/testify"
-          - "github.com/gogo/protobuf"
-          - "github.com/jaegertracing/jaeger-idl"
-          - "go.uber.org/goleak"
-
-run:
-  go: "1.23"
-  timeout: 20m
+  exclusions:
+    generated: lax
+    paths:
+      - .*.pb.go$
+      - proto-gen/.*
+      - model/v1/prototest/.*
