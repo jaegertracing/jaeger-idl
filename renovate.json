@@ -16,6 +16,15 @@
   ],
   "packageRules": [
     {
+      "groupName": "Disable minor updates for all dependencies",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "enabled": false
+    },
+    {
       "groupName": "All Protobuf/gRPC packages",
       "matchManagers": [
         "gomod"
@@ -23,6 +32,9 @@
       "matchSourceUrls": [
         "google.golang.org{/,}**",
         "github.com/gogo/{/,}**"
+      ],
+      "schedule": [
+        "on the first day of the month"
       ]
     },
     {
@@ -33,16 +45,6 @@
       "schedule": [
         "on the first day of the month"
       ]
-    },
-    {
-      "matchManagers": [
-        "github-actions"
-      ],
-      "matchUpdateTypes": [
-        "patch",
-        "digest"
-      ],
-      "enabled": false
     }
   ]
 }
