@@ -252,7 +252,7 @@ test-ci:
 proto: proto-prepare proto-api-v2 proto-prototest
 
 # proto-all target is used to generate code for all languages as a validation step.
-proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all
+proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all proto-storage-all
 
 .PHONY: proto-prepare-all
 proto-prepare-all:
@@ -311,6 +311,17 @@ proto-api-v3-all:
 		google/api/http.proto \
 		protoc-gen-swagger/options/annotations.proto \
 		protoc-gen-swagger/options/openapiv2.proto \
+		gogoproto/gogo.proto
+
+
+.PHONY: proto-storage-all
+proto-storage-all:
+	$(PROTOC_WITH_GRPC) \
+		proto/storage/v2/trace_storage.proto
+	$(PROTOC_WITH_GRPC) \
+		proto/storage/v2/dependency_storage.proto
+
+	$(PROTOC_INTERNAL) \
 		gogoproto/gogo.proto
 
 .PHONY: proto-zipkin
