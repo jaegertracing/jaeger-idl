@@ -321,9 +321,6 @@ proto-storage-all:
 	$(PROTOC_WITH_GRPC) \
 		proto/storage/v2/dependency_storage.proto
 
-	$(PROTOC_INTERNAL) \
-		gogoproto/gogo.proto
-
 .PHONY: proto-zipkin
 proto-zipkin: proto-prepare-all
 	$(PROTOC_WITHOUT_GRPC) \
