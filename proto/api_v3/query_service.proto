@@ -133,6 +133,36 @@ message GetOperationsResponse {
   repeated Operation operations = 1;
 }
 
+message GetDependenciesRequest {
+  // Start time of the dependencies graph.
+  google.protobuf.Timestamp start_time = 1;
+  
+  // End time of the dependencies graph.
+  google.protobuf.Timestamp end_time = 2;
+}
+
+message GetDependenciesResponse {
+  // List of dependency links between services.
+  repeated DependencyLink dependencies = 1;
+}
+
+message DependencyLink {
+  // Parent service name.
+  string parent = 1;
+  
+  // Child service name.
+  string child = 2;
+  
+  // Number of calls between parent and child.
+  uint64 call_count = 3;
+  
+  // Source of the dependency link (e.g., "jaeger").
+  string source = 4;
+  
+  // Additional metadata about the dependency.
+  map<string, string> attributes = 5;
+}
+
 service QueryService {
   // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
@@ -150,6 +180,9 @@ service QueryService {
 
   // GetOperations returns operation names.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+
+  // GetDependencies returns service dependencies.
+  rpc GetDependencies(GetDependenciesRequest) returns (GetDependenciesResponse);
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
