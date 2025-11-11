@@ -20,7 +20,7 @@ make test-ci
 make lint
 ```
 
-## Making changes to the .proto files
+## Making changes to the .thrift files
 
 After making any changes to .thrift files make sure all generated files are up to date by running:
 ```
