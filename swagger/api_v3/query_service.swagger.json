@@ -214,23 +214,23 @@
         "time_unix_nano": {
           "type": "string",
           "format": "uint64",
-          "description": "time_unix_nano is the time the event occurred."
+          "description": "The time the event occurred."
         },
         "name": {
           "type": "string",
-          "description": "name of the event.\nThis field is semantically required to be set to non-empty string."
+          "description": "The name of the event.\nThis field is semantically required to be set to non-empty string."
         },
         "attributes": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "attributes is a collection of attribute key/value pairs on the event.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
+          "description": "A collection of attribute key/value pairs on the event.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key).\n\nThe attribute values SHOULD NOT contain empty values.\nThe attribute values SHOULD NOT contain bytes values.\nThe attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,\ndouble values.\nThe attribute values SHOULD NOT contain kvlist values.\nThe behavior of software that receives attributes containing such values can be unpredictable.\nThese restrictions can change in a minor release.\nThe restrictions take origin from the OpenTelemetry specification:\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute."
         },
         "dropped_attributes_count": {
           "type": "integer",
           "format": "int64",
-          "description": "dropped_attributes_count is the number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
+          "description": "The number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
         }
       },
       "description": "Event is a time-stamped annotation of the span, consisting of user-supplied\ntext description and key-value pairs."
@@ -257,17 +257,17 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "attributes is a collection of attribute key/value pairs on the link.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
+          "description": "A collection of attribute key/value pairs on the link.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key).\n\nThe attribute values SHOULD NOT contain empty values.\nThe attribute values SHOULD NOT contain bytes values.\nThe attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,\ndouble values.\nThe attribute values SHOULD NOT contain kvlist values.\nThe behavior of software that receives attributes containing such values can be unpredictable.\nThese restrictions can change in a minor release.\nThe restrictions take origin from the OpenTelemetry specification:\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute."
         },
         "dropped_attributes_count": {
           "type": "integer",
           "format": "int64",
-          "description": "dropped_attributes_count is the number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
+          "description": "The number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
         },
         "flags": {
           "type": "integer",
           "format": "int64",
-          "description": "Flags, a bit field. 8 least significant bits are the trace\nflags as defined in W3C Trace Context specification. Readers\nMUST not assume that 24 most significant bits will be zero.\nWhen creating new spans, the most-significant 24-bits MUST be\nzero.  To read the 8-bit W3C trace flag (use flags \u0026\nSPAN_FLAGS_TRACE_FLAGS_MASK).  [Optional].\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions."
+          "description": "Flags, a bit field.\n\nBits 0-7 (8 least significant bits) are the trace flags as defined in W3C Trace\nContext specification. To read the 8-bit W3C trace flag, use\n`flags \u0026 SPAN_FLAGS_TRACE_FLAGS_MASK`.\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions.\n\nBits 8 and 9 represent the 3 states of whether the link is remote.\nThe states are (unknown, is not remote, is remote).\nTo read whether the value is known, use `(flags \u0026 SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK) != 0`.\nTo read whether the link is remote, use `(flags \u0026 SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK) != 0`.\n\nReaders MUST NOT assume that bits 10-31 (22 most significant bits) will be zero.\nWhen creating new spans, bits 10-31 (most-significant 22-bits) MUST be zero.\n\n[Optional]."
         }
       },
       "description": "A pointer from the current span to another span in the same trace or in a\ndifferent trace. For example, this can be used in batching operations,\nwhere a single batch handler processes multiple requests from different\ntraces or when the handler receives a request from a different project."
@@ -295,6 +295,47 @@
       "default": "STATUS_CODE_UNSET",
       "description": "- STATUS_CODE_UNSET: The default status.\n - STATUS_CODE_OK: The Span has been validated by an Application developer or Operator to \nhave completed successfully.\n - STATUS_CODE_ERROR: The Span contains an error.",
       "title": "For the semantics of status codes see\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#set-status"
+    },
+    "api_v3DependencyLink": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string",
+          "description": "Parent service name."
+        },
+        "child": {
+          "type": "string",
+          "description": "Child service name."
+        },
+        "call_count": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Number of calls between parent and child."
+        },
+        "source": {
+          "type": "string",
+          "description": "Source of the dependency link (e.g., \"jaeger\")."
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Additional metadata about the dependency."
+        }
+      }
+    },
+    "api_v3GetDependenciesResponse": {
+      "type": "object",
+      "properties": {
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/api_v3DependencyLink"
+          },
+          "description": "List of dependency links between services."
+        }
+      }
     },
     "api_v3GetOperationsResponse": {
       "type": "object",
@@ -445,7 +486,7 @@
           "format": "byte"
         }
       },
-      "description": "AnyValue is used to represent any type of attribute value. AnyValue may contain a\nprimitive value such as a string or integer or it may contain an arbitrary nested\nobject containing arrays, key-value lists and primitives."
+      "description": "Represents any type of attribute value. AnyValue may contain a\nprimitive value such as a string or integer or it may contain an arbitrary nested\nobject containing arrays, key-value lists and primitives."
     },
     "v1ArrayValue": {
       "type": "object",
@@ -460,15 +501,45 @@
       },
       "description": "ArrayValue is a list of AnyValue messages. We need ArrayValue as a message\nsince oneof in AnyValue does not allow repeated fields."
     },
+    "v1EntityRef": {
+      "type": "object",
+      "properties": {
+        "schema_url": {
+          "type": "string",
+          "description": "This schema_url applies to the data in this message and to the Resource attributes\nreferenced by id_keys and description_keys.\nTODO: discuss if we are happy with this somewhat complicated definition of what\nthe schema_url applies to.\n\nThis field obsoletes the schema_url field in ResourceMetrics/ResourceSpans/ResourceLogs.",
+          "title": "The Schema URL, if known. This is the identifier of the Schema that the entity data\nis recorded in. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url"
+        },
+        "type": {
+          "type": "string",
+          "description": "Defines the type of the entity. MUST not change during the lifetime of the entity.\nFor example: \"service\" or \"host\". This field is required and MUST not be empty\nfor valid entities."
+        },
+        "id_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Attribute Keys that identify the entity.\nMUST not change during the lifetime of the entity. The Id must contain at least one attribute.\nThese keys MUST exist in the containing {message}.attributes."
+        },
+        "description_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Descriptive (non-identifying) attribute keys of the entity.\nMAY change over the lifetime of the entity. MAY be empty.\nThese attribute keys are not part of entity's identity.\nThese keys MUST exist in the containing {message}.attributes."
+        }
+      },
+      "description": "A reference to an Entity.\nEntity represents an object of interest associated with produced telemetry: e.g spans, metrics, profiles, or logs.\n\nStatus: [Development]"
+    },
     "v1InstrumentationScope": {
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "description": "An empty instrumentation scope name means the name is unknown."
+          "description": "A name denoting the Instrumentation scope.\nAn empty instrumentation scope name means the name is unknown."
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "Defines the version of the instrumentation scope.\nAn empty instrumentation scope version means the version is unknown."
         },
         "attributes": {
           "type": "array",
@@ -479,7 +550,8 @@
         },
         "dropped_attributes_count": {
           "type": "integer",
-          "format": "int64"
+          "format": "int64",
+          "description": "The number of attributes that were discarded. Attributes\ncan be discarded because their keys are too long or because there are too many\nattributes. If this value is 0, then no attributes were dropped."
         }
       },
       "description": "InstrumentationScope is a message representing the instrumentation scope information\nsuch as the fully qualified name and version."
@@ -488,13 +560,15 @@
       "type": "object",
       "properties": {
         "key": {
-          "type": "string"
+          "type": "string",
+          "description": "The key name of the pair."
         },
         "value": {
-          "$ref": "#/definitions/v1AnyValue"
+          "$ref": "#/definitions/v1AnyValue",
+          "description": "The value of the pair."
         }
       },
-      "description": "KeyValue is a key-value pair that is used to store Span attributes, Link\nattributes, etc."
+      "description": "Represents a key-value pair that is used to store Span attributes, Link\nattributes, etc."
     },
     "v1KeyValueList": {
       "type": "object",
@@ -517,12 +591,19 @@
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "Set of attributes that describe the resource.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
+          "description": "Set of attributes that describe the resource.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key).\n\nThe attribute values SHOULD NOT contain empty values.\nThe attribute values SHOULD NOT contain bytes values.\nThe attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,\ndouble values.\nThe attribute values SHOULD NOT contain kvlist values.\nThe behavior of software that receives attributes containing such values can be unpredictable.\nThese restrictions can change in a minor release.\nThe restrictions take origin from the OpenTelemetry specification:\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute."
         },
         "dropped_attributes_count": {
           "type": "integer",
           "format": "int64",
-          "description": "dropped_attributes_count is the number of dropped attributes. If the value is 0, then\nno attributes were dropped."
+          "description": "The number of dropped attributes. If the value is 0, then\nno attributes were dropped."
+        },
+        "entity_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1EntityRef"
+          },
+          "description": "Set of entities that participate in this Resource.\n\nNote: keys in the references MUST exist in attributes of this message.\n\nStatus: [Development]"
         }
       },
       "description": "Resource information."
@@ -543,7 +624,7 @@
         },
         "schema_url": {
           "type": "string",
-          "description": "The Schema URL, if known. This is the identifier of the Schema that the resource data\nis recorded in. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url\nThis schema_url applies to the data in the \"resource\" field. It does not apply\nto the data in the \"scope_spans\" field which have their own schema_url field."
+          "description": "The Schema URL, if known. This is the identifier of the Schema that the resource data\nis recorded in. Notably, the last part of the URL path is the version number of the\nschema: http[s]://server[:port]/path/\u003cversion\u003e. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url\nThis schema_url applies to the data in the \"resource\" field. It does not apply\nto the data in the \"scope_spans\" field which have their own schema_url field."
         }
       },
       "description": "A collection of ScopeSpans from a Resource."
@@ -564,7 +645,7 @@
         },
         "schema_url": {
           "type": "string",
-          "description": "The Schema URL, if known. This is the identifier of the Schema that the span data\nis recorded in. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url\nThis schema_url applies to all spans and span events in the \"spans\" field."
+          "description": "The Schema URL, if known. This is the identifier of the Schema that the span data\nis recorded in. Notably, the last part of the URL path is the version number of the\nschema: http[s]://server[:port]/path/\u003cversion\u003e. To learn more about Schema URL see\nhttps://opentelemetry.io/docs/specs/otel/schemas/#schema-url\nThis schema_url applies to all spans and span events in the \"spans\" field."
         }
       },
       "description": "A collection of Spans produced by an InstrumentationScope."
@@ -594,7 +675,7 @@
         "flags": {
           "type": "integer",
           "format": "int64",
-          "description": "Flags, a bit field. 8 least significant bits are the trace\nflags as defined in W3C Trace Context specification. Readers\nMUST not assume that 24 most significant bits will be zero.\nTo read the 8-bit W3C trace flag, use `flags \u0026 SPAN_FLAGS_TRACE_FLAGS_MASK`.\n\nWhen creating span messages, if the message is logically forwarded from another source\nwith an equivalent flags fields (i.e., usually another OTLP span message), the field SHOULD\nbe copied as-is. If creating from a source that does not have an equivalent flags field\n(such as a runtime representation of an OpenTelemetry span), the high 24 bits MUST\nbe set to zero.\n\n[Optional].\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions."
+          "description": "Flags, a bit field.\n\nBits 0-7 (8 least significant bits) are the trace flags as defined in W3C Trace\nContext specification. To read the 8-bit W3C trace flag, use\n`flags \u0026 SPAN_FLAGS_TRACE_FLAGS_MASK`.\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions.\n\nBits 8 and 9 represent the 3 states of whether a span's parent\nis remote. The states are (unknown, is not remote, is remote).\nTo read whether the value is known, use `(flags \u0026 SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK) != 0`.\nTo read whether the span is remote, use `(flags \u0026 SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK) != 0`.\n\nWhen creating span messages, if the message is logically forwarded from another source\nwith an equivalent flags fields (i.e., usually another OTLP span message), the field SHOULD\nbe copied as-is. If creating from a source that does not have an equivalent flags field\n(such as a runtime representation of an OpenTelemetry span), the high 22 bits MUST\nbe set to zero.\nReaders MUST NOT assume that bits 10-31 (22 most significant bits) will be zero.\n\n[Optional]."
         },
         "name": {
           "type": "string",
@@ -607,49 +688,49 @@
         "start_time_unix_nano": {
           "type": "string",
           "format": "uint64",
-          "description": "start_time_unix_nano is the start time of the span. On the client side, this is the time\nkept by the local machine where the span execution starts. On the server side, this\nis the time when the server's application handler starts running.\nValue is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.\n\nThis field is semantically required and it is expected that end_time \u003e= start_time."
+          "description": "The start time of the span. On the client side, this is the time\nkept by the local machine where the span execution starts. On the server side, this\nis the time when the server's application handler starts running.\nValue is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.\n\nThis field is semantically required and it is expected that end_time \u003e= start_time."
         },
         "end_time_unix_nano": {
           "type": "string",
           "format": "uint64",
-          "description": "end_time_unix_nano is the end time of the span. On the client side, this is the time\nkept by the local machine where the span execution ends. On the server side, this\nis the time when the server application handler stops running.\nValue is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.\n\nThis field is semantically required and it is expected that end_time \u003e= start_time."
+          "description": "The end time of the span. On the client side, this is the time\nkept by the local machine where the span execution ends. On the server side, this\nis the time when the server application handler stops running.\nValue is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.\n\nThis field is semantically required and it is expected that end_time \u003e= start_time."
         },
         "attributes": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1KeyValue"
           },
-          "description": "\"/http/user_agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\"\n    \"/http/server_latency\": 300\n    \"example.com/myattribute\": true\n    \"example.com/score\": 10.239\n\nThe OpenTelemetry API specification further restricts the allowed value types:\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md#attribute\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key).",
-          "title": "attributes is a collection of key/value pairs. Note, global attributes\nlike server name can be set using the resource API. Examples of attributes:"
+          "description": "\"/http/user_agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\"\n    \"/http/server_latency\": 300\n    \"example.com/myattribute\": true\n    \"example.com/score\": 10.239\n\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key).\n\nThe attribute values SHOULD NOT contain empty values.\nThe attribute values SHOULD NOT contain bytes values.\nThe attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,\ndouble values.\nThe attribute values SHOULD NOT contain kvlist values.\nThe behavior of software that receives attributes containing such values can be unpredictable.\nThese restrictions can change in a minor release.\nThe restrictions take origin from the OpenTelemetry specification:\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.",
+          "title": "A collection of key/value pairs. Note, global attributes\nlike server name can be set using the resource API. Examples of attributes:"
         },
         "dropped_attributes_count": {
           "type": "integer",
           "format": "int64",
-          "description": "dropped_attributes_count is the number of attributes that were discarded. Attributes\ncan be discarded because their keys are too long or because there are too many\nattributes. If this value is 0, then no attributes were dropped."
+          "description": "The number of attributes that were discarded. Attributes\ncan be discarded because their keys are too long or because there are too many\nattributes. If this value is 0, then no attributes were dropped."
         },
         "events": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SpanEvent"
           },
-          "description": "events is a collection of Event items."
+          "description": "A collection of Event items."
         },
         "dropped_events_count": {
           "type": "integer",
           "format": "int64",
-          "description": "dropped_events_count is the number of dropped events. If the value is 0, then no\nevents were dropped."
+          "description": "The number of dropped events. If the value is 0, then no\nevents were dropped."
         },
         "links": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SpanLink"
           },
-          "description": "links is a collection of Links, which are references from this span to a span\nin the same or different trace."
+          "description": "A collection of Links, which are references from this span to a span\nin the same or different trace."
         },
         "dropped_links_count": {
           "type": "integer",
           "format": "int64",
-          "description": "dropped_links_count is the number of dropped links after the maximum size was\nenforced. If this value is 0, then no links were dropped."
+          "description": "The number of dropped links after the maximum size was\nenforced. If this value is 0, then no links were dropped."
         },
         "status": {
           "$ref": "#/definitions/v1Status",
