@@ -136,6 +136,22 @@ message GetOperationsResponse {
   repeated Operation operations = 1;
 }
 
+message GetDependenciesRequest {
+  int64 end_time_nanos = 1;
+  int64 lookback_nanos = 2;
+}
+
+message DependenciesResponse {
+  repeated Dependency dependencies = 1;
+}
+
+message Dependency {
+  string parent = 1;
+  string child = 2;
+  uint64 call_count = 3;
+}
+
+
 service QueryService {
   // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
@@ -153,6 +169,9 @@ service QueryService {
 
   // GetOperations returns operation names.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+
+   rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse);
+
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
