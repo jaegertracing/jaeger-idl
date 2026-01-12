@@ -137,8 +137,12 @@ message GetOperationsResponse {
 }
 
 message GetDependenciesRequest {
-  int64 end_time_nanos = 1;
-  int64 lookback_nanos = 2;
+    // Optional. The start time to search trace ID.
+  google.protobuf.Timestamp start_time = 2;
+
+  // Optional. The end time to search trace ID.
+  google.protobuf.Timestamp end_time = 3;
+  
 }
 
 message DependenciesResponse {
@@ -203,3 +207,4 @@ message GRPCGatewayError {
 message GRPCGatewayWrapper {
   opentelemetry.proto.trace.v1.TracesData result = 1;
 }
+
