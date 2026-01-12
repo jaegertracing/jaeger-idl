@@ -141,6 +141,13 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          },
+          {
+            "name": "query.attributes",
+            "description": "attributes contains key-value pairs where the key is the attribute name\nand the value is its string representation. Attributes are matched against\nspan and resource attributes. At least one span must match all specified attributes.\n\nThe HTTP API expects this as a URL-encoded JSON string map.\nExample: {\"http.status_code\":\"200\",\"error\":\"true\"}",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
