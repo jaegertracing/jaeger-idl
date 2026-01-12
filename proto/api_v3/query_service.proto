@@ -138,10 +138,10 @@ message GetOperationsResponse {
 
 message GetDependenciesRequest {
     // Optional. The start time to search trace ID.
-  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp start_time = 1;
 
   // Optional. The end time to search trace ID.
-  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Timestamp end_time = 2;
   
 }
 
