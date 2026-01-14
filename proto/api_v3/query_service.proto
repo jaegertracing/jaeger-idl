@@ -137,12 +137,12 @@ message GetOperationsResponse {
 }
 
 message GetDependenciesRequest {
-    // Optional. The start time to search trace ID.
+  // Required. The start time for the time range to search dependencies.
   google.protobuf.Timestamp start_time = 1;
-
-  // Optional. The end time to search trace ID.
+  // Required. The end time for the time range to search dependencies.
   google.protobuf.Timestamp end_time = 2;
-  
+}
+    
 }
 
 message DependenciesResponse {
