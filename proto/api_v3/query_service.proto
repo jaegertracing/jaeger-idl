@@ -143,7 +143,7 @@ message GetDependenciesRequest {
   google.protobuf.Timestamp end_time = 2;
 }
     
-}
+
 
 message DependenciesResponse {
   repeated Dependency dependencies = 1;
