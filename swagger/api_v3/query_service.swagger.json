@@ -296,6 +296,32 @@
       "description": "- STATUS_CODE_UNSET: The default status.\n - STATUS_CODE_OK: The Span has been validated by an Application developer or Operator to \nhave completed successfully.\n - STATUS_CODE_ERROR: The Span contains an error.",
       "title": "For the semantics of status codes see\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#set-status"
     },
+    "api_v3DependenciesResponse": {
+      "type": "object",
+      "properties": {
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/api_v3Dependency"
+          }
+        }
+      }
+    },
+    "api_v3Dependency": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "child": {
+          "type": "string"
+        },
+        "call_count": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
     "api_v3GetOperationsResponse": {
       "type": "object",
       "properties": {
