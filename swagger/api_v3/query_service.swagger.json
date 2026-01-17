@@ -11,6 +11,38 @@
     "application/json"
   ],
   "paths": {
+    "/api/v3/dependencies": {
+      "get": {
+        "summary": "GetDependencies returns dependencies.",
+        "operationId": "QueryService_GetDependencies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/api_v3GetDependenciesResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "lookback",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "QueryService"
+        ]
+      }
+    },
     "/api/v3/operations": {
       "get": {
         "summary": "GetOperations returns operation names.",
@@ -293,6 +325,21 @@
       "description": "- STATUS_CODE_UNSET: The default status.\n - STATUS_CODE_OK: The Span has been validated by an Application developer or Operator to \nhave completed successfully.\n - STATUS_CODE_ERROR: The Span contains an error.",
       "title": "For the semantics of status codes see\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#set-status"
     },
+    "api_v3DependencyLink": {
+      "type": "object",
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "child": {
+          "type": "string"
+        },
+        "call_count": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
     "api_v3FindTracesRequest": {
       "type": "object",
       "properties": {
@@ -301,6 +348,17 @@
         }
       },
       "description": "Request object to search traces."
+    },
+    "api_v3GetDependenciesResponse": {
+      "type": "object",
+      "properties": {
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/api_v3DependencyLink"
+          }
+        }
+      }
     },
     "api_v3GetOperationsResponse": {
       "type": "object",
