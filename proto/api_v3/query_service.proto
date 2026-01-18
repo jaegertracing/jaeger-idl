@@ -16,6 +16,7 @@ syntax = "proto3";
 
 package jaeger.api_v3;
 
+import "google/api/annotations.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
@@ -142,17 +143,33 @@ service QueryService {
   // It means that the JSON response cannot be directly unmarshalled using JSONPb.
   // This can be fixed by first parsing into user-defined envelope with standard JSON library
   // or string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.
-  rpc GetTrace(GetTraceRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {}
+  rpc GetTrace(GetTraceRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {
+    option (google.api.http) = {
+      get: "/api/v3/traces/{trace_id}"
+    };
+  }
 
   // FindTraces searches for traces.
   // See GetTrace for JSON unmarshalling.
-  rpc FindTraces(FindTracesRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {}
+  rpc FindTraces(FindTracesRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {
+    option (google.api.http) = {
+      get: "/api/v3/traces"
+    };
+  }
 
   // GetServices returns service names.
-  rpc GetServices(GetServicesRequest) returns (GetServicesResponse) {}
+  rpc GetServices(GetServicesRequest) returns (GetServicesResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/services"
+    };
+  }
 
   // GetOperations returns operation names.
-  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/operations"
+    };
+  }
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
