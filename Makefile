@@ -311,8 +311,6 @@ proto-api-v3-all:
 		$(PROTO_INCLUDES) \
 		--swagger_out=disable_default_errors=true,logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml:./swagger \
 		proto/api_v3/query_service.proto
-	# Fix swagger for OTLP-JSON compatibility
-	go run ./cmd/fix-otlp-swagger/main.go --input ./swagger/api_v3/query_service.swagger.json
 
 	$(PROTOC_INTERNAL) \
 		google/api/annotations.proto \
@@ -331,6 +329,8 @@ proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI)
 		--openapi_out=Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
+	# Fix OpenAPI for OTLP-JSON compatibility
+	go run ./internal/tools/fix-otlp-openapi/main.go --input ./swagger/api_v3/query_service.openapi.yaml
 
 
 .PHONY: proto-storage-all
