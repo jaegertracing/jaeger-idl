@@ -54,7 +54,7 @@ func processSwagger(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, output, 0644); err != nil {
+	if err := os.WriteFile(outputPath, output, 0o600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -93,9 +93,10 @@ func transformSwagger(swagger map[string]interface{}) {
 			}
 
 			// Transform TraceID and SpanID
-			if propName == "trace_id" || propName == "traceId" {
+			switch propName {
+			case "trace_id", "traceId":
 				transformTraceID(propObj)
-			} else if propName == "span_id" || propName == "spanId" || propName == "parent_span_id" || propName == "parentSpanId" {
+			case "span_id", "spanId", "parent_span_id", "parentSpanId":
 				transformSpanID(propObj)
 			}
 
@@ -145,7 +146,7 @@ func transformEnumToInteger(enumDef map[string]interface{}) {
 
 	// Update the definition
 	enumDef["type"] = "integer"
-	
+
 	// Convert int slice to interface slice for JSON encoding
 	intEnumInterface := make([]interface{}, len(intEnum))
 	for i, v := range intEnum {
@@ -204,7 +205,7 @@ func transformEnumReference(propObj map[string]interface{}, enumDef map[string]i
 	// Preserve and update description
 	description, _ := propObj["description"].(string)
 	enumDescription, _ := enumDef["description"].(string)
-	
+
 	mapping := strings.Join(mappingParts, ", ")
 	combinedDesc := description
 	if enumDescription != "" {
