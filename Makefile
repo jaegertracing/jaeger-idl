@@ -311,6 +311,8 @@ proto-api-v3-all:
 		$(PROTO_INCLUDES) \
 		--swagger_out=disable_default_errors=true,logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml:./swagger \
 		proto/api_v3/query_service.proto
+	# Fix swagger for OTLP-JSON compatibility
+	go run ./cmd/fix-otlp-swagger/main.go --input ./swagger/api_v3/query_service.swagger.json
 
 	$(PROTOC_INTERNAL) \
 		google/api/annotations.proto \
