@@ -58,7 +58,7 @@ func processOpenAPI(inputPath, outputPath string) error {
 	defer f.Close()
 
 	encoder := yaml.NewEncoder(f)
-	encoder.SetIndent(2)
+	encoder.SetIndent(4)
 	if err := encoder.Encode(&root); err != nil {
 		return fmt.Errorf("failed to encode YAML: %w", err)
 	}
@@ -98,6 +98,12 @@ func transformOpenAPI(root *yaml.Node) {
 					transformTraceID(propNode)
 				case "spanId", "parentSpanId":
 					transformSpanID(propNode)
+				}
+
+				// Transform enum fields
+				format := getNodeValue(propNode, "format")
+				if format == "enum" {
+					transformEnum(propNode, propName)
 				}
 			}
 		}
@@ -238,4 +244,78 @@ func transformSpanID(propNode *yaml.Node) {
 
 	// Update description
 	updateNodeDescription(propNode, "Byte array as hex-encoded string.")
+}
+
+func transformEnum(propNode *yaml.Node, propName string) {
+	// Check if already has enum values (idempotency)
+	if findNodeByKey(propNode, "enum") != nil {
+		return
+	}
+
+	// Only transform if it has format: enum
+	format := getNodeValue(propNode, "format")
+	if format != "enum" {
+		return
+	}
+
+	// Remove format: enum
+	removeNodeKey(propNode, "format")
+
+	// Get enum values and descriptions based on property name
+	var enumValues []int
+	var enumDescriptions []string
+
+	// SpanKind enum - based on OpenTelemetry proto definitions
+	if propName == "kind" {
+		enumValues = []int{0, 1, 2, 3, 4, 5}
+		enumDescriptions = []string{
+			"0: SPAN_KIND_UNSPECIFIED - Unspecified. Do NOT use as default",
+			"1: SPAN_KIND_INTERNAL - Internal operation within an application (default)",
+			"2: SPAN_KIND_SERVER - Server-side handling of RPC or remote request",
+			"3: SPAN_KIND_CLIENT - Request to some remote service",
+			"4: SPAN_KIND_PRODUCER - Producer sending a message to a broker",
+			"5: SPAN_KIND_CONSUMER - Consumer receiving a message from a broker",
+		}
+	} else {
+		// For other enum fields, we can't determine values without proto definitions
+		return
+	}
+
+	// Add enum array
+	addEnumArray(propNode, enumValues)
+
+	// Update description with enum mapping
+	description := getNodeValue(propNode, "description")
+	mapping := strings.Join(enumDescriptions, "; ")
+	if description != "" {
+		setNodeValue(propNode, "description", description+"\n\nEnum values: "+mapping)
+	} else {
+		setNodeValue(propNode, "description", "Enum values: "+mapping)
+	}
+}
+
+func addEnumArray(propNode *yaml.Node, values []int) {
+	if propNode.Kind != yaml.MappingNode {
+		return
+	}
+
+	// Create enum array node
+	enumKey := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: "enum",
+	}
+
+	enumArray := &yaml.Node{
+		Kind: yaml.SequenceNode,
+	}
+
+	for _, val := range values {
+		enumArray.Content = append(enumArray.Content, &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: fmt.Sprintf("%d", val),
+		})
+	}
+
+	// Add to propNode
+	propNode.Content = append(propNode.Content, enumKey, enumArray)
 }
