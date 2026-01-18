@@ -12,7 +12,7 @@ SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
-SWAGGER2OPENAPI_IMAGE=mermade/swagger2openapi:latest
+SWAGGER2OPENAPI_IMAGE=mermade/swagger2openapi@sha256:1e92f087f014e8f7ae493fb0e149548299256dffe3e3b64a2a93be73f94e1ff3
 SWAGGER2OPENAPI=docker run --rm -u ${shell id -u} -v "${PWD}:/usr/src/app" $(SWAGGER2OPENAPI_IMAGE)
 
 PROTOTOOL_VER=1.8.0
