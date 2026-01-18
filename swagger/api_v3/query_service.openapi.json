@@ -1,0 +1,153 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "jaeger.api_v3",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/get-trace": {
+      "post": {
+        "tags": [
+          "QueryService"
+        ],
+        "summary": "GetTrace returns a single trace.",
+        "description": "Note that the JSON response over HTTP is wrapped into result envelope \"{\"result\": ...}\"\n It means that the JSON response cannot be directly unmarshalled using JSONPb.\n This can be fixed by first parsing into user-defined envelope with standard JSON library\n or string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.",
+        "operationId": "GetTrace",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response for GetTrace operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracesData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/find-traces": {
+      "post": {
+        "tags": [
+          "QueryService"
+        ],
+        "summary": "FindTraces searches for traces.",
+        "description": "See GetTrace for JSON unmarshalling.",
+        "operationId": "FindTraces",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response for FindTraces operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracesData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-services": {
+      "post": {
+        "tags": [
+          "QueryService"
+        ],
+        "summary": "GetServices returns service names.",
+        "operationId": "GetServices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response for GetServices operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetServicesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-operations": {
+      "post": {
+        "tags": [
+          "QueryService"
+        ],
+        "summary": "GetOperations returns operation names.",
+        "operationId": "GetOperations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Response for GetOperations operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetOperationsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TracesData": {
+        "$ref": "#/components/schemas/TracesData"
+      },
+      "GetServicesResponse": {
+        "type": "object",
+        "properties": {
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "services"
+        ],
+        "description": "Response object to get service names."
+      },
+      "Operation": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "span_kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "span_kind"
+        ],
+        "description": "Operation encapsulates information about operation."
+      },
+      "GetOperationsResponse": {
+        "type": "object",
+        "properties": {
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Operation"
+            }
+          }
+        },
+        "required": [
+          "operations"
+        ],
+        "description": "Response object to get operation names."
+      }
+    }
+  },
+  "tags": []
+}
