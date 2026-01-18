@@ -54,7 +54,8 @@ func processSwagger(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, output, 0o600); err != nil {
+	//nolint:gosec // G306: Generated Swagger file needs to be readable by other tools and users
+	if err := os.WriteFile(outputPath, output, 0o644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -99,9 +100,6 @@ func transformSwagger(swagger map[string]interface{}) {
 			case "span_id", "spanId", "parent_span_id", "parentSpanId":
 				transformSpanID(propObj)
 			}
-
-			// Transform 64-bit integer fields - already handled correctly in the swagger
-			// (start_time_unix_nano, end_time_unix_nano, time_unix_nano are already type: string, format: uint64)
 
 			// Handle enum references
 			if ref, ok := propObj["$ref"].(string); ok {
@@ -163,7 +161,7 @@ func transformEnumToInteger(enumDef map[string]interface{}) {
 		enumDef["description"] = "Value mapping: " + mapping
 	}
 
-	// Remove default if it exists and is a string
+	// Convert default value from string to integer index
 	if defaultVal, exists := enumDef["default"].(string); exists {
 		// Find the index of the default value
 		for i, val := range enumValues {
