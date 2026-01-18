@@ -12,9 +12,6 @@ SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
-SWAGGER2OPENAPI_IMAGE=mermade/swagger2openapi@sha256:1e92f087f014e8f7ae493fb0e149548299256dffe3e3b64a2a93be73f94e1ff3
-SWAGGER2OPENAPI=docker run --rm -u ${shell id -u} -v "${PWD}:/usr/src/app" $(SWAGGER2OPENAPI_IMAGE)
-
 PROTOTOOL_VER=1.8.0
 PROTOTOOL_IMAGE=uber/prototool:$(PROTOTOOL_VER)
 PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(PROTOTOOL_IMAGE)
@@ -59,7 +56,6 @@ $(LINT): $(TOOLS_BIN_DIR)
 .PHONY: test-code-gen
 test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
-	git diff --exit-code ./swagger/api_v3/query_service.openapi.json
 
 .PHONY: swagger-validate
 swagger-validate:
@@ -316,13 +312,7 @@ proto-api-v3-all:
 		protoc-gen-swagger/options/annotations.proto \
 		protoc-gen-swagger/options/openapiv2.proto \
 		gogoproto/gogo.proto
-	# OpenAPI v3
-	$(MAKE) proto-api-v3-openapi
 
-.PHONY: proto-api-v3-openapi
-proto-api-v3-openapi:
-	# Convert Swagger 2.0 to OpenAPI 3.0
-	$(SWAGGER2OPENAPI) swagger2openapi /usr/src/app/swagger/api_v3/query_service.swagger.json --outfile /usr/src/app/swagger/api_v3/query_service.openapi.json
 
 .PHONY: proto-storage-all
 proto-storage-all:
