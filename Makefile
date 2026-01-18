@@ -19,6 +19,7 @@ PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" 
 PROTOC_VER=0.5.0
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
 PROTOC=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
+PROTOC_WITH_TOOLS=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -v "$(TOOLS_BIN_DIR):/tools" -w ${PWD} -e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ${PROTOC_IMAGE} --proto_path=${PWD}
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
 THRIFT_PY_ARGS=new_style,tornado
@@ -323,13 +324,7 @@ proto-api-v3-all:
 .PHONY: proto-api-v3-openapi
 proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI)
 	# Generate OpenAPI v3 from proto source
-	docker run --rm -u ${shell id -u} \
-		-v "${PWD}:${PWD}" \
-		-v "$(TOOLS_BIN_DIR):/tools" \
-		-w ${PWD} \
-		-e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-		${PROTOC_IMAGE} \
-		--proto_path=${PWD} \
+	$(PROTOC_WITH_TOOLS) \
 		$(PROTO_INCLUDES) \
 		--openapi_out=Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
