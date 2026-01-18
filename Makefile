@@ -19,6 +19,7 @@ PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" 
 PROTOC_VER=0.5.0
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
 PROTOC=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
+PROTOC_WITH_TOOLS=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -v "$(TOOLS_BIN_DIR):/tools" -w ${PWD} -e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ${PROTOC_IMAGE} --proto_path=${PWD}
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
 THRIFT_PY_ARGS=new_style,tornado
@@ -46,6 +47,7 @@ SRC_ROOT := $(shell git rev-parse --show-toplevel)
 TOOLS_MOD_DIR   := $(SRC_ROOT)/internal/tools
 TOOLS_BIN_DIR   := $(SRC_ROOT)/.tools
 LINT         := $(TOOLS_BIN_DIR)/golangci-lint
+PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
 
 $(TOOLS_BIN_DIR):
 	mkdir -p $@
@@ -53,9 +55,13 @@ $(TOOLS_BIN_DIR):
 $(LINT): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
+$(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
+	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
+
 .PHONY: test-code-gen
 test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
+	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
 
 .PHONY: swagger-validate
 swagger-validate:
@@ -312,6 +318,17 @@ proto-api-v3-all:
 		protoc-gen-swagger/options/annotations.proto \
 		protoc-gen-swagger/options/openapiv2.proto \
 		gogoproto/gogo.proto
+	# OpenAPI v3
+	$(MAKE) proto-api-v3-openapi
+
+.PHONY: proto-api-v3-openapi
+proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI)
+	# Generate OpenAPI v3 from proto source
+	$(PROTOC_WITH_TOOLS) \
+		$(PROTO_INCLUDES) \
+		--openapi_out=Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
+		proto/api_v3/query_service.proto
+	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
 
 
 .PHONY: proto-storage-all
