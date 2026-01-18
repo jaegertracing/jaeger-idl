@@ -46,7 +46,7 @@ SRC_ROOT := $(shell git rev-parse --show-toplevel)
 TOOLS_MOD_DIR   := $(SRC_ROOT)/internal/tools
 TOOLS_BIN_DIR   := $(SRC_ROOT)/.tools
 LINT         := $(TOOLS_BIN_DIR)/golangci-lint
-PROTOC_GEN_OPENAPIV3 := $(TOOLS_BIN_DIR)/protoc-gen-openapiv3
+PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
 
 $(TOOLS_BIN_DIR):
 	mkdir -p $@
@@ -54,14 +54,13 @@ $(TOOLS_BIN_DIR):
 $(LINT): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
-$(PROTOC_GEN_OPENAPIV3): $(TOOLS_BIN_DIR)
-	CGO_ENABLED=0 go install github.com/sapk/protoc-gen-openapiv3@latest
-	mv $(shell go env GOPATH)/bin/protoc-gen-openapiv3 $@
+$(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
+	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
 
 .PHONY: test-code-gen
 test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
-	git diff --exit-code ./swagger/api_v3/query_service.openapi.json
+	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
 
 .PHONY: swagger-validate
 swagger-validate:
@@ -322,7 +321,7 @@ proto-api-v3-all:
 	$(MAKE) proto-api-v3-openapi
 
 .PHONY: proto-api-v3-openapi
-proto-api-v3-openapi: $(PROTOC_GEN_OPENAPIV3)
+proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI)
 	# Generate OpenAPI v3 from proto source
 	docker run --rm -u ${shell id -u} \
 		-v "${PWD}:${PWD}" \
@@ -332,8 +331,9 @@ proto-api-v3-openapi: $(PROTOC_GEN_OPENAPIV3)
 		${PROTOC_IMAGE} \
 		--proto_path=${PWD} \
 		$(PROTO_INCLUDES) \
-		--openapiv3_out=output=./swagger/api_v3/query_service.openapi.json,output-format=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:. \
+		--openapi_out=Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
+	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
 
 
 .PHONY: proto-storage-all
