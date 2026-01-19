@@ -154,7 +154,22 @@ service QueryService {
   // See GetTrace for JSON unmarshalling.
   rpc FindTraces(FindTracesRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {
     option (google.api.http) = {
+      // 1. Primary Binding: GET
+      // Maps fields to Query Parameters (e.g., ?query.service_name=foo)
       get: "/api/v3/traces"
+
+      // 2. Secondary Binding: POST
+      // Maps the entire JSON body to the request message, e.g.
+      // {
+      //   "query": {
+      //     "service_name": "foo",
+      //     "attributes": { "http.status": "200" }
+      //   }
+      // }
+      additional_bindings {
+        post: "/api/v3/traces" // You can use the exact same path
+        body: "*"              // "*" means "map the whole JSON body to the Request struct"
+      }
     };
   }
 
