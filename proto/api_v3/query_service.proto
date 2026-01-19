@@ -17,6 +17,7 @@ syntax = "proto3";
 package jaeger.api_v3;
 
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
@@ -115,26 +116,26 @@ message GetServicesRequest {}
 
 // Response object to get service names.
 message GetServicesResponse {
-  repeated string services = 1;
+  repeated string services = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Request object to get operation names.
 message GetOperationsRequest {
   // Required service name.
-  string service = 1;
+  string service = 1 [(google.api.field_behavior) = REQUIRED];
   // Optional span kind.
-  string span_kind = 2;
+  string span_kind = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Operation encapsulates information about operation.
 message Operation {
-  string name = 1;
-  string span_kind = 2;
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string span_kind = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Response object to get operation names.
 message GetOperationsResponse {
-  repeated Operation operations = 1;
+  repeated Operation operations = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 service QueryService {
