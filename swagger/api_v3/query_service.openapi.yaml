@@ -239,6 +239,8 @@ components:
                 ArrayValue is a list of AnyValue messages. We need ArrayValue as a message
                  since oneof in AnyValue does not allow repeated fields.
         GetOperationsResponse:
+            required:
+                - operations
             type: object
             properties:
                 operations:
@@ -247,6 +249,8 @@ components:
                         $ref: '#/components/schemas/Operation'
             description: Response object to get operation names.
         GetServicesResponse:
+            required:
+                - services
             type: object
             properties:
                 services:
@@ -313,6 +317,9 @@ components:
                  avoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches
                  are semantically equivalent.
         Operation:
+            required:
+                - name
+                - spanKind
             type: object
             properties:
                 name:

@@ -16,7 +16,7 @@ PROTOTOOL_VER=1.8.0
 PROTOTOOL_IMAGE=uber/prototool:$(PROTOTOOL_VER)
 PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(PROTOTOOL_IMAGE)
 
-PROTOC_VER=0.5.0
+PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
 PROTOC=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
 PROTOC_WITH_TOOLS=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -v "$(TOOLS_BIN_DIR):/tools" -w ${PWD} -e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ${PROTOC_IMAGE} --proto_path=${PWD}
@@ -44,9 +44,9 @@ IMPORT_LOG=.import.log
 
 # SRC_ROOT is the top of the source tree.
 SRC_ROOT := $(shell git rev-parse --show-toplevel)
-TOOLS_MOD_DIR   := $(SRC_ROOT)/internal/tools
-TOOLS_BIN_DIR   := $(SRC_ROOT)/.tools
-LINT         := $(TOOLS_BIN_DIR)/golangci-lint
+TOOLS_MOD_DIR      := $(SRC_ROOT)/internal/tools
+TOOLS_BIN_DIR      := $(SRC_ROOT)/.tools
+LINT               := $(TOOLS_BIN_DIR)/golangci-lint
 PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
 
 $(TOOLS_BIN_DIR):
@@ -55,8 +55,9 @@ $(TOOLS_BIN_DIR):
 $(LINT): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
+# Since this is a protoc plugin that runs inside a container, we need to build it for Linux.
 $(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
-	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
+	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 GOOS=linux go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
 
 .PHONY: test-code-gen
 test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
