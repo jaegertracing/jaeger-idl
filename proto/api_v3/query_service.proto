@@ -154,13 +154,13 @@ message GetDependenciesRequest {
 
 
 message DependenciesResponse {
-  repeated Dependency dependencies = 1;
+  repeated Dependency dependencies = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message Dependency {
-  string parent = 1;
-  string child = 2;
-  uint64 call_count = 3;
+  string parent = 1 [(google.api.field_behavior) = REQUIRED];
+  string child = 2 [(google.api.field_behavior) = REQUIRED];
+  uint64 call_count = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 
@@ -212,7 +212,7 @@ service QueryService {
       get: "/api/v3/operations"
     };
   }
-   rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse);
+  rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse);
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
