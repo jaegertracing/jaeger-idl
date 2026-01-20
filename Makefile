@@ -55,7 +55,7 @@ PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
 PRUNE_OPENAPI      := $(TOOLS_BIN_DIR)/prune-openapi
 
 # Determine the directory of the gnostic module.
-# Using deferred expansion to ensure the build step waas done already.
+# Using deferred expansion to ensure the build step was done already.
 GNOSTIC_DIR = $(shell cd $(TOOLS_MOD_DIR) && go list -f '{{.Dir}}' -m github.com/google/gnostic)
 
 $(TOOLS_BIN_DIR):
