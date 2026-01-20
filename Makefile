@@ -273,7 +273,7 @@ proto: proto-prepare proto-api-v2 proto-prototest
 proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all proto-storage-all
 
 .PHONY: proto-prepare-all
-proto-prepare-all:
+proto-prepare-all: $(TOOLS_BIN_DIR)
 	mkdir -p ${PROTO_GEN_GO_DIR_POLYGLOT} \
 		${PROTO_GEN_JAVA_DIR_POLYGLOT} \
 		${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
@@ -282,7 +282,7 @@ proto-prepare-all:
 		${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 
 .PHONY: proto-prepare
-proto-prepare:
+proto-prepare: $(TOOLS_BIN_DIR)
 	mkdir -p ${PROTO_GEN_GO_DIR}
 
 .PHONY: proto-prototest
