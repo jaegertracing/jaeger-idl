@@ -20,7 +20,7 @@ PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
 PROTOC=docker run --rm -u ${shell id -u} \
 	-v "${PWD}:${PWD}" \
-	-v "$(GNOSTIC_DIR):/gnostic/github.com/google/gnostic" \
+	-v "$(GNOSTIC_DIR):/gnostic/gnostic" \
 	-v "$(TOOLS_BIN_DIR):/tools" \
 	-w ${PWD} \
 	-e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
@@ -120,8 +120,8 @@ PROTO_INCLUDES := \
 	-Iproto \
 	-I/usr/include/github.com/gogo/protobuf \
 	-Iopentelemetry-proto \
-	-I/gnostic/ \
-	-I/gnostic/github.com/google/gnostic
+	-I/gnostic \
+	-I/gnostic/gnostic
 # Remapping of std types to gogo types (must not contain spaces)
 PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types, \

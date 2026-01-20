@@ -21,7 +21,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
-import "github.com/google/gnostic/openapiv3/annotations.proto";
+import "gnostic/openapiv3/annotations.proto";
 
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
