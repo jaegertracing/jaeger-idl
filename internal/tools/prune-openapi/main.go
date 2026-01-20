@@ -39,6 +39,30 @@ func main() {
 		log.Fatalf("Could not find 'schemas' in 'components'")
 	}
 
+	// 1.5 Fix duplicated operationId for POST /api/v3/traces
+	// Iterate paths to find /api/v3/traces -> post -> operationId
+	for i := 0; i < len(pathsNode.Content); i += 2 {
+		pathKey := pathsNode.Content[i].Value
+		if pathKey == "/api/v3/traces" {
+			pathVal := pathsNode.Content[i+1]
+			// Find "post"
+			for j := 0; j < len(pathVal.Content); j += 2 {
+				method := pathVal.Content[j].Value
+				if method == "post" {
+					methodVal := pathVal.Content[j+1]
+					// Find "operationId"
+					for k := 0; k < len(methodVal.Content); k += 2 {
+						if methodVal.Content[k].Value == "operationId" {
+							if methodVal.Content[k+1].Value == "QueryService_FindTraces" {
+								methodVal.Content[k+1].Value = "QueryService_FindTracesPost"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// 2. Identify all reachable schemas starting from "paths"
 	reachable := make(map[string]bool)
 
@@ -91,6 +115,7 @@ func main() {
 		node, exists := schemaMap[name]
 		if !exists {
 			// Ref points to non-existent schema? Ignore or warn.
+			log.Printf("Warning: reference to non-existent schema %q; ignoring", name)
 			continue
 		}
 

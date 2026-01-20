@@ -157,7 +157,7 @@ paths:
             description: |-
                 FindTraces searches for traces.
                  See GetTrace for JSON unmarshalling.
-            operationId: QueryService_FindTraces
+            operationId: QueryService_FindTracesPost
             requestBody:
                 content:
                     application/json:
