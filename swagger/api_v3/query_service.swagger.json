@@ -14,7 +14,7 @@
     "/api/v3/operations": {
       "get": {
         "summary": "GetOperations returns operation names.",
-        "operationId": "QueryService_GetOperations",
+        "operationId": "QueryService_GetOperations2",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -47,7 +47,7 @@
     "/api/v3/services": {
       "get": {
         "summary": "GetServices returns service names.",
-        "operationId": "QueryService_GetServices",
+        "operationId": "QueryService_GetServices2",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -64,7 +64,7 @@
     "/api/v3/traces": {
       "get": {
         "summary": "FindTraces searches for traces.\nSee GetTrace for JSON unmarshalling.",
-        "operationId": "QueryService_FindTraces",
+        "operationId": "QueryService_FindTraces2",
         "responses": {
           "200": {
             "description": "A successful response.(streaming responses)",
@@ -146,12 +146,46 @@
         "tags": [
           "QueryService"
         ]
+      },
+      "post": {
+        "summary": "FindTraces searches for traces.\nSee GetTrace for JSON unmarshalling.",
+        "operationId": "QueryService_FindTraces3",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1TracesData"
+                },
+                "error": {
+                  "$ref": "#/definitions/runtimeStreamError"
+                }
+              },
+              "title": "Stream result of v1TracesData"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/api_v3FindTracesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "QueryService"
+        ]
       }
     },
     "/api/v3/traces/{trace_id}": {
       "get": {
         "summary": "GetTrace returns a single trace.\nNote that the JSON response over HTTP is wrapped into result envelope \"{\"result\": ...}\"\nIt means that the JSON response cannot be directly unmarshalled using JSONPb.\nThis can be fixed by first parsing into user-defined envelope with standard JSON library\nor string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.",
-        "operationId": "QueryService_GetTrace",
+        "operationId": "QueryService_GetTrace2",
         "responses": {
           "200": {
             "description": "A successful response.(streaming responses)",
@@ -235,43 +269,6 @@
       },
       "description": "Event is a time-stamped annotation of the span, consisting of user-supplied\ntext description and key-value pairs."
     },
-    "SpanLink": {
-      "type": "object",
-      "properties": {
-        "trace_id": {
-          "type": "string",
-          "format": "byte",
-          "description": "A unique identifier of a trace that this linked span is part of. The ID is a\n16-byte array."
-        },
-        "span_id": {
-          "type": "string",
-          "format": "byte",
-          "description": "A unique identifier for the linked span. The ID is an 8-byte array."
-        },
-        "trace_state": {
-          "type": "string",
-          "description": "The trace_state associated with the link."
-        },
-        "attributes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1KeyValue"
-          },
-          "description": "attributes is a collection of attribute key/value pairs on the link.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
-        },
-        "dropped_attributes_count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "dropped_attributes_count is the number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
-        },
-        "flags": {
-          "type": "integer",
-          "format": "int64",
-          "description": "Flags, a bit field. 8 least significant bits are the trace\nflags as defined in W3C Trace Context specification. Readers\nMUST not assume that 24 most significant bits will be zero.\nWhen creating new spans, the most-significant 24-bits MUST be\nzero.  To read the 8-bit W3C trace flag (use flags \u0026\nSPAN_FLAGS_TRACE_FLAGS_MASK).  [Optional].\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions."
-        }
-      },
-      "description": "A pointer from the current span to another span in the same trace or in a\ndifferent trace. For example, this can be used in batching operations,\nwhere a single batch handler processes multiple requests from different\ntraces or when the handler receives a request from a different project."
-    },
     "SpanSpanKind": {
       "type": "string",
       "enum": [
@@ -296,6 +293,7 @@
       "description": "- STATUS_CODE_UNSET: The default status.\n - STATUS_CODE_OK: The Span has been validated by an Application developer or Operator to \nhave completed successfully.\n - STATUS_CODE_ERROR: The Span contains an error.",
       "title": "For the semantics of status codes see\nhttps://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#set-status"
     },
+
     "api_v3DependenciesResponse": {
       "type": "object",
       "properties": {
@@ -321,6 +319,16 @@
           "format": "uint64"
         }
       }
+
+    "api_v3FindTracesRequest": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "$ref": "#/definitions/api_v3TraceQueryParameters"
+        }
+      },
+      "description": "Request object to search traces."
+
     },
     "api_v3GetOperationsResponse": {
       "type": "object",
@@ -328,7 +336,7 @@
         "operations": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/api_v3Operation"
+            "$ref": "#/definitions/jaegerapi_v3Operation"
           }
         }
       },
@@ -345,18 +353,6 @@
         }
       },
       "description": "Response object to get service names."
-    },
-    "api_v3Operation": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "span_kind": {
-          "type": "string"
-        }
-      },
-      "description": "Operation encapsulates information about operation."
     },
     "api_v3TraceQueryParameters": {
       "type": "object",
@@ -406,17 +402,32 @@
       },
       "description": "Query parameters to find traces.\n\nAll fields form a conjunction (e.g., \"service_name='X' AND operation_name='Y' AND ...\"),\nexcept for `search_depth` and `raw_traces`.\n\nFields are matched against individual spans, not the trace level. The results include\ntraces with at least one matching span.\n\nThe results have no guaranteed ordering."
     },
-    "protobufAny": {
+    "googleprotobufAny": {
       "type": "object",
       "properties": {
         "type_url": {
-          "type": "string"
+          "type": "string",
+          "description": "A URL/resource name that uniquely identifies the type of the serialized\nprotocol buffer message. This string must contain at least\none \"/\" character. The last segment of the URL's path must represent\nthe fully qualified name of the type (as in\n`path/google.protobuf.Duration`). The name should be in a canonical form\n(e.g., leading \".\" is not accepted).\n\nIn practice, teams usually precompile into the binary all types that they\nexpect it to use in the context of Any. However, for URLs which use the\nscheme `http`, `https`, or no scheme, one can optionally set up a type\nserver that maps type URLs to message definitions as follows:\n\n* If no scheme is provided, `https` is assumed.\n* An HTTP GET on the URL must yield a [google.protobuf.Type][]\n  value in binary format, or produce an error.\n* Applications are allowed to cache lookup results based on the\n  URL, or have them precompiled into a binary to avoid any\n  lookup. Therefore, binary compatibility needs to be preserved\n  on changes to types. (Use versioned type names to manage\n  breaking changes.)\n\nNote: this functionality is not currently available in the official\nprotobuf release, and it is not used for type URLs beginning with\ntype.googleapis.com.\n\nSchemes other than `http`, `https` (or the empty scheme) might be\nused with implementation specific semantics."
         },
         "value": {
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "description": "Must be a valid serialized protocol buffer of the above specified type."
         }
-      }
+      },
+      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(\u0026foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := \u0026pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := \u0026pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": \u003cstring\u003e,\n      \"lastName\": \u003cstring\u003e\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
+    },
+    "jaegerapi_v3Operation": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "span_kind": {
+          "type": "string"
+        }
+      },
+      "description": "Operation encapsulates information about operation."
     },
     "runtimeStreamError": {
       "type": "object",
@@ -438,7 +449,7 @@
         "details": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/protobufAny"
+            "$ref": "#/definitions/googleprotobufAny"
           }
         }
       }
@@ -668,7 +679,7 @@
         "links": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SpanLink"
+            "$ref": "#/definitions/v1SpanLink"
           },
           "description": "links is a collection of Links, which are references from this span to a span\nin the same or different trace."
         },
@@ -683,6 +694,43 @@
         }
       },
       "description": "A Span represents a single operation performed by a single component of the system.\n\nThe next available field id is 17."
+    },
+    "v1SpanLink": {
+      "type": "object",
+      "properties": {
+        "trace_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "A unique identifier of a trace that this linked span is part of. The ID is a\n16-byte array."
+        },
+        "span_id": {
+          "type": "string",
+          "format": "byte",
+          "description": "A unique identifier for the linked span. The ID is an 8-byte array."
+        },
+        "trace_state": {
+          "type": "string",
+          "description": "The trace_state associated with the link."
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1KeyValue"
+          },
+          "description": "attributes is a collection of attribute key/value pairs on the link.\nAttribute keys MUST be unique (it is not allowed to have more than one\nattribute with the same key)."
+        },
+        "dropped_attributes_count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "dropped_attributes_count is the number of dropped attributes. If the value is 0,\nthen no attributes were dropped."
+        },
+        "flags": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Flags, a bit field. 8 least significant bits are the trace\nflags as defined in W3C Trace Context specification. Readers\nMUST not assume that 24 most significant bits will be zero.\nWhen creating new spans, the most-significant 24-bits MUST be\nzero.  To read the 8-bit W3C trace flag (use flags \u0026\nSPAN_FLAGS_TRACE_FLAGS_MASK).  [Optional].\n\nSee https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions."
+        }
+      },
+      "description": "A pointer from the current span to another span in the same trace or in a\ndifferent trace. For example, this can be used in batching operations,\nwhere a single batch handler processes multiple requests from different\ntraces or when the handler receives a request from a different project."
     },
     "v1Status": {
       "type": "object",

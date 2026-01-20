@@ -16,9 +16,12 @@ syntax = "proto3";
 
 package jaeger.api_v3;
 
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
+import "gnostic/openapiv3/annotations.proto";
 
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
@@ -62,7 +65,12 @@ message TraceQueryParameters {
   //
   // The HTTP API expects this as a URL-encoded JSON string map.
   // Example: {"http.status_code":"200","error":"true"}
-  map<string, string> attributes = 3;
+  map<string, string> attributes = 3 [
+    (openapi.v3.property) = {
+      type: "string",
+      example: { yaml: "'{\"http.status_code\":\"200\"}'" }
+    }
+  ];
 
   // start_time_min is the start of the time interval (inclusive) for the query.
   // Only traces with spans that started on or after this time will be returned.
@@ -114,26 +122,26 @@ message GetServicesRequest {}
 
 // Response object to get service names.
 message GetServicesResponse {
-  repeated string services = 1;
+  repeated string services = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Request object to get operation names.
 message GetOperationsRequest {
   // Required service name.
-  string service = 1;
+  string service = 1 [(google.api.field_behavior) = REQUIRED];
   // Optional span kind.
-  string span_kind = 2;
+  string span_kind = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Operation encapsulates information about operation.
 message Operation {
-  string name = 1;
-  string span_kind = 2;
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string span_kind = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Response object to get operation names.
 message GetOperationsResponse {
-  repeated Operation operations = 1;
+  repeated Operation operations = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message GetDependenciesRequest {
@@ -162,20 +170,49 @@ service QueryService {
   // It means that the JSON response cannot be directly unmarshalled using JSONPb.
   // This can be fixed by first parsing into user-defined envelope with standard JSON library
   // or string manipulation to remove the envelope. Alternatively generate objects using OpenAPI.
-  rpc GetTrace(GetTraceRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {}
+  rpc GetTrace(GetTraceRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {
+    option (google.api.http) = {
+      get: "/api/v3/traces/{trace_id}"
+    };
+  }
 
   // FindTraces searches for traces.
   // See GetTrace for JSON unmarshalling.
-  rpc FindTraces(FindTracesRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {}
+  rpc FindTraces(FindTracesRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {
+    option (google.api.http) = {
+      // 1. Primary Binding: GET
+      // Maps fields to Query Parameters (e.g., ?query.service_name=foo)
+      get: "/api/v3/traces"
+
+      // 2. Secondary Binding: POST
+      // Maps the entire JSON body to the request message, e.g.
+      // {
+      //   "query": {
+      //     "service_name": "foo",
+      //     "attributes": { "http.status": "200" }
+      //   }
+      // }
+      additional_bindings {
+        post: "/api/v3/traces" // You can use the exact same path
+        body: "*"              // "*" means "map the whole JSON body to the Request struct"
+      }
+    };
+  }
 
   // GetServices returns service names.
-  rpc GetServices(GetServicesRequest) returns (GetServicesResponse) {}
+  rpc GetServices(GetServicesRequest) returns (GetServicesResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/services"
+    };
+  }
 
   // GetOperations returns operation names.
-  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
-
+   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/operations"
+    };
+  }
    rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse);
-
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
