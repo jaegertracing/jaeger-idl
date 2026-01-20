@@ -65,6 +65,7 @@ $(LINT): $(TOOLS_BIN_DIR)
 # Since this is a protoc plugin that runs inside a container, we need to build it for Linux.
 $(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 GOOS=linux go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
+	@echo "GNOSTIC_DIR=$(GNOSTIC_DIR)"
 
 $(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ ./prune-openapi
