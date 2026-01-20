@@ -95,7 +95,7 @@ func main() {
 	}
 
 	// Now process queue
-	// For each schema in queue, valid it exists in schemasNode, then traverse IT to find more refs
+	// For each schema in queue, validate it exists in schemasNode, then traverse it to find more refs
 	schemaMap := make(map[string]*yaml.Node)
 	for i := 0; i < len(schemasNode.Content); i += 2 {
 		schemaMap[schemasNode.Content[i].Value] = schemasNode.Content[i+1]
