@@ -135,14 +135,14 @@ message GetOperationsRequest {
 }
 
 // Operation encapsulates information about operation.
-message TraceOperation {
+message Operation {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
   string span_kind = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Response object to get operation names.
 message GetOperationsResponse {
-  repeated TraceOperation operations = 1 [(google.api.field_behavior) = REQUIRED];
+  repeated Operation operations = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 service QueryService {
