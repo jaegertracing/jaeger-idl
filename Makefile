@@ -26,11 +26,11 @@ PROTOC=docker run --rm -u ${shell id -u} \
 	--proto_path=${PWD}
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
-THRIFT_PY_ARGS=new_style,tornado
+THRIFT_PY_ARGS=tornado
 THRIFT_JAVA_ARGS=private-members
-THRIFT_PHP_ARGS=psr4
+THRIFT_PHP_ARGS=
 
-THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift
+THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift
 THRIFT_GEN_DIR=thrift-gen
 
 # All .go files that are not auto-generated and should be auto-formatted and linted.
