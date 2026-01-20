@@ -12,9 +12,7 @@ SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
-PROTOTOOL_VER=1.8.0
-PROTOTOOL_IMAGE=uber/prototool:$(PROTOTOOL_VER)
-PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(PROTOTOOL_IMAGE)
+
 
 PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
@@ -73,7 +71,7 @@ $(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ ./prune-openapi
 
 .PHONY: test-code-gen
-test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
+test-code-gen: thrift-all swagger-validate proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
 
@@ -111,9 +109,7 @@ thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
-.PHONY: protocompile
-protocompile:
-	$(PROTOTOOL) prototool compile proto --dry-run
+
 
 PROTO_INCLUDES := \
 	-Iproto/api_v2 \
