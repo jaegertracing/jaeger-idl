@@ -18,8 +18,14 @@ PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" 
 
 PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
-PROTOC=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
-PROTOC_WITH_TOOLS=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -v "$(TOOLS_BIN_DIR):/tools" -w ${PWD} -e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ${PROTOC_IMAGE} --proto_path=${PWD}
+PROTOC=docker run --rm -u ${shell id -u} \
+	-v "${PWD}:${PWD}" \
+	-v "$(GNOSTIC_DIR):/gnostic/github.com/google/gnostic" \
+	-v "$(TOOLS_BIN_DIR):/tools" \
+	-w ${PWD} \
+	-e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+	${PROTOC_IMAGE} \
+	--proto_path=${PWD}
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
 THRIFT_PY_ARGS=new_style,tornado
@@ -48,6 +54,10 @@ TOOLS_MOD_DIR      := $(SRC_ROOT)/internal/tools
 TOOLS_BIN_DIR      := $(SRC_ROOT)/.tools
 LINT               := $(TOOLS_BIN_DIR)/golangci-lint
 PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
+PRUNE_OPENAPI      := $(TOOLS_BIN_DIR)/prune-openapi
+
+# Determine the directory of the gnostic module
+GNOSTIC_DIR := $(shell cd $(TOOLS_MOD_DIR) && go list -f '{{.Dir}}' -m github.com/google/gnostic)
 
 $(TOOLS_BIN_DIR):
 	mkdir -p $@
@@ -58,6 +68,9 @@ $(LINT): $(TOOLS_BIN_DIR)
 # Since this is a protoc plugin that runs inside a container, we need to build it for Linux.
 $(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 GOOS=linux go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
+
+$(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
+	cd $(TOOLS_MOD_DIR) && go build -o $@ ./prune-openapi
 
 .PHONY: test-code-gen
 test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
@@ -106,7 +119,9 @@ PROTO_INCLUDES := \
 	-Iproto/api_v2 \
 	-Iproto \
 	-I/usr/include/github.com/gogo/protobuf \
-	-Iopentelemetry-proto
+	-Iopentelemetry-proto \
+	-I/gnostic/ \
+	-I/gnostic/github.com/google/gnostic
 # Remapping of std types to gogo types (must not contain spaces)
 PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types, \
@@ -323,13 +338,14 @@ proto-api-v3-all:
 	$(MAKE) proto-api-v3-openapi
 
 .PHONY: proto-api-v3-openapi
-proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI)
+proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 	# Generate OpenAPI v3 from proto source
-	$(PROTOC_WITH_TOOLS) \
+	$(PROTOC) \
 		$(PROTO_INCLUDES) \
 		--openapi_out=Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
+	$(PRUNE_OPENAPI) ./swagger/api_v3/query_service.openapi.yaml
 
 
 .PHONY: proto-storage-all

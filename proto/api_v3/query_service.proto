@@ -21,6 +21,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
+import "github.com/google/gnostic/openapiv3/annotations.proto";
 
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
@@ -64,7 +65,13 @@ message TraceQueryParameters {
   //
   // The HTTP API expects this as a URL-encoded JSON string map.
   // Example: {"http.status_code":"200","error":"true"}
-  map<string, string> attributes = 3;
+  map<string, string> attributes = 3 [
+    (openapi.v3.property) = {
+      type: "string",
+      description: "JSON-encoded map of attributes. Example: {\"http.status_code\":\"200\"}",
+      example: { yaml: "'{\"http.status_code\":\"200\"}'" }
+    }
+  ];
 
   // start_time_min is the start of the time interval (inclusive) for the query.
   // Only traces with spans that started on or after this time will be returned.
@@ -128,14 +135,14 @@ message GetOperationsRequest {
 }
 
 // Operation encapsulates information about operation.
-message Operation {
+message TraceOperation {
   string name = 1 [(google.api.field_behavior) = REQUIRED];
   string span_kind = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Response object to get operation names.
 message GetOperationsResponse {
-  repeated Operation operations = 1 [(google.api.field_behavior) = REQUIRED];
+  repeated TraceOperation operations = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 service QueryService {

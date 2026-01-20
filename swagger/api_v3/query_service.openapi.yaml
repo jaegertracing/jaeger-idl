@@ -278,7 +278,7 @@ components:
                 operations:
                     type: array
                     items:
-                        $ref: '#/components/schemas/Operation'
+                        $ref: '#/components/schemas/TraceOperation'
             description: Response object to get operation names.
         GetServicesResponse:
             required:
@@ -348,17 +348,6 @@ components:
                  a list of KeyValue messages (e.g. in Span) we use `repeated KeyValue` directly to
                  avoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches
                  are semantically equivalent.
-        Operation:
-            required:
-                - name
-                - spanKind
-            type: object
-            properties:
-                name:
-                    type: string
-                spanKind:
-                    type: string
-            description: Operation encapsulates information about operation.
         Resource:
             type: object
             properties:
@@ -664,6 +653,17 @@ components:
                         $ref: '#/components/schemas/GoogleProtobufAny'
                     description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
             description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
+        TraceOperation:
+            required:
+                - name
+                - spanKind
+            type: object
+            properties:
+                name:
+                    type: string
+                spanKind:
+                    type: string
+            description: Operation encapsulates information about operation.
         TraceQueryParameters:
             type: object
             properties:
@@ -674,16 +674,11 @@ components:
                     type: string
                     description: operation_name filters spans by a specific operation / span name.
                 attributes:
-                    type: object
+                    example: '{"http.status_code":"200"}'
+                    type: string
                     additionalProperties:
                         type: string
-                    description: |-
-                        attributes contains key-value pairs where the key is the attribute name
-                         and the value is its string representation. Attributes are matched against
-                         span and resource attributes. At least one span must match all specified attributes.
-
-                         The HTTP API expects this as a URL-encoded JSON string map.
-                         Example: {"http.status_code":"200","error":"true"}
+                    description: 'JSON-encoded map of attributes. Example: {"http.status_code":"200"}'
                 startTimeMin:
                     type: string
                     description: |-
