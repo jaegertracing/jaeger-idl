@@ -12,8 +12,6 @@ SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
-
-
 PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
 PROTOC=docker run --rm -u ${shell id -u} \
@@ -56,7 +54,7 @@ PRUNE_OPENAPI      := $(TOOLS_BIN_DIR)/prune-openapi
 
 # Determine the directory of the gnostic module.
 # Using deferred expansion to ensure the build step was done already.
-GNOSTIC_DIR = $(shell cd $(TOOLS_MOD_DIR) && go list -f '{{.Dir}}' -m github.com/google/gnostic)
+GNOSTIC_DIR = $$(cd $(TOOLS_MOD_DIR) && go mod download && go list -f '{{.Dir}}' -m github.com/google/gnostic)
 
 $(TOOLS_BIN_DIR):
 	mkdir -p $@
