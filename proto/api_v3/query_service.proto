@@ -144,6 +144,26 @@ message GetOperationsResponse {
   repeated Operation operations = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+message GetDependenciesRequest {
+  // Required. The start time for the time range to search dependencies.
+  google.protobuf.Timestamp start_time = 1;
+  // Required. The end time for the time range to search dependencies.
+  google.protobuf.Timestamp end_time = 2;
+}
+    
+
+
+message DependenciesResponse {
+  repeated Dependency dependencies = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message Dependency {
+  string parent = 1 [(google.api.field_behavior) = REQUIRED];
+  string child = 2 [(google.api.field_behavior) = REQUIRED];
+  uint64 call_count = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+
 service QueryService {
   // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
@@ -187,11 +207,12 @@ service QueryService {
   }
 
   // GetOperations returns operation names.
-  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
+   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
     option (google.api.http) = {
       get: "/api/v3/operations"
     };
   }
+  rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse);
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
@@ -223,3 +244,4 @@ message GRPCGatewayError {
 message GRPCGatewayWrapper {
   opentelemetry.proto.trace.v1.TracesData result = 1;
 }
+
