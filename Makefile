@@ -12,21 +12,23 @@ SWAGGER_VER=0.31.0
 SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
 SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
-PROTOTOOL_VER=1.8.0
-PROTOTOOL_IMAGE=uber/prototool:$(PROTOTOOL_VER)
-PROTOTOOL=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(PROTOTOOL_IMAGE)
-
 PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
-PROTOC=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -w ${PWD} ${PROTOC_IMAGE} --proto_path=${PWD}
-PROTOC_WITH_TOOLS=docker run --rm -u ${shell id -u} -v "${PWD}:${PWD}" -v "$(TOOLS_BIN_DIR):/tools" -w ${PWD} -e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin ${PROTOC_IMAGE} --proto_path=${PWD}
+PROTOC=docker run --rm -u ${shell id -u} \
+	-v "${PWD}:${PWD}" \
+	-v "$(GNOSTIC_DIR):/gnostic/gnostic" \
+	-v "$(TOOLS_BIN_DIR):/tools" \
+	-w ${PWD} \
+	-e PATH=/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+	${PROTOC_IMAGE} \
+	--proto_path=${PWD}
 
 THRIFT_GO_ARGS=thrift_import="github.com/apache/thrift/lib/go/thrift"
-THRIFT_PY_ARGS=new_style,tornado
+THRIFT_PY_ARGS=tornado
 THRIFT_JAVA_ARGS=private-members
-THRIFT_PHP_ARGS=psr4
+THRIFT_PHP_ARGS=
 
-THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift crossdock/tracetest.thrift
+THRIFT_FILES=agent.thrift jaeger.thrift sampling.thrift zipkincore.thrift
 THRIFT_GEN_DIR=thrift-gen
 
 # All .go files that are not auto-generated and should be auto-formatted and linted.
@@ -48,6 +50,11 @@ TOOLS_MOD_DIR      := $(SRC_ROOT)/internal/tools
 TOOLS_BIN_DIR      := $(SRC_ROOT)/.tools
 LINT               := $(TOOLS_BIN_DIR)/golangci-lint
 PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
+PRUNE_OPENAPI      := $(TOOLS_BIN_DIR)/prune-openapi
+
+# Determine the directory of the gnostic module.
+# Using deferred expansion to ensure the build step was done already.
+GNOSTIC_DIR = $$(cd $(TOOLS_MOD_DIR) && go mod download && go list -f '{{.Dir}}' -m github.com/google/gnostic)
 
 $(TOOLS_BIN_DIR):
 	mkdir -p $@
@@ -58,9 +65,13 @@ $(LINT): $(TOOLS_BIN_DIR)
 # Since this is a protoc plugin that runs inside a container, we need to build it for Linux.
 $(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && CGO_ENABLED=0 GOOS=linux go build -o $@ github.com/google/gnostic/cmd/protoc-gen-openapi
+	@echo "GNOSTIC_DIR=$(GNOSTIC_DIR)"
+
+$(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
+	cd $(TOOLS_MOD_DIR) && go build -o $@ ./prune-openapi
 
 .PHONY: test-code-gen
-test-code-gen: thrift-all swagger-validate protocompile proto-all proto-zipkin
+test-code-gen: thrift-all swagger-validate proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
 
@@ -98,15 +109,15 @@ thrift-image:
 	docker pull $(THRIFT_IMG)
 	$(THRIFT) -version
 
-.PHONY: protocompile
-protocompile:
-	$(PROTOTOOL) prototool compile proto --dry-run
+
 
 PROTO_INCLUDES := \
 	-Iproto/api_v2 \
 	-Iproto \
 	-I/usr/include/github.com/gogo/protobuf \
-	-Iopentelemetry-proto
+	-Iopentelemetry-proto \
+	-I/gnostic \
+	-I/gnostic/gnostic
 # Remapping of std types to gogo types (must not contain spaces)
 PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types, \
@@ -262,7 +273,7 @@ proto: proto-prepare proto-api-v2 proto-prototest
 proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all proto-storage-all
 
 .PHONY: proto-prepare-all
-proto-prepare-all:
+proto-prepare-all: $(TOOLS_BIN_DIR)
 	mkdir -p ${PROTO_GEN_GO_DIR_POLYGLOT} \
 		${PROTO_GEN_JAVA_DIR_POLYGLOT} \
 		${PROTO_GEN_PYTHON_DIR_POLYGLOT} \
@@ -271,7 +282,7 @@ proto-prepare-all:
 		${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 
 .PHONY: proto-prepare
-proto-prepare:
+proto-prepare: $(TOOLS_BIN_DIR)
 	mkdir -p ${PROTO_GEN_GO_DIR}
 
 .PHONY: proto-prototest
@@ -323,13 +334,14 @@ proto-api-v3-all:
 	$(MAKE) proto-api-v3-openapi
 
 .PHONY: proto-api-v3-openapi
-proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI)
+proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 	# Generate OpenAPI v3 from proto source
-	$(PROTOC_WITH_TOOLS) \
+	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--openapi_out=Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
+		--openapi_out=fq_schema_naming=true,naming=proto,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
+	$(PRUNE_OPENAPI) ./swagger/api_v3/query_service.openapi.yaml
 
 
 .PHONY: proto-storage-all
