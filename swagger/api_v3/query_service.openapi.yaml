@@ -305,7 +305,13 @@ components:
                     type: string
                     additionalProperties:
                         type: string
-                    description: 'JSON-encoded map of attributes. Example: {"http.status_code":"200"}'
+                    description: |-
+                        attributes contains key-value pairs where the key is the attribute name
+                         and the value is its string representation. Attributes are matched against
+                         span and resource attributes. At least one span must match all specified attributes.
+
+                         The HTTP API expects this as a URL-encoded JSON string map.
+                         Example: {"http.status_code":"200","error":"true"}
                 start_time_min:
                     type: string
                     description: |-

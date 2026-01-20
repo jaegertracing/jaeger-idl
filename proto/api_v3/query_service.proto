@@ -68,7 +68,6 @@ message TraceQueryParameters {
   map<string, string> attributes = 3 [
     (openapi.v3.property) = {
       type: "string",
-      description: "JSON-encoded map of attributes. Example: {\"http.status_code\":\"200\"}",
       example: { yaml: "'{\"http.status_code\":\"200\"}'" }
     }
   ];
