@@ -115,7 +115,7 @@ func main() {
 		node, exists := schemaMap[name]
 		if !exists {
 			// Ref points to non-existent schema? Ignore or warn.
-			log.Printf("Warning: reference to non-existent schema %q; ignoring", name)
+			log.Printf("Warning: reference to non-existent schema %q; this may indicate a missing import or incorrectly generated reference; ignoring", name)
 			continue
 		}
 
