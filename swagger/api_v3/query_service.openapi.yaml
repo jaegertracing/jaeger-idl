@@ -29,13 +29,13 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GetOperationsResponse'
+                                $ref: '#/components/schemas/jaeger.api_v3.GetOperationsResponse'
                 default:
                     description: Default error response
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Status'
+                                $ref: '#/components/schemas/google.rpc.Status'
     /api/v3/services:
         get:
             tags:
@@ -48,13 +48,13 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GetServicesResponse'
+                                $ref: '#/components/schemas/jaeger.api_v3.GetServicesResponse'
                 default:
                     description: Default error response
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Status'
+                                $ref: '#/components/schemas/google.rpc.Status'
     /api/v3/traces:
         get:
             tags:
@@ -144,13 +144,13 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TracesData'
+                                $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
                 default:
                     description: Default error response
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Status'
+                                $ref: '#/components/schemas/google.rpc.Status'
         post:
             tags:
                 - QueryService
@@ -162,7 +162,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/FindTracesRequest'
+                            $ref: '#/components/schemas/jaeger.api_v3.FindTracesRequest'
                 required: true
             responses:
                 "200":
@@ -170,13 +170,13 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TracesData'
+                                $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
                 default:
                     description: Default error response
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Status'
+                                $ref: '#/components/schemas/google.rpc.Status'
     /api/v3/traces/{trace_id}:
         get:
             tags:
@@ -221,37 +221,152 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TracesData'
+                                $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
                 default:
                     description: Default error response
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/Status'
+                                $ref: '#/components/schemas/google.rpc.Status'
 components:
     schemas:
-        AdditionalPropertiesItem:
+        google.protobuf.Any:
             type: object
             properties:
-                schema_or_reference:
-                    $ref: '#/components/schemas/SchemaOrReference'
-                boolean:
-                    type: boolean
-        Any:
-            type: object
-            properties:
-                value:
-                    $ref: '#/components/schemas/GoogleProtobufAny'
-                yaml:
+                '@type':
                     type: string
-        AnyOrExpression:
+                    description: The type of the serialized message.
+            additionalProperties: true
+            description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+        google.rpc.Status:
             type: object
             properties:
-                any:
-                    $ref: '#/components/schemas/Any'
-                expression:
-                    $ref: '#/components/schemas/Expression'
-        AnyValue:
+                code:
+                    type: integer
+                    description: The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].
+                    format: int32
+                message:
+                    type: string
+                    description: A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client.
+                details:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/google.protobuf.Any'
+                    description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
+            description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
+        jaeger.api_v3.FindTracesRequest:
+            type: object
+            properties:
+                query:
+                    $ref: '#/components/schemas/jaeger.api_v3.TraceQueryParameters'
+            description: Request object to search traces.
+        jaeger.api_v3.GetOperationsResponse:
+            required:
+                - operations
+            type: object
+            properties:
+                operations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/jaeger.api_v3.Operation'
+            description: Response object to get operation names.
+        jaeger.api_v3.GetServicesResponse:
+            required:
+                - services
+            type: object
+            properties:
+                services:
+                    type: array
+                    items:
+                        type: string
+            description: Response object to get service names.
+        jaeger.api_v3.Operation:
+            required:
+                - name
+                - span_kind
+            type: object
+            properties:
+                name:
+                    type: string
+                span_kind:
+                    type: string
+            description: Operation encapsulates information about operation.
+        jaeger.api_v3.TraceQueryParameters:
+            type: object
+            properties:
+                service_name:
+                    type: string
+                    description: service_name filters spans generated by a specific service.
+                operation_name:
+                    type: string
+                    description: operation_name filters spans by a specific operation / span name.
+                attributes:
+                    example: '{"http.status_code":"200"}'
+                    type: string
+                    additionalProperties:
+                        type: string
+                    description: 'JSON-encoded map of attributes. Example: {"http.status_code":"200"}'
+                start_time_min:
+                    type: string
+                    description: |-
+                        start_time_min is the start of the time interval (inclusive) for the query.
+                         Only traces with spans that started on or after this time will be returned.
+
+                         The HTTP API uses RFC-3339ns format.
+
+                         This field is required.
+                    format: date-time
+                start_time_max:
+                    type: string
+                    description: |-
+                        start_time_max is the end of the time interval (exclusive) for the query.
+                         Only traces with spans that started before this time will be returned.
+
+                         The HTTP API uses RFC-3339ns format.
+
+                         This field is required.
+                    format: date-time
+                duration_min:
+                    pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+                    type: string
+                    description: |-
+                        duration_min is the minimum duration of a span in the trace.
+                         Only traces with spans that lasted at least this long will be returned.
+
+                         The HTTP API uses Golang's time format (e.g., "10s").
+                duration_max:
+                    pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+                    type: string
+                    description: |-
+                        duration_max is the maximum duration of a span in the trace.
+                         Only traces with spans that lasted at most this long will be returned.
+
+                         The HTTP API uses Golang's time format (e.g., "10s").
+                search_depth:
+                    type: integer
+                    description: |-
+                        search_depth defines the maximum search depth. Depending on the backend storage implementation,
+                         this may behave like an SQL `LIMIT` clause. However, some implementations might not support
+                         precise limits, and a larger value generally results in more traces being returned.
+                    format: int32
+                raw_traces:
+                    type: boolean
+                    description: |-
+                        If set to true, the response will exclude any enrichments to the trace, such as clock skew adjustments.
+                         The trace will be returned exactly as stored.
+
+                         This field is optional.
+            description: |-
+                Query parameters to find traces.
+
+                 All fields form a conjunction (e.g., "service_name='X' AND operation_name='Y' AND ..."),
+                 except for `search_depth` and `raw_traces`.
+
+                 Fields are matched against individual spans, not the trace level. The results include
+                 traces with at least one matching span.
+
+                 The results have no guaranteed ordering.
+        opentelemetry.proto.common.v1.AnyValue:
             type: object
             properties:
                 string_value:
@@ -264,9 +379,9 @@ components:
                     type: number
                     format: double
                 array_value:
-                    $ref: '#/components/schemas/ArrayValue'
+                    $ref: '#/components/schemas/opentelemetry.proto.common.v1.ArrayValue'
                 kvlist_value:
-                    $ref: '#/components/schemas/KeyValueList'
+                    $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValueList'
                 bytes_value:
                     type: string
                     format: bytes
@@ -274,217 +389,18 @@ components:
                 AnyValue is used to represent any type of attribute value. AnyValue may contain a
                  primitive value such as a string or integer or it may contain an arbitrary nested
                  object containing arrays, key-value lists and primitives.
-        ArrayValue:
+        opentelemetry.proto.common.v1.ArrayValue:
             type: object
             properties:
                 values:
                     type: array
                     items:
-                        $ref: '#/components/schemas/AnyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.AnyValue'
                     description: Array of values. The array may be empty (contain 0 elements).
             description: |-
                 ArrayValue is a list of AnyValue messages. We need ArrayValue as a message
                  since oneof in AnyValue does not allow repeated fields.
-        Callback:
-            type: object
-            properties:
-                path:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedPathItem'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: A map of possible out-of band callbacks related to the parent operation. Each value in the map is a Path Item Object that describes a set of requests that may be initiated by the API provider and the expected responses. The key value used to identify the callback object is an expression, evaluated at runtime, that identifies a URL to use for the callback operation.
-        CallbackOrReference:
-            type: object
-            properties:
-                callback:
-                    $ref: '#/components/schemas/Callback'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        CallbacksOrReferences:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedCallbackOrReference'
-        DefaultType:
-            type: object
-            properties:
-                number:
-                    type: number
-                    format: double
-                boolean:
-                    type: boolean
-                string:
-                    type: string
-        Discriminator:
-            type: object
-            properties:
-                property_name:
-                    type: string
-                mapping:
-                    $ref: '#/components/schemas/Strings'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: When request bodies or response payloads may be one of a number of different schemas, a `discriminator` object can be used to aid in serialization, deserialization, and validation.  The discriminator is a specific object in a schema which is used to inform the consumer of the specification of an alternative schema based on the value associated with it.  When using the discriminator, _inline_ schemas will not be considered.
-        Encoding:
-            type: object
-            properties:
-                content_type:
-                    type: string
-                headers:
-                    $ref: '#/components/schemas/HeadersOrReferences'
-                style:
-                    type: string
-                explode:
-                    type: boolean
-                allow_reserved:
-                    type: boolean
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: A single encoding definition applied to a single schema property.
-        Encodings:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedEncoding'
-        Example:
-            type: object
-            properties:
-                summary:
-                    type: string
-                description:
-                    type: string
-                value:
-                    $ref: '#/components/schemas/Any'
-                external_value:
-                    type: string
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-        ExampleOrReference:
-            type: object
-            properties:
-                example:
-                    $ref: '#/components/schemas/Example'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        ExamplesOrReferences:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedExampleOrReference'
-        Expression:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-        ExternalDocs:
-            type: object
-            properties:
-                description:
-                    type: string
-                url:
-                    type: string
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Allows referencing an external resource for extended documentation.
-        FindTracesRequest:
-            type: object
-            properties:
-                query:
-                    $ref: '#/components/schemas/TraceQueryParameters'
-            description: Request object to search traces.
-        GetOperationsResponse:
-            required:
-                - operations
-            type: object
-            properties:
-                operations:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/Operation'
-            description: Response object to get operation names.
-        GetServicesResponse:
-            required:
-                - services
-            type: object
-            properties:
-                services:
-                    type: array
-                    items:
-                        type: string
-            description: Response object to get service names.
-        GoogleProtobufAny:
-            type: object
-            properties:
-                '@type':
-                    type: string
-                    description: The type of the serialized message.
-            additionalProperties: true
-            description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
-        Header:
-            type: object
-            properties:
-                description:
-                    type: string
-                required:
-                    type: boolean
-                deprecated:
-                    type: boolean
-                allow_empty_value:
-                    type: boolean
-                style:
-                    type: string
-                explode:
-                    type: boolean
-                allow_reserved:
-                    type: boolean
-                schema:
-                    $ref: '#/components/schemas/SchemaOrReference'
-                example:
-                    $ref: '#/components/schemas/Any'
-                examples:
-                    $ref: '#/components/schemas/ExamplesOrReferences'
-                content:
-                    $ref: '#/components/schemas/MediaTypes'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: 'The Header Object follows the structure of the Parameter Object with the following changes:  1. `name` MUST NOT be specified, it is given in the corresponding `headers` map. 1. `in` MUST NOT be specified, it is implicitly in `header`. 1. All traits that are affected by the location MUST be applicable to a location of `header` (for example, `style`).'
-        HeaderOrReference:
-            type: object
-            properties:
-                header:
-                    $ref: '#/components/schemas/Header'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        HeadersOrReferences:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedHeaderOrReference'
-        InstrumentationScope:
+        opentelemetry.proto.common.v1.InstrumentationScope:
             type: object
             properties:
                 name:
@@ -495,7 +411,7 @@ components:
                 attributes:
                     type: array
                     items:
-                        $ref: '#/components/schemas/KeyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValue'
                     description: |-
                         Additional attributes that describe the scope. [Optional].
                          Attribute keys MUST be unique (it is not allowed to have more than one
@@ -506,30 +422,23 @@ components:
             description: |-
                 InstrumentationScope is a message representing the instrumentation scope information
                  such as the fully qualified name and version.
-        ItemsItem:
-            type: object
-            properties:
-                schema_or_reference:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/SchemaOrReference'
-        KeyValue:
+        opentelemetry.proto.common.v1.KeyValue:
             type: object
             properties:
                 key:
                     type: string
                 value:
-                    $ref: '#/components/schemas/AnyValue'
+                    $ref: '#/components/schemas/opentelemetry.proto.common.v1.AnyValue'
             description: |-
                 KeyValue is a key-value pair that is used to store Span attributes, Link
                  attributes, etc.
-        KeyValueList:
+        opentelemetry.proto.common.v1.KeyValueList:
             type: object
             properties:
                 values:
                     type: array
                     items:
-                        $ref: '#/components/schemas/KeyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValue'
                     description: |-
                         A collection of key/value pairs of key-value pairs. The list may be empty (may
                          contain 0 elements).
@@ -541,369 +450,13 @@ components:
                  a list of KeyValue messages (e.g. in Span) we use `repeated KeyValue` directly to
                  avoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches
                  are semantically equivalent.
-        Link:
-            type: object
-            properties:
-                operation_ref:
-                    type: string
-                operation_id:
-                    type: string
-                parameters:
-                    $ref: '#/components/schemas/AnyOrExpression'
-                request_body:
-                    $ref: '#/components/schemas/AnyOrExpression'
-                description:
-                    type: string
-                server:
-                    $ref: '#/components/schemas/Server'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: The `Link object` represents a possible design-time link for a response. The presence of a link does not guarantee the caller's ability to successfully invoke it, rather it provides a known relationship and traversal mechanism between responses and other operations.  Unlike _dynamic_ links (i.e. links provided **in** the response payload), the OAS linking mechanism does not require link information in the runtime response.  For computing links, and providing instructions to execute them, a runtime expression is used for accessing values in an operation and using them as parameters while invoking the linked operation.
-        LinkOrReference:
-            type: object
-            properties:
-                link:
-                    $ref: '#/components/schemas/Link'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        LinksOrReferences:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedLinkOrReference'
-        MediaType:
-            type: object
-            properties:
-                schema:
-                    $ref: '#/components/schemas/SchemaOrReference'
-                example:
-                    $ref: '#/components/schemas/Any'
-                examples:
-                    $ref: '#/components/schemas/ExamplesOrReferences'
-                encoding:
-                    $ref: '#/components/schemas/Encodings'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Each Media Type Object provides schema and examples for the media type identified by its key.
-        MediaTypes:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedMediaType'
-        NamedAny:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/Any'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of Any as ordered (name,value) pairs.
-        NamedCallbackOrReference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/CallbackOrReference'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of CallbackOrReference as ordered (name,value) pairs.
-        NamedEncoding:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/Encoding'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of Encoding as ordered (name,value) pairs.
-        NamedExampleOrReference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/ExampleOrReference'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of ExampleOrReference as ordered (name,value) pairs.
-        NamedHeaderOrReference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/HeaderOrReference'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of HeaderOrReference as ordered (name,value) pairs.
-        NamedLinkOrReference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/LinkOrReference'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of LinkOrReference as ordered (name,value) pairs.
-        NamedMediaType:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/MediaType'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of MediaType as ordered (name,value) pairs.
-        NamedPathItem:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/PathItem'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of PathItem as ordered (name,value) pairs.
-        NamedResponseOrReference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/ResponseOrReference'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of ResponseOrReference as ordered (name,value) pairs.
-        NamedSchemaOrReference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/SchemaOrReference'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of SchemaOrReference as ordered (name,value) pairs.
-        NamedServerVariable:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/ServerVariable'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of ServerVariable as ordered (name,value) pairs.
-        NamedString:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    type: string
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of string as ordered (name,value) pairs.
-        NamedStringArray:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: Map key
-                value:
-                    allOf:
-                        - $ref: '#/components/schemas/StringArray'
-                    description: Mapped value
-            description: Automatically-generated message used to represent maps of StringArray as ordered (name,value) pairs.
-        Operation:
-            type: object
-            properties:
-                tags:
-                    type: array
-                    items:
-                        type: string
-                summary:
-                    type: string
-                description:
-                    type: string
-                external_docs:
-                    $ref: '#/components/schemas/ExternalDocs'
-                operation_id:
-                    type: string
-                parameters:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/ParameterOrReference'
-                request_body:
-                    $ref: '#/components/schemas/RequestBodyOrReference'
-                responses:
-                    $ref: '#/components/schemas/Responses'
-                callbacks:
-                    $ref: '#/components/schemas/CallbacksOrReferences'
-                deprecated:
-                    type: boolean
-                security:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/SecurityRequirement'
-                servers:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/Server'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Describes a single API operation on a path.
-        Parameter:
-            type: object
-            properties:
-                name:
-                    type: string
-                in:
-                    type: string
-                description:
-                    type: string
-                required:
-                    type: boolean
-                deprecated:
-                    type: boolean
-                allow_empty_value:
-                    type: boolean
-                style:
-                    type: string
-                explode:
-                    type: boolean
-                allow_reserved:
-                    type: boolean
-                schema:
-                    $ref: '#/components/schemas/SchemaOrReference'
-                example:
-                    $ref: '#/components/schemas/Any'
-                examples:
-                    $ref: '#/components/schemas/ExamplesOrReferences'
-                content:
-                    $ref: '#/components/schemas/MediaTypes'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Describes a single operation parameter.  A unique parameter is defined by a combination of a name and location.
-        ParameterOrReference:
-            type: object
-            properties:
-                parameter:
-                    $ref: '#/components/schemas/Parameter'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        PathItem:
-            type: object
-            properties:
-                _ref:
-                    type: string
-                summary:
-                    type: string
-                description:
-                    type: string
-                get:
-                    $ref: '#/components/schemas/Operation'
-                put:
-                    $ref: '#/components/schemas/Operation'
-                post:
-                    $ref: '#/components/schemas/Operation'
-                delete:
-                    $ref: '#/components/schemas/Operation'
-                options:
-                    $ref: '#/components/schemas/Operation'
-                head:
-                    $ref: '#/components/schemas/Operation'
-                patch:
-                    $ref: '#/components/schemas/Operation'
-                trace:
-                    $ref: '#/components/schemas/Operation'
-                servers:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/Server'
-                parameters:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/ParameterOrReference'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Describes the operations available on a single path. A Path Item MAY be empty, due to ACL constraints. The path itself is still exposed to the documentation viewer but they will not know which operations and parameters are available.
-        Properties:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedSchemaOrReference'
-        Reference:
-            type: object
-            properties:
-                _ref:
-                    type: string
-                summary:
-                    type: string
-                description:
-                    type: string
-            description: A simple object to allow referencing other components in the specification, internally and externally.  The Reference Object is defined by JSON Reference and follows the same structure, behavior and rules.   For this specification, reference resolution is accomplished as defined by the JSON Reference specification and not by the JSON Schema specification.
-        RequestBody:
-            type: object
-            properties:
-                description:
-                    type: string
-                content:
-                    $ref: '#/components/schemas/MediaTypes'
-                required:
-                    type: boolean
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Describes a single request body.
-        RequestBodyOrReference:
-            type: object
-            properties:
-                request_body:
-                    $ref: '#/components/schemas/RequestBody'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        Resource:
+        opentelemetry.proto.resource.v1.Resource:
             type: object
             properties:
                 attributes:
                     type: array
                     items:
-                        $ref: '#/components/schemas/KeyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValue'
                     description: |-
                         Set of attributes that describe the resource.
                          Attribute keys MUST be unique (it is not allowed to have more than one
@@ -915,19 +468,19 @@ components:
                          no attributes were dropped.
                     format: uint32
             description: Resource information.
-        ResourceSpans:
+        opentelemetry.proto.trace.v1.ResourceSpans:
             type: object
             properties:
                 resource:
                     allOf:
-                        - $ref: '#/components/schemas/Resource'
+                        - $ref: '#/components/schemas/opentelemetry.proto.resource.v1.Resource'
                     description: |-
                         The resource for the spans in this message.
                          If this field is not set then no resource info is known.
                 scope_spans:
                     type: array
                     items:
-                        $ref: '#/components/schemas/ScopeSpans'
+                        $ref: '#/components/schemas/opentelemetry.proto.trace.v1.ScopeSpans'
                     description: A list of ScopeSpans that originate from a resource.
                 schema_url:
                     type: string
@@ -938,147 +491,12 @@ components:
                          This schema_url applies to the data in the "resource" field. It does not apply
                          to the data in the "scope_spans" field which have their own schema_url field.
             description: A collection of ScopeSpans from a Resource.
-        Response:
-            type: object
-            properties:
-                description:
-                    type: string
-                headers:
-                    $ref: '#/components/schemas/HeadersOrReferences'
-                content:
-                    $ref: '#/components/schemas/MediaTypes'
-                links:
-                    $ref: '#/components/schemas/LinksOrReferences'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: Describes a single response from an API Operation, including design-time, static  `links` to operations based on the response.
-        ResponseOrReference:
-            type: object
-            properties:
-                response:
-                    $ref: '#/components/schemas/Response'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        Responses:
-            type: object
-            properties:
-                default:
-                    $ref: '#/components/schemas/ResponseOrReference'
-                response_or_reference:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedResponseOrReference'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: A container for the expected responses of an operation. The container maps a HTTP response code to the expected response.  The documentation is not necessarily expected to cover all possible HTTP response codes because they may not be known in advance. However, documentation is expected to cover a successful operation response and any known errors.  The `default` MAY be used as a default response object for all HTTP codes  that are not covered individually by the specification.  The `Responses Object` MUST contain at least one response code, and it  SHOULD be the response for a successful operation call.
-        Schema:
-            type: object
-            properties:
-                nullable:
-                    type: boolean
-                discriminator:
-                    $ref: '#/components/schemas/Discriminator'
-                read_only:
-                    type: boolean
-                write_only:
-                    type: boolean
-                xml:
-                    $ref: '#/components/schemas/Xml'
-                external_docs:
-                    $ref: '#/components/schemas/ExternalDocs'
-                example:
-                    $ref: '#/components/schemas/Any'
-                deprecated:
-                    type: boolean
-                title:
-                    type: string
-                multiple_of:
-                    type: number
-                    format: double
-                maximum:
-                    type: number
-                    format: double
-                exclusive_maximum:
-                    type: boolean
-                minimum:
-                    type: number
-                    format: double
-                exclusive_minimum:
-                    type: boolean
-                max_length:
-                    type: string
-                min_length:
-                    type: string
-                pattern:
-                    type: string
-                max_items:
-                    type: string
-                min_items:
-                    type: string
-                unique_items:
-                    type: boolean
-                max_properties:
-                    type: string
-                min_properties:
-                    type: string
-                required:
-                    type: array
-                    items:
-                        type: string
-                enum:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/Any'
-                type:
-                    type: string
-                all_of:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/SchemaOrReference'
-                one_of:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/SchemaOrReference'
-                any_of:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/SchemaOrReference'
-                not:
-                    $ref: '#/components/schemas/Schema'
-                items:
-                    $ref: '#/components/schemas/ItemsItem'
-                properties:
-                    $ref: '#/components/schemas/Properties'
-                additional_properties:
-                    $ref: '#/components/schemas/AdditionalPropertiesItem'
-                default:
-                    $ref: '#/components/schemas/DefaultType'
-                description:
-                    type: string
-                format:
-                    type: string
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: The Schema Object allows the definition of input and output data types. These types can be objects, but also primitives and arrays. This object is an extended subset of the JSON Schema Specification Wright Draft 00.  For more information about the properties, see JSON Schema Core and JSON Schema Validation. Unless stated otherwise, the property definitions follow the JSON Schema.
-        SchemaOrReference:
-            type: object
-            properties:
-                schema:
-                    $ref: '#/components/schemas/Schema'
-                reference:
-                    $ref: '#/components/schemas/Reference'
-        ScopeSpans:
+        opentelemetry.proto.trace.v1.ScopeSpans:
             type: object
             properties:
                 scope:
                     allOf:
-                        - $ref: '#/components/schemas/InstrumentationScope'
+                        - $ref: '#/components/schemas/opentelemetry.proto.common.v1.InstrumentationScope'
                     description: |-
                         The instrumentation scope information for the spans in this message.
                          Semantically when InstrumentationScope isn't set, it is equivalent with
@@ -1086,7 +504,7 @@ components:
                 spans:
                     type: array
                     items:
-                        $ref: '#/components/schemas/Span'
+                        $ref: '#/components/schemas/opentelemetry.proto.trace.v1.Span'
                     description: A list of Spans that originate from an instrumentation scope.
                 schema_url:
                     type: string
@@ -1096,52 +514,7 @@ components:
                          https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
                          This schema_url applies to all spans and span events in the "spans" field.
             description: A collection of Spans produced by an InstrumentationScope.
-        SecurityRequirement:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedStringArray'
-            description: Lists the required security schemes to execute this operation. The name used for each property MUST correspond to a security scheme declared in the Security Schemes under the Components Object.  Security Requirement Objects that contain multiple schemes require that all schemes MUST be satisfied for a request to be authorized. This enables support for scenarios where multiple query parameters or HTTP headers are required to convey security information.  When a list of Security Requirement Objects is defined on the OpenAPI Object or Operation Object, only one of the Security Requirement Objects in the list needs to be satisfied to authorize the request.
-        Server:
-            type: object
-            properties:
-                url:
-                    type: string
-                description:
-                    type: string
-                variables:
-                    $ref: '#/components/schemas/ServerVariables'
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: An object representing a Server.
-        ServerVariable:
-            type: object
-            properties:
-                enum:
-                    type: array
-                    items:
-                        type: string
-                default:
-                    type: string
-                description:
-                    type: string
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: An object representing a Server Variable for server URL template substitution.
-        ServerVariables:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedServerVariable'
-        Span:
+        opentelemetry.proto.trace.v1.Span:
             type: object
             properties:
                 trace_id:
@@ -1236,7 +609,7 @@ components:
                 attributes:
                     type: array
                     items:
-                        $ref: '#/components/schemas/KeyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValue'
                     description: |-
                         attributes is a collection of key/value pairs. Note, global attributes
                          like server name can be set using the resource API. Examples of attributes:
@@ -1260,7 +633,7 @@ components:
                 events:
                     type: array
                     items:
-                        $ref: '#/components/schemas/Span_Event'
+                        $ref: '#/components/schemas/opentelemetry.proto.trace.v1.Span_Event'
                     description: events is a collection of Event items.
                 dropped_events_count:
                     type: integer
@@ -1271,7 +644,7 @@ components:
                 links:
                     type: array
                     items:
-                        $ref: '#/components/schemas/Span_Link'
+                        $ref: '#/components/schemas/opentelemetry.proto.trace.v1.Span_Link'
                     description: |-
                         links is a collection of Links, which are references from this span to a span
                          in the same or different trace.
@@ -1283,7 +656,7 @@ components:
                     format: uint32
                 status:
                     allOf:
-                        - $ref: '#/components/schemas/Status'
+                        - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.Status'
                     description: |-
                         An optional final status for this span. Semantically when Status isn't set, it means
                          span's status code is unset, i.e. assume STATUS_CODE_UNSET (code = 0).
@@ -1291,7 +664,7 @@ components:
                 A Span represents a single operation performed by a single component of the system.
 
                  The next available field id is 17.
-        Span_Event:
+        opentelemetry.proto.trace.v1.Span_Event:
             type: object
             properties:
                 time_unix_nano:
@@ -1305,7 +678,7 @@ components:
                 attributes:
                     type: array
                     items:
-                        $ref: '#/components/schemas/KeyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValue'
                     description: |-
                         attributes is a collection of attribute key/value pairs on the event.
                          Attribute keys MUST be unique (it is not allowed to have more than one
@@ -1319,7 +692,7 @@ components:
             description: |-
                 Event is a time-stamped annotation of the span, consisting of user-supplied
                  text description and key-value pairs.
-        Span_Link:
+        opentelemetry.proto.trace.v1.Span_Link:
             type: object
             properties:
                 trace_id:
@@ -1338,7 +711,7 @@ components:
                 attributes:
                     type: array
                     items:
-                        $ref: '#/components/schemas/KeyValue'
+                        $ref: '#/components/schemas/opentelemetry.proto.common.v1.KeyValue'
                     description: |-
                         attributes is a collection of attribute key/value pairs on the link.
                          Attribute keys MUST be unique (it is not allowed to have more than one
@@ -1366,118 +739,26 @@ components:
                  different trace. For example, this can be used in batching operations,
                  where a single batch handler processes multiple requests from different
                  traces or when the handler receives a request from a different project.
-        Status:
+        opentelemetry.proto.trace.v1.Status:
             type: object
             properties:
-                code:
-                    type: integer
-                    description: The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].
-                    format: int32
                 message:
                     type: string
-                    description: A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client.
-                details:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/GoogleProtobufAny'
-                    description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
-            description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
-        StringArray:
-            type: object
-            properties:
-                value:
-                    type: array
-                    items:
-                        type: string
-        Strings:
-            type: object
-            properties:
-                additional_properties:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedString'
-        TraceQueryParameters:
-            type: object
-            properties:
-                service_name:
-                    type: string
-                    description: service_name filters spans generated by a specific service.
-                operation_name:
-                    type: string
-                    description: operation_name filters spans by a specific operation / span name.
-                attributes:
-                    example: '{"http.status_code":"200"}'
-                    type: string
-                    additionalProperties:
-                        type: string
-                    description: 'JSON-encoded map of attributes. Example: {"http.status_code":"200"}'
-                start_time_min:
-                    type: string
-                    description: |-
-                        start_time_min is the start of the time interval (inclusive) for the query.
-                         Only traces with spans that started on or after this time will be returned.
-
-                         The HTTP API uses RFC-3339ns format.
-
-                         This field is required.
-                    format: date-time
-                start_time_max:
-                    type: string
-                    description: |-
-                        start_time_max is the end of the time interval (exclusive) for the query.
-                         Only traces with spans that started before this time will be returned.
-
-                         The HTTP API uses RFC-3339ns format.
-
-                         This field is required.
-                    format: date-time
-                duration_min:
-                    pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-                    type: string
-                    description: |-
-                        duration_min is the minimum duration of a span in the trace.
-                         Only traces with spans that lasted at least this long will be returned.
-
-                         The HTTP API uses Golang's time format (e.g., "10s").
-                duration_max:
-                    pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-                    type: string
-                    description: |-
-                        duration_max is the maximum duration of a span in the trace.
-                         Only traces with spans that lasted at most this long will be returned.
-
-                         The HTTP API uses Golang's time format (e.g., "10s").
-                search_depth:
+                    description: A developer-facing human readable error message.
+                code:
                     type: integer
-                    description: |-
-                        search_depth defines the maximum search depth. Depending on the backend storage implementation,
-                         this may behave like an SQL `LIMIT` clause. However, some implementations might not support
-                         precise limits, and a larger value generally results in more traces being returned.
-                    format: int32
-                raw_traces:
-                    type: boolean
-                    description: |-
-                        If set to true, the response will exclude any enrichments to the trace, such as clock skew adjustments.
-                         The trace will be returned exactly as stored.
-
-                         This field is optional.
+                    description: The status code.
+                    format: enum
             description: |-
-                Query parameters to find traces.
-
-                 All fields form a conjunction (e.g., "service_name='X' AND operation_name='Y' AND ..."),
-                 except for `search_depth` and `raw_traces`.
-
-                 Fields are matched against individual spans, not the trace level. The results include
-                 traces with at least one matching span.
-
-                 The results have no guaranteed ordering.
-        TracesData:
+                The Status type defines a logical error model that is suitable for different
+                 programming environments, including REST APIs and RPC APIs.
+        opentelemetry.proto.trace.v1.TracesData:
             type: object
             properties:
                 resource_spans:
                     type: array
                     items:
-                        $ref: '#/components/schemas/ResourceSpans'
+                        $ref: '#/components/schemas/opentelemetry.proto.trace.v1.ResourceSpans'
                     description: |-
                         An array of ResourceSpans.
                          For data coming from a single resource this array will typically contain
@@ -1495,23 +776,5 @@ components:
 
                  When new fields are added into this message, the OTLP request MUST be updated
                  as well.
-        Xml:
-            type: object
-            properties:
-                name:
-                    type: string
-                namespace:
-                    type: string
-                prefix:
-                    type: string
-                attribute:
-                    type: boolean
-                wrapped:
-                    type: boolean
-                specification_extension:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/NamedAny'
-            description: A metadata object that allows for more fine-tuned XML model definitions.  When using arrays, XML element names are *not* inferred (for singular/plural forms) and the `name` property SHOULD be used to add that information. See examples for expected behavior.
 tags:
     - name: QueryService

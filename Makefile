@@ -342,7 +342,7 @@ proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 	# Generate OpenAPI v3 from proto source
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--openapi_out=naming=proto,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
+		--openapi_out=fq_schema_naming=true,naming=proto,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
 	$(PRUNE_OPENAPI) ./swagger/api_v3/query_service.openapi.yaml
