@@ -128,8 +128,8 @@
             "type": "string"
           },
           {
-            "name": "query.search_depth",
-            "description": "search_depth defines the maximum search depth. Depending on the backend storage implementation,\nthis may behave like an SQL `LIMIT` clause. However, some implementations might not support\nprecise limits, and a larger value generally results in more traces being returned.",
+            "name": "query.num_traces",
+            "description": "num_traces defines the maximum search depth. Depending on the backend storage implementation,\nthis may behave like an SQL `LIMIT` clause. However, some implementations might not support\nprecise limits, and a larger value generally results in more traces being returned.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -141,6 +141,14 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          },
+          {
+            "name": "query.attributes",
+            "description": "attributes filters traces by span or resource attributes. Should be a JSON object of key-value pairs, e.g. {\"driver\":\"T751767C\"}.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "example": "{\"driver\":\"T751767C\"}"
           }
         ],
         "tags": [
