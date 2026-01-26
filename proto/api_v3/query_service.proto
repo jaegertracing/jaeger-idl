@@ -144,6 +144,22 @@ message GetOperationsResponse {
   repeated Operation operations = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+message GetDependenciesRequest {
+  google.protobuf.Timestamp end_time = 1;
+  google.protobuf.Duration lookback = 2;
+}
+
+message DependencyLink {
+  string parent = 1;
+  string child = 2;
+  uint64 call_count = 3;
+}
+
+message GetDependenciesResponse {
+  repeated DependencyLink dependencies = 1;
+}
+
+
 service QueryService {
   // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
@@ -190,6 +206,13 @@ service QueryService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
     option (google.api.http) = {
       get: "/api/v3/operations"
+    };
+  }
+
+  // GetDependencies returns dependencies.
+  rpc GetDependencies(GetDependenciesRequest) returns (GetDependenciesResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/dependencies"
     };
   }
 }
