@@ -207,7 +207,7 @@ service QueryService {
   }
 
   // GetOperations returns operation names.
-   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
+  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {
     option (google.api.http) = {
       get: "/api/v3/operations"
     };
