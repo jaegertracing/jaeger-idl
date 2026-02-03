@@ -6,6 +6,37 @@ info:
     title: QueryService API
     version: 0.0.1
 paths:
+    /api/v3/dependencies:
+        get:
+            tags:
+                - QueryService
+            operationId: QueryService_GetDependencies
+            parameters:
+                - name: start_time
+                  in: query
+                  description: Required. The start time for the time range to search dependencies.
+                  schema:
+                    type: string
+                    format: date-time
+                - name: end_time
+                  in: query
+                  description: Required. The end time for the time range to search dependencies.
+                  schema:
+                    type: string
+                    format: date-time
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/jaeger.api_v3.DependenciesResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/google.rpc.Status'
     /api/v3/operations:
         get:
             tags:
@@ -254,6 +285,28 @@ components:
                         $ref: '#/components/schemas/google.protobuf.Any'
                     description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
             description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
+        jaeger.api_v3.DependenciesResponse:
+            required:
+                - dependencies
+            type: object
+            properties:
+                dependencies:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/jaeger.api_v3.Dependency'
+        jaeger.api_v3.Dependency:
+            required:
+                - parent
+                - child
+                - call_count
+            type: object
+            properties:
+                parent:
+                    type: string
+                child:
+                    type: string
+                call_count:
+                    type: string
         jaeger.api_v3.FindTracesRequest:
             type: object
             properties:

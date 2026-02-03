@@ -212,7 +212,11 @@ service QueryService {
       get: "/api/v3/operations"
     };
   }
-  rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse);
+  rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/dependencies"
+    };
+  }
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.

@@ -11,6 +11,40 @@
     "application/json"
   ],
   "paths": {
+    "/api/v3/dependencies": {
+      "get": {
+        "operationId": "QueryService_GetDependencies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/api_v3DependenciesResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "start_time",
+            "description": "Required. The start time for the time range to search dependencies.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "end_time",
+            "description": "Required. The end time for the time range to search dependencies.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "QueryService"
+        ]
+      }
+    },
     "/api/v3/operations": {
       "get": {
         "summary": "GetOperations returns operation names.",
