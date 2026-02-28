@@ -20,8 +20,6 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
-// TODO: document all types and fields
-
 // TODO: once this moves to jaeger-idl repo, we may want to change Go pkg to api_v2
 // and rewrite it to model only in this repo. That should make it easier to generate
 // classes in other languages.
@@ -36,7 +34,7 @@ option (gogoproto.unmarshaler_all) = true;
 // Enable custom Size method (Required by Marshal and Unmarshal).
 option (gogoproto.sizer_all) = true;
 
-//ValueType describes the type of value stored in a key-value pair.
+// ValueType describes the type of value stored in a key-value pair.
 enum ValueType {
   STRING  = 0;
   BOOL    = 1;
@@ -60,7 +58,7 @@ message KeyValue {
 }
 
 //Log is a time-stamped event which captures the incidents such as errors,
-//lifecycle events that occured during the execution of the span in key-value format.
+//lifecycle events that occurred during the execution of the span in key-value format.
 message Log {
   google.protobuf.Timestamp timestamp = 1 [
     (gogoproto.stdtime) = true,
@@ -96,7 +94,7 @@ message SpanRef {
   SpanRefType ref_type = 3;
 }
 
-//Process represents the service that resuted in the creation of span.
+//Process represents the service that resulted in the creation of span.
 message Process {
   //service_name represents the name of the service which resulted in creation of span.
   string service_name = 1;
@@ -114,7 +112,7 @@ message Span {
     (gogoproto.customtype) = "TraceID",
     (gogoproto.customname) = "TraceID"
   ];
-  //span_id indentifies the ID of the span.
+  //span_id identifies the ID of the span.
   bytes span_id = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "SpanID",
@@ -187,10 +185,10 @@ message Trace {
 //Batch represents the group of spans sent to Jaeger over a wire.
 message Batch {
   //It represents the spans within the batch.
-    repeated Span spans = 1;
-    Process process = 2 [
-      (gogoproto.nullable) = true
-    ];
+  repeated Span spans = 1;
+  Process process = 2 [
+    (gogoproto.nullable) = true
+  ];
 }
 
 //DependencyLink represents the relationship between the two services.
