@@ -18,6 +18,7 @@ package jaeger.api_v3;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "model.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
 
 option go_package = "api_v3";
@@ -133,6 +134,20 @@ message GetOperationsResponse {
   repeated Operation operations = 1;
 }
 
+// Request object to get dependencies.
+message GetDependenciesRequest {
+  // Required. The start of the time interval for the dependency query.
+  google.protobuf.Timestamp start_time = 1;
+
+  // Required. The end of the time interval for the dependency query.
+  google.protobuf.Timestamp end_time = 2;
+}
+
+// Response object to get dependencies.
+message GetDependenciesResponse {
+  repeated jaeger.api_v2.DependencyLink dependencies = 1;
+}
+
 service QueryService {
   // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
@@ -150,6 +165,9 @@ service QueryService {
 
   // GetOperations returns operation names.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+
+  // GetDependencies returns the inter-service dependency graph.
+  rpc GetDependencies(GetDependenciesRequest) returns (GetDependenciesResponse) {}
 }
 
 // Below are some helper types when using APIv3 via HTTP endpoints.
