@@ -84,7 +84,7 @@ func FuzzSpanRef(f *testing.F) {
 		}
 
 		if !bytes.Equal(d1, d2) {
-			t.Fatalf("profound encoding mismatch")
+			t.Fatalf("protobuf encoding mismatch between model.SpanRef and prototest.SpanRef")
 		}
 
 		var ref1u model.SpanRef
