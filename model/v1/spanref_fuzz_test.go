@@ -6,6 +6,7 @@ package model_test
 
 import (
 	"bytes"
+	"sort"
 	"testing"
 
 	"github.com/gogo/protobuf/jsonpb"
@@ -17,9 +18,13 @@ import (
 
 func FuzzSpanRef(f *testing.F) {
 	var enumValues []model.SpanRefType
-	for v := range model.SpanRefType_name {
-		enumValues = append(enumValues, model.SpanRefType(v))
+	for k := range model.SpanRefType_name {
+		enumValues = append(enumValues, model.SpanRefType(k))
 	}
+
+	sort.Slice(enumValues, func(i, j int) bool {
+		return enumValues[i] < enumValues[j]
+	})
 
 	// Add seed inputs to cover normal, zero and max boundary values.
 	f.Add(uint64(2), uint64(3), uint64(11), uint8(0))
@@ -43,21 +48,21 @@ func FuzzSpanRef(f *testing.F) {
 		traceBytes := make([]byte, traceID.Size())
 		spanBytes := make([]byte, spanID.Size())
 
-		n, err := traceID.MarshalTo(traceBytes)
+		n1, err := traceID.MarshalTo(traceBytes)
 		if err != nil {
 			t.Fatalf("traceID MarshalTo failed: %v", err)
 		}
 
-		if n != len(traceBytes) {
-			t.Fatalf("traceID MarshalTo wrote %d bytes, expected %d", n, len(traceBytes))
+		if n1 != len(traceBytes) {
+			t.Fatalf("traceID MarshalTo wrote %d bytes, expected %d", n1, len(traceBytes))
 		}
-		n, err = spanID.MarshalTo(spanBytes)
+		n2, err := spanID.MarshalTo(spanBytes)
 		if err != nil {
 			t.Fatalf("spanID MarshalTo failed: %v", err)
 		}
 
-		if n != len(spanBytes) {
-			t.Fatalf("spanID MarshalTo wrote %d bytes, expected %d", n, len(spanBytes))
+		if n2 != len(spanBytes) {
+			t.Fatalf("spanID MarshalTo wrote %d bytes, expected %d", n2, len(spanBytes))
 		}
 
 		ref2 := prototest.SpanRef{
@@ -70,12 +75,12 @@ func FuzzSpanRef(f *testing.F) {
 		// comparing to match with the standard protobuf encoding.
 		d1, err := proto.Marshal(&ref1)
 		if err != nil {
-			t.Fatalf("marshal ref1 failed")
+			t.Fatalf("marshal ref1 failed: %v", err)
 		}
 
 		d2, err := proto.Marshal(&ref2)
 		if err != nil {
-			t.Fatalf("marshal ref2 failed")
+			t.Fatalf("marshal ref2 failed: %v", err)
 		}
 
 		if !bytes.Equal(d1, d2) {
@@ -98,7 +103,7 @@ func FuzzSpanRef(f *testing.F) {
 		}
 
 		out2 := new(bytes.Buffer)
-		if err := new(jsonpb.Marshaler).Marshal(out2, &ref1); err != nil {
+		if err := new(jsonpb.Marshaler).Marshal(out2, &ref2); err != nil {
 			t.Fatalf("json marshal ref1 failed: %v", err)
 		}
 
@@ -107,7 +112,7 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("json unmarshal j1 failed: %v", err)
 		}
 
-		if err := jsonpb.Unmarshal(bytes.NewReader(out1.Bytes()), &j2); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader(out2.Bytes()), &j2); err != nil {
 			t.Fatalf("json unmarshal j2 failed: %v", err)
 		}
 
