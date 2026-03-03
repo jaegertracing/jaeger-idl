@@ -1,3 +1,7 @@
+// Copyright (c) 2019 The Jaeger Authors.
+// Copyright (c) 2018 Uber Technologies, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package model_test
 
 import (
@@ -12,36 +16,53 @@ import (
 )
 
 func FuzzSpanRef(f *testing.F) {
-	//Add seed inputs to cover normal, zero and max boundary values.
-	f.Add(uint64(2), uint64(3), uint64(11))
-	f.Add(uint64(0), uint64(0), uint64(0))
-	f.Add(^uint64(0), ^uint64(0), ^uint64(0))
+	// Add seed inputs to cover normal, zero and max boundary values.
+	f.Add(uint64(2), uint64(3), uint64(11), uint8(0))
+	f.Add(uint64(0), uint64(0), uint64(0), uint8(1))
+	f.Add(^uint64(0), ^uint64(0), ^uint64(0), uint8(0))
 
-	f.Fuzz(func(t *testing.T, high, low, span uint64) {
-		//Construct SpanRef using custom model types.
+	f.Fuzz(func(t *testing.T, high, low, span uint64, refType uint8) {
+		rt := model.SpanRefType(refType % 2)
+		// Construct SpanRef using custom model types.
 		ref1 := model.SpanRef{
 			TraceID: model.NewTraceID(high, low),
 			SpanID:  model.NewSpanID(span),
+			RefType: rt,
 		}
 
-		//Convert traceID and spanID into raw byte format before
-		//constructing SpanRefs.
+		// Convert traceID and spanID into raw byte format before
+		// constructing SpanRefs.
 		traceID := model.NewTraceID(high, low)
 		spanID := model.NewSpanID(span)
 
 		traceBytes := make([]byte, traceID.Size())
 		spanBytes := make([]byte, spanID.Size())
 
-		_, _ = traceID.MarshalTo(traceBytes)
-		_, _ = spanID.MarshalTo(spanBytes)
+		n, err := traceID.MarshalTo(traceBytes)
+		if err != nil {
+			t.Fatalf("traceID MarshalTo failed: %v", err)
+		}
+
+		if n != len(traceBytes) {
+			t.Fatalf("traceID MarshalTo wrote %d bytes, expected %d", n, len(traceBytes))
+		}
+		n, err = spanID.MarshalTo(spanBytes)
+		if err != nil {
+			t.Fatalf("spanID MarshalTo failed: %v", err)
+		}
+
+		if n != len(spanBytes) {
+			t.Fatalf("spanID MarshalTo wrote %d bytes, expected %d", n, len(spanBytes))
+		}
 
 		ref2 := prototest.SpanRef{
 			TraceId: traceBytes,
 			SpanId:  spanBytes,
+			RefType: prototest.SpanRefType(rt),
 		}
 
-		//Convert both SpanRefs into proto binary formats before
-		//comparing to match with the standard protobuf encoding.
+		// Convert both SpanRefs into proto binary formats before
+		// comparing to match with the standard protobuf encoding.
 		d1, err := proto.Marshal(&ref1)
 		if err != nil {
 			t.Fatalf("marshal ref1 failed")
@@ -61,7 +82,7 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("protobuf unmarshal failed: %v", err)
 		}
 
-		//Verify output of protobuf roundtrip to ensure there are no changes in the data.
+		// Verify output of protobuf roundtrip to ensure there are no changes in the data.
 		if !proto.Equal(&ref1, &ref1u) {
 			t.Fatalf("protobuf roundtrip mismatched")
 		}
