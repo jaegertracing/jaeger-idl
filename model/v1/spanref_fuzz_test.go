@@ -16,13 +16,22 @@ import (
 )
 
 func FuzzSpanRef(f *testing.F) {
+	var enumValues []model.SpanRefType
+	for v := range model.SpanRefType_name {
+		enumValues = append(enumValues, model.SpanRefType(v))
+	}
+
 	// Add seed inputs to cover normal, zero and max boundary values.
 	f.Add(uint64(2), uint64(3), uint64(11), uint8(0))
 	f.Add(uint64(0), uint64(0), uint64(0), uint8(1))
 	f.Add(^uint64(0), ^uint64(0), ^uint64(0), uint8(0))
 
 	f.Fuzz(func(t *testing.T, high, low, span uint64, refType uint8) {
-		rt := model.SpanRefType(refType % 2)
+		rt := enumValues[int(refType)%len(enumValues)]
+
+		traceID := model.NewTraceID(high, low)
+		spanID := model.NewSpanID(span)
+
 		// Construct SpanRef using custom model types.
 		ref1 := model.SpanRef{
 			TraceID: model.NewTraceID(high, low),
@@ -30,11 +39,7 @@ func FuzzSpanRef(f *testing.F) {
 			RefType: rt,
 		}
 
-		// Convert traceID and spanID into raw byte format before
-		// constructing SpanRefs.
-		traceID := model.NewTraceID(high, low)
-		spanID := model.NewSpanID(span)
-
+		//Convert TraceID and SpanID into raw bytes.
 		traceBytes := make([]byte, traceID.Size())
 		spanBytes := make([]byte, spanID.Size())
 
@@ -87,18 +92,27 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("protobuf roundtrip mismatched")
 		}
 
-		out := new(bytes.Buffer)
-		if err := new(jsonpb.Marshaler).Marshal(out, &ref1); err != nil {
-			t.Fatalf("json marshal failed: %v", err)
+		out1 := new(bytes.Buffer)
+		if err := new(jsonpb.Marshaler).Marshal(out1, &ref1); err != nil {
+			t.Fatalf("json marshal ref1 failed: %v", err)
 		}
 
-		var ref1j model.SpanRef
-		if err := jsonpb.Unmarshal(bytes.NewReader(out.Bytes()), &ref1j); err != nil {
-			t.Fatalf("json unmarshal failed: %v", err)
+		out2 := new(bytes.Buffer)
+		if err := new(jsonpb.Marshaler).Marshal(out2, &ref1); err != nil {
+			t.Fatalf("json marshal ref1 failed: %v", err)
 		}
 
-		if !proto.Equal(&ref1, &ref1j) {
-			t.Fatalf("json roundtrip mismatch")
+		var j1, j2 model.SpanRef
+		if err := jsonpb.Unmarshal(bytes.NewReader(out1.Bytes()), &j1); err != nil {
+			t.Fatalf("json unmarshal j1 failed: %v", err)
+		}
+
+		if err := jsonpb.Unmarshal(bytes.NewReader(out1.Bytes()), &j2); err != nil {
+			t.Fatalf("json unmarshal j2 failed: %v", err)
+		}
+
+		if !proto.Equal(&j1, &j2) {
+			t.Fatalf("json encoding mismatch between model and prototest")
 		}
 	})
 }
