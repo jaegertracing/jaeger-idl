@@ -26,6 +26,8 @@ func FuzzSpanRef(f *testing.F) {
 		return enumValues[i] < enumValues[j]
 	})
 
+	var marshaler = &jsonpb.Marshaler{}
+
 	// Add seed inputs to cover normal, zero and max boundary values.
 	f.Add(uint64(2), uint64(3), uint64(11), uint8(0))
 	f.Add(uint64(0), uint64(0), uint64(0), uint8(1))
@@ -88,7 +90,7 @@ func FuzzSpanRef(f *testing.F) {
 		}
 
 		var ref1u model.SpanRef
-		if err := proto.Unmarshal(d1, &ref1u); err != nil {
+		if err := proto.Unmarshal(d2, &ref1u); err != nil {
 			t.Fatalf("protobuf unmarshal failed: %v", err)
 		}
 
@@ -96,8 +98,6 @@ func FuzzSpanRef(f *testing.F) {
 		if !proto.Equal(&ref1, &ref1u) {
 			t.Fatalf("protobuf roundtrip mismatched")
 		}
-
-		var marshaler = &jsonpb.Marshaler{}
 
 		var out1, out2 bytes.Buffer
 		if err := marshaler.Marshal(&out1, &ref1); err != nil {
@@ -119,6 +119,10 @@ func FuzzSpanRef(f *testing.F) {
 
 		if !proto.Equal(&j1, &j2) {
 			t.Fatalf("json encoding mismatch between model and prototest")
+		}
+
+		if !proto.Equal(&ref1, &j1) {
+			t.Fatalf("json roundtrip mismatched original ref1")
 		}
 	})
 }
