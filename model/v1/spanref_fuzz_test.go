@@ -134,8 +134,12 @@ func FuzzSpanRef(f *testing.F) {
 
 		b2, err := proto.Marshal(&j2)
 		if err != nil {
-			t.Fatalf("marshal ref2 failed: %v", err)
+			t.Fatalf("marshal j2 failed: %v", err)
 		}
+
+		//Use binary comparison instead of proto.Equal because
+		//jsonpb will normalize nil vs empty byte slices which
+		//are semantically equivalent but not proto.Equal
 
 		if !bytes.Equal(b1, b2) {
 			t.Fatalf("json roundtrip mismatch for prototest.SpanRef")
