@@ -122,6 +122,13 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("json unmarshal j2 failed: %v", err)
 		}
 
+		if !proto.Equal(&ref1, &j1) {
+			t.Fatalf("jsonpb roundtrip mismatch for ref1")
+		}
+		if !proto.Equal(&ref2, &j2) {
+			t.Fatalf("jsonpb roundtrip mismatch for ref2")
+		}
+
 		var m1, m2 map[string]interface{}
 		if err := json.Unmarshal(out1.Bytes(), &m1); err != nil {
 			t.Fatalf("json decode out1 failed: %v", err)
