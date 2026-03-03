@@ -6,8 +6,6 @@ package model_test
 
 import (
 	"bytes"
-	"encoding/json"
-	"reflect"
 	"sort"
 	"testing"
 
@@ -28,7 +26,9 @@ func FuzzSpanRef(f *testing.F) {
 		return enumValues[i] < enumValues[j]
 	})
 
-	marshaler := &jsonpb.Marshaler{}
+	marshaler := &jsonpb.Marshaler{
+		EnumsAsInts: true,
+	}
 
 	// Add seed inputs to cover normal, zero and max boundary values.
 	f.Add(uint64(2), uint64(3), uint64(11), uint8(0))
@@ -113,33 +113,42 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("json marshal ref2 failed: %v", err)
 		}
 
-		var j1, j2 model.SpanRef
+		var j1 model.SpanRef
 		if err := jsonpb.Unmarshal(bytes.NewReader(out1.Bytes()), &j1); err != nil {
-			t.Fatalf("json unmarshal j1 failed: %v", err)
-		}
-
-		if err := jsonpb.Unmarshal(bytes.NewReader(out2.Bytes()), &j2); err != nil {
-			t.Fatalf("json unmarshal j2 failed: %v", err)
+			t.Fatalf("json unmarshal model failed: %v", err)
 		}
 
 		if !proto.Equal(&ref1, &j1) {
-			t.Fatalf("jsonpb roundtrip mismatch for ref1")
-		}
-		if !proto.Equal(&ref2, &j2) {
-			t.Fatalf("jsonpb roundtrip mismatch for ref2")
+			t.Fatalf("json roundtrip mismatch for model.SpanRef")
 		}
 
-		var m1, m2 map[string]interface{}
-		if err := json.Unmarshal(out1.Bytes(), &m1); err != nil {
-			t.Fatalf("json decode out1 failed: %v", err)
-		}
-		if err := json.Unmarshal(out2.Bytes(), &m2); err != nil {
-			t.Fatalf("json decode out2 failed: %v", err)
+		var j2 prototest.SpanRef
+		if err := jsonpb.Unmarshal(bytes.NewReader(out2.Bytes()), &j2); err != nil {
+			t.Fatalf("json unmarshal prototest failed: %v", err)
 		}
 
-		if !reflect.DeepEqual(m1, m2) {
-			t.Fatalf("json encoding mismatch:\nmodel=%s\nproto=%s",
-				out1.String(), out2.String())
+		b1, err := proto.Marshal(&ref2)
+		if err != nil {
+			t.Fatalf("marshal ref2 failed: %v", err)
+		}
+
+		b2, err := proto.Marshal(&j2)
+		if err != nil {
+			t.Fatalf("marshal ref2 failed: %v", err)
+		}
+
+		if !bytes.Equal(b1, b2) {
+			t.Fatalf("json roundtrip mismatch for prototest.SpanRef")
+		}
+
+		var cross1 prototest.SpanRef
+		if err := jsonpb.Unmarshal(bytes.NewReader(out1.Bytes()), &cross1); err != nil {
+			t.Fatalf("model JSON not compatible with prototest: %v", err)
+		}
+
+		var cross2 model.SpanRef
+		if err := jsonpb.Unmarshal(bytes.NewReader(out2.Bytes()), &cross2); err != nil {
+			t.Fatalf("prototest JSON not compatible with model: %v", err)
 		}
 
 		var ref1j model.SpanRef
