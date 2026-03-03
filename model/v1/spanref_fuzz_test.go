@@ -6,6 +6,8 @@ package model_test
 
 import (
 	"bytes"
+	"encoding/json"
+	"reflect"
 	"sort"
 	"testing"
 
@@ -120,12 +122,26 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("json unmarshal j2 failed: %v", err)
 		}
 
-		if !proto.Equal(&j1, &j2) {
-			t.Fatalf("json encoding mismatch between model and prototest")
+		var m1, m2 map[string]interface{}
+		if err := json.Unmarshal(out1.Bytes(), &m1); err != nil {
+			t.Fatalf("json decode out1 failed: %v", err)
+		}
+		if err := json.Unmarshal(out2.Bytes(), &m2); err != nil {
+			t.Fatalf("json decode out2 failed: %v", err)
 		}
 
-		if !proto.Equal(&ref1, &j1) {
-			t.Fatalf("json roundtrip mismatched original ref1")
+		if !reflect.DeepEqual(m1, m2) {
+			t.Fatalf("json encoding mismatch:\nmodel=%s\nproto=%s",
+				out1.String(), out2.String())
+		}
+
+		var ref1j model.SpanRef
+		if err := jsonpb.Unmarshal(bytes.NewReader(out1.Bytes()), &ref1j); err != nil {
+			t.Fatalf("json unmarshal failed: %v", err)
+		}
+
+		if !proto.Equal(&ref1, &ref1j) {
+			t.Fatalf("json roundtrip mismatch")
 		}
 	})
 }
