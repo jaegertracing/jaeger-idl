@@ -55,7 +55,6 @@ func TestTraceSpanIDMarshalProto(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			ref1 := model.SpanRef{TraceID: model.NewTraceID(2, 3), SpanID: model.NewSpanID(11)}
 			ref2 := prototest.SpanRef{
-				// TODO: would be cool to fuzz that test
 				TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3},
 				SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 11},
 			}
