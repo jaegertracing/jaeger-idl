@@ -26,7 +26,7 @@ func FuzzSpanRef(f *testing.F) {
 		return enumValues[i] < enumValues[j]
 	})
 
-	var marshaler = &jsonpb.Marshaler{}
+	marshaler := &jsonpb.Marshaler{}
 
 	// Add seed inputs to cover normal, zero and max boundary values.
 	f.Add(uint64(2), uint64(3), uint64(11), uint8(0))
@@ -47,8 +47,11 @@ func FuzzSpanRef(f *testing.F) {
 		}
 
 		// Convert TraceID and SpanID into raw bytes.
-		traceBytes := make([]byte, traceID.Size())
-		spanBytes := make([]byte, spanID.Size())
+		var traceBuf [16]byte
+		var spanBuf [8]byte
+
+		traceBytes := traceBuf[:]
+		spanBytes := spanBuf[:]
 
 		n1, err := traceID.MarshalTo(traceBytes)
 		if err != nil {
@@ -105,7 +108,7 @@ func FuzzSpanRef(f *testing.F) {
 		}
 
 		if err := marshaler.Marshal(&out2, &ref2); err != nil {
-			t.Fatalf("json marshal ref1 failed: %v", err)
+			t.Fatalf("json marshal ref2 failed: %v", err)
 		}
 
 		var j1, j2 model.SpanRef
