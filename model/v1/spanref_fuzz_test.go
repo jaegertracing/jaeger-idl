@@ -39,12 +39,12 @@ func FuzzSpanRef(f *testing.F) {
 
 		// Construct SpanRef using custom model types.
 		ref1 := model.SpanRef{
-			TraceID: model.NewTraceID(high, low),
-			SpanID:  model.NewSpanID(span),
+			TraceID: traceID,
+			SpanID:  spanID,
 			RefType: rt,
 		}
 
-		//Convert TraceID and SpanID into raw bytes.
+		// Convert TraceID and SpanID into raw bytes.
 		traceBytes := make([]byte, traceID.Size())
 		spanBytes := make([]byte, spanID.Size())
 
