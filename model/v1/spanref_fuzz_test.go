@@ -97,13 +97,14 @@ func FuzzSpanRef(f *testing.F) {
 			t.Fatalf("protobuf roundtrip mismatched")
 		}
 
-		out1 := new(bytes.Buffer)
-		if err := new(jsonpb.Marshaler).Marshal(out1, &ref1); err != nil {
+		var marshaler = &jsonpb.Marshaler{}
+
+		var out1, out2 bytes.Buffer
+		if err := marshaler.Marshal(&out1, &ref1); err != nil {
 			t.Fatalf("json marshal ref1 failed: %v", err)
 		}
 
-		out2 := new(bytes.Buffer)
-		if err := new(jsonpb.Marshaler).Marshal(out2, &ref2); err != nil {
+		if err := marshaler.Marshal(&out2, &ref2); err != nil {
 			t.Fatalf("json marshal ref1 failed: %v", err)
 		}
 
