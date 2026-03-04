@@ -129,7 +129,7 @@ message Span {
   ];
   // operation_name is the name of the operation.
   string operation_name = 3;
-  // References are links to other spans.
+  // references are links to other spans.
   repeated SpanRef references = 4 [
     (gogoproto.nullable) = false
   ];
