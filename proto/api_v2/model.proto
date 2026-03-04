@@ -64,7 +64,7 @@ message KeyValue {
   bytes     v_binary  = 7;
 }
 
-// Log is a time-stamped event which captures incidents such as errors or lifecycles
+// Log is a time-stamped event which captures incidents such as errors or lifecycle
 // events that occur during the execution of the span in key-value format.
 message Log {
   google.protobuf.Timestamp timestamp = 1 [
@@ -160,7 +160,7 @@ message Span {
   string process_id = 11 [
     (gogoproto.customname) = "ProcessID"
   ];
-  // Warnings generation during span creation.
+  // Warnings generated during span creation.
   repeated string warnings = 12;
 }
 
