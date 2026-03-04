@@ -101,11 +101,13 @@ message SpanRef {
   SpanRefType ref_type = 3;
 }
 
-// Process represents the service that resulted in the creation of a span.
+// Process represents the process (and associated service) that emitted a span, including
+// its logical service name and process-level tags.
 message Process {
-  // service_name represents the name of the service that resulted in the creation of a span.
+  // service_name represents the logical name of the service for the process that emitted the span.
   string service_name = 1;
-  // tags describe the metadata about the service, such as host, IP address, environment etc.
+  // tags describe process-level metadata for the emitting process/service, such as host, IP address,
+  // environment, and other attributes that apply to the process as a whole.
   repeated KeyValue tags = 2 [
     (gogoproto.nullable) = false
   ];
@@ -127,7 +129,7 @@ message Span {
   ];
   // operation_name is the name of the operation.
   string operation_name = 3;
-  // References to other spans.
+  // References are links to other spans.
   repeated SpanRef references = 4 [
     (gogoproto.nullable) = false
   ];
