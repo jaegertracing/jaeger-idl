@@ -64,8 +64,8 @@ message KeyValue {
   bytes     v_binary  = 7;
 }
 
-// Log is a time-stamped event which captures the incidents such as errors,
-// lifecycle events that occurred during the execution of the span in key-value format.
+// Log is a time-stamped event which captures incidents such as errors or lifecycles
+// events that occur during the execution of the span in key-value format.
 message Log {
   google.protobuf.Timestamp timestamp = 1 [
     (gogoproto.stdtime) = true,
@@ -111,9 +111,9 @@ message Process {
   ];
 }
 
-// Span represents the single operation performed within the trace.
+// Span represents a single operation performed within the trace.
 message Span {
-  // trace_id identifies ID of the trace, all the spans within it share the same trace_id.
+  // trace_id is the ID of the trace, all the spans within it share the same trace_id.
   bytes trace_id = 1 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "TraceID",
@@ -166,7 +166,7 @@ message Span {
 
 // Trace represents the collection of spans with the same trace ID.
 message Trace {
-  // ProcessMapping represents the name and tags of the service.
+  // ProcessMapping represents a single mapping entry from a process_id.
   message ProcessMapping {
     // process_id is a unique identifier for each process in the trace.
     string process_id = 1 [
