@@ -168,18 +168,18 @@ message Span {
 message Trace {
   // ProcessMapping represents the name and tags of the service.
   message ProcessMapping {
-    // process_id is a unique identifier to each process in the trace.
+    // process_id is a unique identifier for each process in the trace.
     string process_id = 1 [
         (gogoproto.customname) = "ProcessID"
     ];
     // process represents process definition along with service name and tags.
-     Process process = 2 [
+    Process process = 2 [
         (gogoproto.nullable) = false
     ];
   }
   // The list of spans that belong to this trace.
   repeated Span spans = 1;
-  // process_map represents the mapping of process identifiers to thier process definitons.
+  // process_map represents the mapping of process identifiers to their process definitions.
   repeated ProcessMapping process_map = 2 [
     (gogoproto.nullable) = false
   ];
