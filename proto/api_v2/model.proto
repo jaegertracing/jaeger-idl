@@ -43,22 +43,29 @@ enum ValueType {
   BINARY  = 4;
 };
 
-//KeyValue is a message type used to store dynamically-typed attributes under a single structure.
+// KeyValue is a message type used to store dynamically-typed attributes under a single structure.
 message KeyValue {
   option (gogoproto.equal) = true;
   option (gogoproto.compare) = true;
 
+  // The attribute key.
   string    key      = 1;
+  // The type of the value stored in this KeyValue.
   ValueType v_type    = 2;
+  // The string value. Used when v_type == STRING.
   string    v_str     = 3;
+  // The boolean value. Used when v_type == BOOL.
   bool      v_bool    = 4;
+  // The 64-bit integer value. Used when v_type == INT64.
   int64     v_int64   = 5;
+  // The 64-bit floating-point value. Used when v_type == FLOAT64.
   double    v_float64 = 6;
+  // The binary value. Used when v_type == BINARY.
   bytes     v_binary  = 7;
 }
 
-//Log is a time-stamped event which captures the incidents such as errors,
-//lifecycle events that occurred during the execution of the span in key-value format.
+// Log is a time-stamped event which captures the incidents such as errors,
+// lifecycle events that occurred during the execution of the span in key-value format.
 message Log {
   google.protobuf.Timestamp timestamp = 1 [
     (gogoproto.stdtime) = true,
@@ -69,56 +76,56 @@ message Log {
   ];
 }
 
-//SpanRefType describes the relationship between the two spans.
+// SpanRefType describes the relationship between the two spans.
 enum SpanRefType {
   CHILD_OF = 0;
   FOLLOWS_FROM = 1;
 };
 
-//SpanRef describes the reference from one span to another, it
-//establishes relationship between the spans.
+// SpanRef describes the reference from one span to another.
+// It establishes the relationship between the spans.
 message SpanRef {
-  //trace_id represents the trace containing the referenced span.
+  // trace_id represents the trace containing the referenced span.
   bytes trace_id = 1 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "TraceID",
     (gogoproto.customname) = "TraceID"
   ];
-  //span_id represents the referenced span within the trace.
+  // span_id represents the referenced span within the trace.
   bytes span_id = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "SpanID",
     (gogoproto.customname) = "SpanID"
   ];
-  //ref_type describes the type of relationship between the spans.
+  // ref_type describes the type of relationship between the spans.
   SpanRefType ref_type = 3;
 }
 
-//Process represents the service that resulted in the creation of span.
+// Process represents the service that resulted in the creation of a span.
 message Process {
-  //service_name represents the name of the service which resulted in creation of span.
+  // service_name represents the name of the service that resulted in the creation of a span.
   string service_name = 1;
-  //tags describe the metadata about the service such as Host, IP, Environment etc.
+  // tags describe the metadata about the service, such as host, IP address, environment etc.
   repeated KeyValue tags = 2 [
     (gogoproto.nullable) = false
   ];
 }
 
-//Span represents the single operation performed within the trace.
+// Span represents the single operation performed within the trace.
 message Span {
-  //trace_id identifies ID of the trace, all the spans within it share the same trace_id.
+  // trace_id identifies ID of the trace, all the spans within it share the same trace_id.
   bytes trace_id = 1 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "TraceID",
     (gogoproto.customname) = "TraceID"
   ];
-  //span_id identifies the ID of the span.
+  // span_id identifies the ID of the span.
   bytes span_id = 2 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "SpanID",
     (gogoproto.customname) = "SpanID"
   ];
-  //It represents the name of the operation.
+  // operation_name is the name of the operation.
   string operation_name = 3;
   repeated SpanRef references = 4 [
     (gogoproto.nullable) = false
@@ -127,25 +134,25 @@ message Span {
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "Flags"
   ];
-  //start_time represents the time when the span started.
+  // start_time represents the time when the span started.
   google.protobuf.Timestamp start_time = 6 [
     (gogoproto.stdtime) = true,
     (gogoproto.nullable) = false
   ];
-  //duration represents how long did the span run.
+  // duration represents how long did the span run.
   google.protobuf.Duration duration = 7 [
     (gogoproto.stdduration) = true,
     (gogoproto.nullable) = false
   ];
-  //tags represents the metadata of the operation.
+  // tags represents the metadata of the operation.
   repeated KeyValue tags = 8 [
     (gogoproto.nullable) = false
   ];
-  //logs represents the timestamped events within the span.
+  // logs represents the timestamped events within the span.
   repeated Log logs = 9 [
     (gogoproto.nullable) = false
   ];
-  //process represents the process which emitted the span.
+  // process represents the process which emitted the span.
   Process process = 10;
   string process_id = 11 [
     (gogoproto.customname) = "ProcessID"
@@ -153,18 +160,18 @@ message Span {
   repeated string warnings = 12;
 }
 
-//Trace represents the collection of spans with same trace ID.
+// Trace represents the collection of spans with same trace ID.
 message Trace {
-  //ProcessMapping represents the name and tags of the service.
+  // ProcessMapping represents the name and tags of the service.
   message ProcessMapping {
-      string process_id = 1 [
+    string process_id = 1 [
         (gogoproto.customname) = "ProcessID"
-      ];
-      Process process = 2 [
+    ];
+     Process process = 2 [
         (gogoproto.nullable) = false
-      ];
+    ];
   }
-  //spans represent the spans within the trace.
+  // The list of spans that belong to this trace.
   repeated Span spans = 1;
   repeated ProcessMapping process_map = 2 [
     (gogoproto.nullable) = false
@@ -182,23 +189,24 @@ message Trace {
 // their own instances of Process, with span.Process taking priority
 // over batch.Process.
 
-//Batch represents the group of spans sent to Jaeger over a wire.
+// Batch represents the group of spans sent to Jaeger over a wire.
 message Batch {
-  //It represents the spans within the batch.
+  // The spans included in this batch.
   repeated Span spans = 1;
+  // The process that generated these spans.
   Process process = 2 [
     (gogoproto.nullable) = true
   ];
 }
 
-//DependencyLink represents the relationship between the two services.
+// DependencyLink represents the relationship between the two services.
 message DependencyLink {
-  //parent represents the calling service.
+  // parent represents the calling service.
   string parent = 1;
-  //child represents the called service.
+  // child represents the called service.
   string child = 2;
   //call_count represents the number of calls between the two services.
   uint64 call_count = 3;
-  //source identifies the system or component that generated the dependency data.
+  // source identifies the system or component that generated the dependency data.
   string source = 4;
 }
