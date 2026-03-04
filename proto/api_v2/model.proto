@@ -127,9 +127,11 @@ message Span {
   ];
   // operation_name is the name of the operation.
   string operation_name = 3;
+  // References to other spans.
   repeated SpanRef references = 4 [
     (gogoproto.nullable) = false
   ];
+  // Bit flags that describe span behavior (e.g., sampling, debug).
   uint32 flags = 5 [
     (gogoproto.nullable) = false,
     (gogoproto.customtype) = "Flags"
@@ -139,7 +141,7 @@ message Span {
     (gogoproto.stdtime) = true,
     (gogoproto.nullable) = false
   ];
-  // duration represents how long did the span run.
+  // duration represents how long the span ran.
   google.protobuf.Duration duration = 7 [
     (gogoproto.stdduration) = true,
     (gogoproto.nullable) = false
@@ -154,28 +156,34 @@ message Span {
   ];
   // process represents the process which emitted the span.
   Process process = 10;
+  // Identifier of the process that emits the span.
   string process_id = 11 [
     (gogoproto.customname) = "ProcessID"
   ];
+  // Warnings generation during span creation.
   repeated string warnings = 12;
 }
 
-// Trace represents the collection of spans with same trace ID.
+// Trace represents the collection of spans with the same trace ID.
 message Trace {
   // ProcessMapping represents the name and tags of the service.
   message ProcessMapping {
+    // process_id is a unique identifier to each process in the trace.
     string process_id = 1 [
         (gogoproto.customname) = "ProcessID"
     ];
+    // process represents process definition along with service name and tags.
      Process process = 2 [
         (gogoproto.nullable) = false
     ];
   }
   // The list of spans that belong to this trace.
   repeated Span spans = 1;
+  // process_map represents the mapping of process identifiers to thier process definitons.
   repeated ProcessMapping process_map = 2 [
     (gogoproto.nullable) = false
   ];
+  // Warnings generated during trace ingestion, processing, or storage.
   repeated string warnings = 3;
 }
 
@@ -205,7 +213,7 @@ message DependencyLink {
   string parent = 1;
   // child represents the called service.
   string child = 2;
-  //call_count represents the number of calls between the two services.
+  // call_count represents the number of calls between the two services.
   uint64 call_count = 3;
   // source identifies the system or component that generated the dependency data.
   string source = 4;
