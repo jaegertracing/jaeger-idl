@@ -4,6 +4,12 @@
     "config:recommended",
     ":gitSignOff"
   ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ]
+  },
   "labels": [
     "changelog:dependencies"
   ],
