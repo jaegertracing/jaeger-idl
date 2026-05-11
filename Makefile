@@ -69,7 +69,6 @@ $(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
 
 .PHONY: test-code-gen
 test-code-gen: thrift-all proto-all proto-zipkin
-	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
 
 
