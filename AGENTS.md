@@ -19,6 +19,10 @@ The project uses a `Makefile` that heavily relies on Docker (specifically `jaege
     -   Removes unused schemas (e.g., transitively imported Gnostic types).
     -   Patches duplicate `operationId`s (e.g., `QueryService_FindTraces` -> `QueryService_FindTracesPost`).
 
+## Git sign-off
+
+When committing always include -s flag for sign-off footer.
+
 ## Working with GitHub CLI (`gh`)
 
 To effectively gather context from Pull Requests, especially for review comments:
