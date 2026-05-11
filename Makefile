@@ -8,9 +8,6 @@ THRIFT_VER?=0.19
 THRIFT_IMG?=jaegertracing/thrift:$(THRIFT_VER)
 THRIFT=docker run --rm -u $(shell id -u) -v "${PWD}:/data" $(THRIFT_IMG) thrift
 
-SWAGGER_VER=0.31.0
-SWAGGER_IMAGE=quay.io/goswagger/swagger:$(SWAGGER_VER)
-SWAGGER=docker run --rm -u ${shell id -u} -v "${PWD}:/go/src/${PROJECT_ROOT}" -w /go/src/${PROJECT_ROOT} $(SWAGGER_IMAGE)
 
 PROTOC_VER=0.5.1
 PROTOC_IMAGE=jaegertracing/protobuf:$(PROTOC_VER)
@@ -71,13 +68,10 @@ $(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ ./prune-openapi
 
 .PHONY: test-code-gen
-test-code-gen: thrift-all swagger-validate proto-all proto-zipkin
+test-code-gen: thrift-all proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.swagger.json
 	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
 
-.PHONY: swagger-validate
-swagger-validate:
-	$(SWAGGER) validate ./swagger/zipkin2-api.yaml
 
 .PHONY: clean
 clean:
@@ -170,10 +164,6 @@ PROTOC_WITH_GRPC := $(PROTOC_WITH_GRPC_common) \
 		--grpc-csharp_out=${PROTO_GEN_CSHARP_DIR_POLYGLOT}
 endif
 
-PROTOC_INTERNAL := $(PROTOC) \
-		$(PROTO_INCLUDES) \
-		--csharp_out=internal_access,base_namespace:${PROTO_GEN_CSHARP_DIR_POLYGLOT} \
-		--python_out=${PROTO_GEN_PYTHON_DIR_POLYGLOT}
 
 GO=go
 GOOS ?= $(shell $(GO) env GOOS)
@@ -313,23 +303,6 @@ proto-api-v3-all:
 	# API v3
 	$(PROTOC_WITH_GRPC) \
 		proto/api_v3/query_service.proto
-	# GRPC gateway
-	$(PROTOC) \
-		$(PROTO_INCLUDES) \
- 		--grpc-gateway_out=logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml,$(PROTO_GOGO_MAPPINGS):${PROTO_GEN_GO_DIR_POLYGLOT} \
-		proto/api_v3/query_service.proto
-	# Swagger
-	$(PROTOC) \
-		$(PROTO_INCLUDES) \
-		--swagger_out=disable_default_errors=true,logtostderr=true,grpc_api_configuration=proto/api_v3/query_service_http.yaml:./swagger \
-		proto/api_v3/query_service.proto
-
-	$(PROTOC_INTERNAL) \
-		google/api/annotations.proto \
-		google/api/http.proto \
-		protoc-gen-swagger/options/annotations.proto \
-		protoc-gen-swagger/options/openapiv2.proto \
-		gogoproto/gogo.proto
 	# OpenAPI v3
 	$(MAKE) proto-api-v3-openapi
 
