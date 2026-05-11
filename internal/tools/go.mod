@@ -1,8 +1,6 @@
 module github.com/jaegertracing/jaeger-idl/internal/tools
 
-go 1.24.6
-
-toolchain go1.24.11
+go 1.26.0
 
 require (
 	github.com/golangci/golangci-lint/v2 v2.1.5
