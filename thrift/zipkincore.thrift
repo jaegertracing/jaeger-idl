@@ -292,7 +292,7 @@ struct Span {
   3: string name,
   4: i64 id,                       # unique span id, only used for this span
   5: optional i64 parent_id,       # parent span id
-  6: list<Annotation> annotations, # all annotations/events that occured, sorted by timestamp
+  6: list<Annotation> annotations, # all annotations/events that occurred, sorted by timestamp
   8: list<BinaryAnnotation> binary_annotations # any binary annotations
   9: optional bool debug = 0       # if true, we DEMAND that this span passes all samplers
   /**
