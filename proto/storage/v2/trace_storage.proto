@@ -105,9 +105,12 @@ message TraceQueryParameters {
 }
 
 // FindTracesRequest represents a request to find traces.
-// It can be used to retrieve the traces (FindTraces) or simply
-// the trace IDs (FindTraceIDs).
 message FindTracesRequest {
+  TraceQueryParameters query = 1;
+}
+
+// FindTraceIDsRequest represents a request to find trace IDs.
+message FindTraceIDsRequest {
   TraceQueryParameters query = 1;
 }
 
@@ -124,7 +127,7 @@ message FoundTraceID {
   google.protobuf.Timestamp end = 3;
 }
 
-// FindTraceIDsResponse represents the response for FindTracesRequest.
+// FindTraceIDsResponse represents the response for FindTraceIDsRequest.
 message FindTraceIDsResponse {
   repeated FoundTraceID trace_ids = 1;
 }
@@ -170,5 +173,5 @@ service TraceReader {
   // of matching trace IDs. This is useful in some contexts, such as batch jobs, where a
   // large list of trace IDs may be queried first and then the full traces are loaded
   // in batches.
-  rpc FindTraceIDs(FindTracesRequest) returns (FindTraceIDsResponse) {}
+  rpc FindTraceIDs(FindTraceIDsRequest) returns (FindTraceIDsResponse) {}
 }
