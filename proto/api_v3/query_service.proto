@@ -164,6 +164,71 @@ message Dependency {
 }
 
 
+// ServiceSummary contains per-service statistics for a trace, matching
+// what the UI renders as a coloured tag in the search results row.
+message ServiceSummary {
+  // Name of the service.
+  string name = 1;
+
+  // Number of spans attributed to this service in the trace.
+  int32 span_count = 2;
+
+  // Number of spans from this service that carry OTEL StatusCode = ERROR.
+  // The UI renders an error icon when this value is > 0.
+  // Only spans explicitly owned by this service are counted; there is no
+  // error propagation from child spans of other services.
+  int32 error_span_count = 3;
+}
+
+// TraceSummary contains lightweight summary information about a trace,
+// suitable for display in search result lists.
+message TraceSummary {
+  // Hex-encoded 128-bit trace ID.
+  string trace_id = 1;
+
+  // Name of the service that owns the root span.
+  string root_service_name = 2;
+
+  // Operation name of the root span.
+  string root_operation_name = 3;
+
+  // Start timestamp of the earliest span in the trace (Unix nanoseconds).
+  // Named to match the OTLP convention (e.g. startTimeUnixNano in OTLP span JSON).
+  // proto3 JSON encoding: fixed64/uint64/int64 fields are serialised as decimal
+  // strings to avoid float64 precision loss in JavaScript for values above 2^53.
+  fixed64 min_start_time_unix_nano = 4;
+
+  // End timestamp of the latest span in the trace (Unix nanoseconds).
+  // The UI may compute duration as BigInt(maxEndTimeUnixNano) - BigInt(minStartTimeUnixNano).
+  fixed64 max_end_time_unix_nano = 5;
+
+  // Total number of spans in the trace.
+  int32 span_count = 6;
+
+  // Number of spans that carry an error indicator (OTEL StatusCode = ERROR).
+  int32 error_span_count = 7;
+
+  // Number of spans whose parent span ID is not present in this trace.
+  // A non-zero value indicates an incomplete or partial trace.
+  int32 orphan_span_count = 8;
+
+  // Per-service breakdown, one entry per distinct service name observed
+  // across all spans, sorted by name.
+  repeated ServiceSummary services = 9;
+}
+
+// Request object for FindTraceSummaries.
+message FindTraceSummariesRequest {
+  TraceQueryParameters query = 1;
+}
+
+// Response chunk for FindTraceSummaries. A single RPC call may yield multiple
+// chunks, each carrying one or more summaries, mirroring the chunked streaming
+// used by FindTraces / GetTrace.
+message FindTraceSummariesResponse {
+  repeated TraceSummary summaries = 1;
+}
+
 service QueryService {
   // GetTrace returns a single trace.
   // Note that the JSON response over HTTP is wrapped into result envelope "{"result": ...}"
@@ -215,6 +280,20 @@ service QueryService {
   rpc GetDependencies(GetDependenciesRequest) returns (DependenciesResponse) {
     option (google.api.http) = {
       get: "/api/v3/dependencies"
+    };
+  }
+
+  // FindTraceSummaries searches for traces matching the given query and streams
+  // back lightweight summary information for each matching trace. Each response
+  // chunk may contain one or more summaries. Use this instead of FindTraces when
+  // full span data is not required (e.g. search results page).
+  rpc FindTraceSummaries(FindTraceSummariesRequest) returns (stream FindTraceSummariesResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/trace-summaries"
+      additional_bindings {
+        post: "/api/v3/trace-summaries"
+        body: "*"
+      }
     };
   }
 }

@@ -132,6 +132,40 @@ message FindTraceIDsResponse {
   repeated FoundTraceID trace_ids = 1;
 }
 
+// ServiceSummary contains per-service statistics for a trace.
+// Mirrors jaeger.api_v3.ServiceSummary but lives in the storage package
+// to avoid a cross-package proto dependency.
+message ServiceSummary {
+  string name             = 1;
+  int32  span_count       = 2;
+  int32  error_span_count = 3;
+}
+
+// TraceSummary contains lightweight summary information about a trace.
+// Mirrors jaeger.api_v3.TraceSummary but uses a 16-byte binary trace ID.
+message TraceSummary {
+  bytes   trace_id                 = 1;  // 16-byte binary trace ID
+  string  root_service_name        = 2;
+  string  root_operation_name      = 3;
+  fixed64 min_start_time_unix_nano = 4;  // Unix nanoseconds; 0 if unknown
+  fixed64 max_end_time_unix_nano   = 5;  // Unix nanoseconds; 0 if unknown
+  int32   span_count               = 6;
+  int32   error_span_count         = 7;
+  int32   orphan_span_count        = 8;
+  repeated ServiceSummary services = 9;
+}
+
+// FindTraceSummariesRequest represents a request to find trace summaries.
+message FindTraceSummariesRequest {
+  TraceQueryParameters query = 1;
+}
+
+// FindTraceSummariesResponse is a response chunk for FindTraceSummaries.
+// Mirrors the chunked streaming contract of GetTraces / FindTraces.
+message FindTraceSummariesResponse {
+  repeated TraceSummary summaries = 1;
+}
+
 // TraceReader is a service that allows reading traces from storage.
 // Note that if you implement this service, you should also implement
 // OTEL's TraceService in package opentelemetry.proto.collector.trace.v1
@@ -174,4 +208,14 @@ service TraceReader {
   // large list of trace IDs may be queried first and then the full traces are loaded
   // in batches.
   rpc FindTraceIDs(FindTraceIDsRequest) returns (FindTraceIDsResponse) {}
+
+  // FindTraceSummaries is an optional streaming RPC that returns lightweight
+  // summary information for traces matching the given query.
+  //
+  // If a remote storage backend does not implement this method, it MUST return
+  // gRPC status UNIMPLEMENTED so that the caller can fall back to FindTraces +
+  // client-side aggregation. The auto-generated UnimplementedTraceReaderServer
+  // embedding already provides this behaviour for backends that do not override
+  // the method.
+  rpc FindTraceSummaries(FindTraceSummariesRequest) returns (stream FindTraceSummariesResponse) {}
 }
