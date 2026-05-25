@@ -168,7 +168,7 @@ message Dependency {
 // what the UI renders as a coloured tag in the search results row.
 message ServiceSummary {
   // Name of the service.
-  string name = 1;
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Number of spans attributed to this service in the trace.
   int32 span_count = 2;
@@ -184,7 +184,7 @@ message ServiceSummary {
 // suitable for display in search result lists.
 message TraceSummary {
   // Hex-encoded 128-bit trace ID.
-  string trace_id = 1;
+  string trace_id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Name of the service that owns the root span.
   string root_service_name = 2;

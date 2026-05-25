@@ -488,6 +488,8 @@ components:
                     type: string
             description: Operation encapsulates information about operation.
         jaeger.api_v3.ServiceSummary:
+            required:
+                - name
             type: object
             properties:
                 name:
@@ -590,6 +592,8 @@ components:
 
                  The results have no guaranteed ordering.
         jaeger.api_v3.TraceSummary:
+            required:
+                - traceId
             type: object
             properties:
                 traceId:
