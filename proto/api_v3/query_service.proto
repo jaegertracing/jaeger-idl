@@ -43,6 +43,79 @@ message GetTraceRequest {
   bool raw_traces = 4;
 }
 
+// Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
+// Array constant) or a Call over argument Expressions. See RFC 0005 §5–§6.
+message Expression {
+  oneof term {
+    Reference ref    = 1;  // a value on the span/trace: attribute or built-in field
+    Scalar    scalar = 2;  // a single constant
+    List      list   = 3;  // a homogeneous list constant (right arg of in/not_in)
+    Call      call   = 4;  // an operator/function over argument Expressions
+  }
+}
+
+// Reference names a value on the span/trace: a built-in field of `level`
+// (default) or an attribute (attr=true). See RFC 0005 §5.1–§5.2.
+message Reference {
+  // name is the built-in field name, or the attribute key when attr=true. Empty
+  // at event/link level denotes the whole collection (for `some`; RFC 0005 §5.5).
+  string name = 1;
+
+  // level is the scope. Empty means an unqualified span-or-resource attribute
+  // (always an attribute, whatever attr says); an explicit level defaults to a
+  // built-in field of that level.
+  string level = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "instrumentation"}, {yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+
+  // attr selects, at an explicit level, an attribute (true) or a built-in field
+  // (false, default). Ignored when level is empty.
+  bool attr = 3;
+}
+
+// Scalar is a single constant value.
+message Scalar {
+  string value = 1;
+
+  // type is OPTIONAL; empty means any type, a set type is authoritative. See RFC 0005 §5.4.
+  string type = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+    }
+  ];
+}
+
+// List is a homogeneous list constant, the right arg of in/not_in.
+message List {
+  repeated string values = 1;
+
+  // type is an OPTIONAL hint applied to every element (see Scalar.type).
+  string type = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+    }
+  ];
+}
+
+// Call applies operator/function `op` to argument Expressions. Arity follows the
+// operator: unary for not/exists, binary for the comparisons and in/not_in,
+// n-ary for and/or. `some` is an event/link existential; its args are
+// [collection Reference, predicate] (RFC 0005 §5.5).
+message Call {
+  string op = 1 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "and"}, {yaml: "or"}, {yaml: "not"}, {yaml: "eq"}, {yaml: "ne"}, {yaml: "gt"}, {yaml: "lt"}, {yaml: "gte"}, {yaml: "lte"}, {yaml: "regex"}, {yaml: "exists"}, {yaml: "in"}, {yaml: "not_in"}, {yaml: "some"}]
+    }
+  ];
+  repeated Expression args = 2;
+}
+
 // Query parameters to find traces.
 //
 // All fields form a conjunction (e.g., "service_name='X' AND operation_name='Y' AND ..."),
@@ -110,6 +183,15 @@ message TraceQueryParameters {
   //
   // This field is optional.
   bool raw_traces = 9;
+
+  // filter is the structured query filter: a single boolean-valued Call,
+  // mutually exclusive with the legacy predicate fields (service_name,
+  // operation_name, duration_min/max, attributes). See RFC 0005 §6.
+  //
+  // Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
+  // it is the structured Call. For example, the filter http.status_code == 500 is
+  // {"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}
+  Call filter = 10;
 }
 
 // Request object to search traces.

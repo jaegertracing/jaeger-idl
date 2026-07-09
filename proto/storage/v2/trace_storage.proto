@@ -90,6 +90,46 @@ message ArrayValue {
   repeated AnyValue values = 1;
 }
 
+// Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
+// Array constant) or a Call over argument Expressions. Mirrors
+// jaeger.api_v3.Expression. See RFC 0005 §5–§6.
+message Expression {
+  oneof term {
+    Reference ref = 1;     // a value on the span/trace: attribute or built-in field
+    Scalar scalar = 2;     // a single constant
+    List list = 3;         // a homogeneous list constant (right arg of in/not_in)
+    Call call = 4;         // an operator/function over argument Expressions
+  }
+}
+
+// Reference names a value on the span/trace: an attribute or a built-in field of
+// `level`. Mirrors jaeger.api_v3.Reference. See RFC 0005 §5.1–§5.2.
+message Reference {
+  string name = 1;     // built-in field name, or attribute key when attr=true; empty at event/link level = the whole collection (for `some`)
+  string level = 2;    // span|resource|instrumentation|event|link; empty = span-or-resource, always an attribute whatever attr says
+  bool attr = 3;       // at an explicit level: true = attribute, false (default) = built-in field; ignored when level is empty
+}
+
+// Scalar is a single constant value.
+message Scalar {
+  string value = 1;
+  string type = 2;   // optional: string|int|double|bool; empty = any type, a set type is authoritative (§5.4)
+}
+
+// List is a homogeneous list constant, the right arg of in/not_in.
+message List {
+  repeated string values = 1;
+  string type = 2;   // optional hint applied to every element; empty = any type
+}
+
+// Call applies operator/function `op` to argument Expressions. Mirrors
+// jaeger.api_v3.Call. `some` is an event/link existential; its args are
+// [collection Reference, predicate] (RFC 0005 §5.5).
+message Call {
+  string op = 1;                 // and|or|not|eq|ne|gt|lt|gte|lte|regex|exists|in|not_in|some
+  repeated Expression args = 2;
+}
+
 // TraceQueryParameters contains query parameters to find traces. For a detailed
 // definition of each field in this message, refer to `TraceQueryParameters` in `jaeger.api_v3`
 // (https://github.com/jaegertracing/jaeger-idl/blob/main/proto/api_v3/query_service.proto).
@@ -102,6 +142,10 @@ message TraceQueryParameters {
   google.protobuf.Duration duration_min = 6;
   google.protobuf.Duration duration_max = 7;
   int32 search_depth = 8;
+  // filter is the structured query filter: a single boolean-valued Call.
+  // Mutually exclusive with the legacy predicate fields (service_name,
+  // operation_name, duration_min/max, attributes). See RFC 0005 §6.
+  Call filter = 9;
 }
 
 // FindTracesRequest represents a request to find traces.

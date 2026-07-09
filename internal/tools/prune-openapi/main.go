@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -63,6 +64,18 @@ func main() {
 					}
 				}
 			}
+		}
+	}
+
+	// 1.6 Collapse the flattened `query.filter.*` GET parameters into a single
+	// `query.filter` string parameter. A message-typed field in a GET binding is
+	// expanded by field path, so `filter` (a Call) yields a useless `query.filter.op`
+	// and drops the recursive `args`. The filter is actually passed as a URL-encoded
+	// JSON object, so replace the flattened parameters with one string parameter.
+	for i := 0; i < len(pathsNode.Content); i += 2 {
+		pathVal := pathsNode.Content[i+1]
+		for j := 0; j < len(pathVal.Content); j += 2 {
+			collapseFilterParams(pathVal.Content[j+1])
 		}
 	}
 
@@ -153,6 +166,62 @@ func main() {
 	if err := encoder.Encode(&root); err != nil {
 		log.Fatalf("Error encoding YAML: %v", err)
 	}
+}
+
+// collapseFilterParams rewrites a method node's `parameters` list, replacing any
+// `query.filter.*` entries (the field-path expansion of the Call-typed filter)
+// with a single `query.filter` string parameter carrying an example.
+func collapseFilterParams(methodVal *yaml.Node) {
+	if methodVal.Kind != yaml.MappingNode {
+		return
+	}
+	for k := 0; k+1 < len(methodVal.Content); k += 2 {
+		if methodVal.Content[k].Value != "parameters" {
+			continue
+		}
+		params := methodVal.Content[k+1]
+		kept := make([]*yaml.Node, 0, len(params.Content))
+		collapsed := false
+		for _, p := range params.Content {
+			if strings.HasPrefix(paramName(p), "query.filter") {
+				collapsed = true
+				continue
+			}
+			kept = append(kept, p)
+		}
+		if collapsed {
+			params.Content = append(kept, filterQueryParam())
+		}
+	}
+}
+
+func paramName(param *yaml.Node) string {
+	for i := 0; i+1 < len(param.Content); i += 2 {
+		if param.Content[i].Value == "name" {
+			return param.Content[i+1].Value
+		}
+	}
+	return ""
+}
+
+func scalarNode(value string, style yaml.Style) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value, Style: style}
+}
+
+func mappingNode(pairs ...*yaml.Node) *yaml.Node {
+	return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: pairs}
+}
+
+func filterQueryParam() *yaml.Node {
+	return mappingNode(
+		scalarNode("name", 0), scalarNode("query.filter", 0),
+		scalarNode("in", 0), scalarNode("query", 0),
+		scalarNode("description", 0), scalarNode("Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.", 0),
+		scalarNode("schema", 0), mappingNode(
+			scalarNode("type", 0), scalarNode("string", 0),
+			scalarNode("example", 0), scalarNode(`{"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}`, yaml.SingleQuotedStyle),
+		),
+	)
 }
 
 func traverse(node *yaml.Node, visitor func(*yaml.Node)) {
