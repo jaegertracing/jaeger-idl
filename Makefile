@@ -322,6 +322,8 @@ proto-storage-all:
 		proto/storage/v2/trace_storage.proto
 	$(PROTOC_WITH_GRPC) \
 		proto/storage/v2/dependency_storage.proto
+	$(PROTOC_WITH_GRPC) \
+		proto/storage/v2/capabilities.proto
 
 .PHONY: proto-zipkin
 proto-zipkin: proto-prepare-all
