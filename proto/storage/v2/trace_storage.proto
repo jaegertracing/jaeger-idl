@@ -166,6 +166,27 @@ message FindTraceSummariesResponse {
   repeated TraceSummary summaries = 1;
 }
 
+// SearchCapabilities describes how faithfully a backend can serve the search RPCs:
+// which TraceQueryParameters fields it accepts as empty, and — as fields are added
+// here — which it honors exactly rather than approximating. Its zero value is the
+// least capable backend, so a field added later leaves existing implementations
+// reporting the new capability as unsupported.
+message SearchCapabilities {
+  // without_service_name is true when FindTraces, FindTraceIDs and FindTraceSummaries
+  // accept a query whose service_name is empty and read it as "any service", rather
+  // than as an error or an empty result. Backends that index by service name, such as
+  // Cassandra, cannot do this.
+  bool without_service_name = 1;
+}
+
+// CapabilitiesRequest represents a request for the backend's capabilities.
+message CapabilitiesRequest {}
+
+// CapabilitiesResponse represents the capabilities of a storage backend.
+message CapabilitiesResponse {
+  SearchCapabilities search = 1;
+}
+
 // TraceReader is a service that allows reading traces from storage.
 // Note that if you implement this service, you should also implement
 // OTEL's TraceService in package opentelemetry.proto.collector.trace.v1
@@ -218,4 +239,17 @@ service TraceReader {
   // embedding already provides this behaviour for backends that do not override
   // the method.
   rpc FindTraceSummaries(FindTraceSummariesRequest) returns (stream FindTraceSummariesResponse) {}
+
+  // Capabilities reports what this backend can do, so a caller can avoid asking for a
+  // query it cannot serve — Jaeger's query service passes the answer to its UI, which
+  // offers a cross-service search only where the backend accepts one.
+  //
+  // If a remote storage backend does not implement this method, it MUST return gRPC
+  // status UNIMPLEMENTED, which the caller reads as "unknown" and treats as the least
+  // capable backend. The auto-generated UnimplementedTraceReaderServer embedding
+  // already provides that behaviour, so an existing backend keeps working unchanged.
+  //
+  // Capabilities are expected to be stable for the lifetime of a connection: a caller
+  // may ask once and cache the answer.
+  rpc Capabilities(CapabilitiesRequest) returns (CapabilitiesResponse) {}
 }
