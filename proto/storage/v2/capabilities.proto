@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package jaeger.storage.v2;
+
+option go_package = "storage";
+
+// SearchCapabilities describes how faithfully a backend can serve the search RPCs of
+// TraceReader: which TraceQueryParameters fields it accepts as empty, and — as fields
+// are added here — which it honors exactly rather than approximating. Its zero value is
+// the least capable backend, so a field added later leaves existing implementations
+// reporting the new capability as unsupported.
+message SearchCapabilities {
+  // without_service_name is true when FindTraces, FindTraceIDs and FindTraceSummaries
+  // accept a query whose service_name is empty and read it as "any service", rather
+  // than as an error or an empty result. Backends that index by service name, such as
+  // Cassandra, cannot do this.
+  bool without_service_name = 1;
+}
+
+// GetCapabilitiesRequest represents a request for the backend's capabilities.
+message GetCapabilitiesRequest {}
+
+// GetCapabilitiesResponse represents the capabilities of a storage backend, grouped by
+// the concern each set describes rather than as a flat list of flags, so that a later
+// addition is a sibling field.
+message GetCapabilitiesResponse {
+  SearchCapabilities search = 1;
+}
+
+// Capabilities reports what a storage backend is able to do, so a caller can avoid
+// asking for something it cannot serve — Jaeger's query service passes the answer to
+// its UI, which offers a cross-service search only where the backend accepts one.
+//
+// It is a service of its own rather than a method on TraceReader because what it
+// reports is not confined to reading traces: jaeger.storage.v1 reported writer-side
+// capabilities through the same mechanism, and a v2 backend may need to report on
+// writes or dependencies without those answers arriving through the trace-reading API.
+//
+// A backend that does not implement this service returns gRPC status UNIMPLEMENTED,
+// which the caller reads as "unknown" and treats as the least capable backend. That
+// keeps every existing backend working unchanged: registering the service is opt-in,
+// and the generated UnimplementedCapabilitiesServer embedding provides the status for a
+// backend that registers it without overriding the method.
+//
+// Capabilities are expected to be stable for the lifetime of a connection, so a caller
+// may ask once and cache the answer.
+service Capabilities {
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse) {}
+}

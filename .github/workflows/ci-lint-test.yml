@@ -27,6 +27,13 @@ jobs:
       - name: Verify Protobuf types are up to date
         run: make proto && { if git status --porcelain | grep '??'; then exit 1; else git diff --name-status --exit-code; fi }
 
+      # proto only generates what this library releases: api_v2 and the prototest fixture.
+      # proto-all compiles every definition across languages, which is the only thing that
+      # checks the api_v3 and storage/v2 protos at all, and regenerates the committed
+      # api_v3 OpenAPI spec so drift in it is caught here rather than downstream.
+      - name: Verify all Protobuf definitions compile
+        run: make proto-all && { if git status --porcelain | grep '??'; then exit 1; else git diff --name-status --exit-code; fi }
+
       - name: Verify Thrift types are up to date
         run: make thrift && { if git status --porcelain | grep '??'; then exit 1; else git diff --name-status --exit-code; fi }
 
