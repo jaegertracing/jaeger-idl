@@ -118,7 +118,8 @@ PROTO_GOGO_MAPPINGS := $(shell echo \
 		Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/api/annotations.proto=github.com/gogo/googleapis/google/api, \
-		Mmodel.proto=github.com/jaegertracing/jaeger-idl/model/v1 \
+		Mmodel.proto=github.com/jaegertracing/jaeger-idl/model/v1, \
+		Mexpression/v1/expression.proto=github.com/jaegertracing/jaeger-idl/expression/v1 \
 	| sed 's/ //g')
 
 PROTO_GEN_GO_DIR ?= proto-gen
@@ -259,7 +260,7 @@ test-ci:
 proto: proto-prepare proto-api-v2 proto-prototest
 
 # proto-all target is used to generate code for all languages as a validation step.
-proto-all: proto-prepare-all proto-api-v2-all proto-api-v3-all proto-storage-all
+proto-all: proto-prepare-all proto-api-v2-all proto-expression-all proto-api-v3-all proto-storage-all
 
 .PHONY: proto-prepare-all
 proto-prepare-all: $(TOOLS_BIN_DIR)
@@ -297,6 +298,11 @@ proto-api-v2-all:
 		proto/api_v2/sampling.proto
 
 
+.PHONY: proto-expression-all
+proto-expression-all:
+	$(PROTOC_WITH_GRPC) \
+		proto/expression/v1/expression.proto
+
 .PHONY: proto-api-v3-all
 proto-api-v3-all:
 	# API v3
@@ -310,7 +316,7 @@ proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 	# Generate OpenAPI v3 from proto source
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--openapi_out=fq_schema_naming=true,naming=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3:./swagger/api_v3 \
+		--openapi_out=fq_schema_naming=true,naming=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3,Mexpression/v1/expression.proto=github.com/jaegertracing/jaeger-idl/expression/v1:./swagger/api_v3 \
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
 	$(PRUNE_OPENAPI) ./swagger/api_v3/query_service.openapi.yaml

@@ -423,35 +423,6 @@ components:
                         $ref: '#/components/schemas/google.protobuf.Any'
                     description: A list of messages that carry the error details.  There is a common set of message types for APIs to use.
             description: 'The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors).'
-        jaeger.api_v3.Call:
-            type: object
-            properties:
-                op:
-                    enum:
-                        - and
-                        - or
-                        - not
-                        - eq
-                        - ne
-                        - gt
-                        - lt
-                        - gte
-                        - lte
-                        - regex
-                        - exists
-                        - in
-                        - not_in
-                        - some
-                    type: string
-                args:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/jaeger.api_v3.Expression'
-            description: |-
-                Call applies operator/function `op` to argument Expressions. Arity follows the
-                 operator: unary for not/exists, binary for the comparisons and in/not_in,
-                 n-ary for and/or. `some` is an event/link existential; its args are
-                 [collection Reference, predicate] (RFC 0005 §5.5).
         jaeger.api_v3.DependenciesResponse:
             required:
                 - dependencies
@@ -474,20 +445,6 @@ components:
                     type: string
                 callCount:
                     type: string
-        jaeger.api_v3.Expression:
-            type: object
-            properties:
-                ref:
-                    $ref: '#/components/schemas/jaeger.api_v3.Reference'
-                scalar:
-                    $ref: '#/components/schemas/jaeger.api_v3.Scalar'
-                list:
-                    $ref: '#/components/schemas/jaeger.api_v3.List'
-                call:
-                    $ref: '#/components/schemas/jaeger.api_v3.Call'
-            description: |-
-                Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
-                 Array constant) or a Call over argument Expressions. See RFC 0005 §5–§6.
         jaeger.api_v3.FindTraceSummariesRequest:
             type: object
             properties:
@@ -531,22 +488,6 @@ components:
                     items:
                         type: string
             description: Response object to get service names.
-        jaeger.api_v3.List:
-            type: object
-            properties:
-                values:
-                    type: array
-                    items:
-                        type: string
-                type:
-                    enum:
-                        - string
-                        - int
-                        - double
-                        - bool
-                    type: string
-                    description: type is an OPTIONAL hint applied to every element (see Scalar.type).
-            description: List is a homogeneous list constant, the right arg of in/not_in.
         jaeger.api_v3.Operation:
             required:
                 - name
@@ -558,48 +499,6 @@ components:
                 spanKind:
                     type: string
             description: Operation encapsulates information about operation.
-        jaeger.api_v3.Reference:
-            type: object
-            properties:
-                name:
-                    type: string
-                    description: |-
-                        name is the built-in field name, or the attribute key when attr=true. Empty
-                         at event/link level denotes the whole collection (for `some`; RFC 0005 §5.5).
-                level:
-                    enum:
-                        - span
-                        - resource
-                        - instrumentation
-                        - event
-                        - link
-                    type: string
-                    description: |-
-                        level is the scope. Empty means an unqualified span-or-resource attribute
-                         (always an attribute, whatever attr says); an explicit level defaults to a
-                         built-in field of that level.
-                attr:
-                    type: boolean
-                    description: |-
-                        attr selects, at an explicit level, an attribute (true) or a built-in field
-                         (false, default). Ignored when level is empty.
-            description: |-
-                Reference names a value on the span/trace: a built-in field of `level`
-                 (default) or an attribute (attr=true). See RFC 0005 §5.1–§5.2.
-        jaeger.api_v3.Scalar:
-            type: object
-            properties:
-                value:
-                    type: string
-                type:
-                    enum:
-                        - string
-                        - int
-                        - double
-                        - bool
-                    type: string
-                    description: type is OPTIONAL; empty means any type, a set type is authoritative. See RFC 0005 §5.4.
-            description: Scalar is a single constant value.
         jaeger.api_v3.ServiceSummary:
             required:
                 - name
@@ -696,11 +595,16 @@ components:
                          This field is optional.
                 filter:
                     allOf:
-                        - $ref: '#/components/schemas/jaeger.api_v3.Call'
+                        - $ref: '#/components/schemas/jaeger.expression.v1.Call'
                     description: |-
                         filter is the structured query filter: a single boolean-valued Call,
                          mutually exclusive with the legacy predicate fields (service_name,
-                         operation_name, duration_min/max, attributes). See RFC 0005 §6.
+                         operation_name, duration_min/max, attributes).
+
+                         Experimental. In Jaeger, the query service admits this field only when the
+                         `jaeger.query.structuredFilters` feature gate is enabled (Alpha, off by default);
+                         with the gate off the field is ignored and the request behaves as it did before the
+                         filter existed.
 
                          Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
                          it is the structured Call. For example, the filter http.status_code == 500 is
@@ -765,6 +669,118 @@ components:
             description: |-
                 TraceSummary contains lightweight summary information about a trace,
                  suitable for display in search result lists.
+        jaeger.expression.v1.Call:
+            required:
+                - op
+            type: object
+            properties:
+                op:
+                    enum:
+                        - and
+                        - or
+                        - not
+                        - eq
+                        - ne
+                        - gt
+                        - lt
+                        - gte
+                        - lte
+                        - regex
+                        - exists
+                        - in
+                        - not_in
+                        - some
+                    type: string
+                args:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/jaeger.expression.v1.Expression'
+            description: |-
+                Call applies operator/function `op` to argument Expressions. Arity follows the
+                 operator: unary for not/exists, binary for the comparisons and in/not_in,
+                 n-ary for and/or. `some` is an event/link existential; its args are
+                 [collection Reference, predicate] (§5.5).
+        jaeger.expression.v1.Expression:
+            type: object
+            oneOf:
+                - required:
+                    - ref
+                - required:
+                    - scalar
+                - required:
+                    - list
+                - required:
+                    - call
+            properties:
+                ref:
+                    $ref: '#/components/schemas/jaeger.expression.v1.Reference'
+                scalar:
+                    $ref: '#/components/schemas/jaeger.expression.v1.Scalar'
+                list:
+                    $ref: '#/components/schemas/jaeger.expression.v1.List'
+                call:
+                    $ref: '#/components/schemas/jaeger.expression.v1.Call'
+            description: |-
+                Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
+                 List constant) or a Call over argument Expressions.
+        jaeger.expression.v1.List:
+            type: object
+            properties:
+                values:
+                    type: array
+                    items:
+                        type: string
+                type:
+                    enum:
+                        - string
+                        - int
+                        - double
+                        - bool
+                    type: string
+                    description: type is an OPTIONAL hint applied to every element (see Scalar.type).
+            description: List is a homogeneous list constant, the right arg of in/not_in.
+        jaeger.expression.v1.Reference:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: |-
+                        name is the built-in field name, or the attribute key when attr=true. Empty
+                         at event/link level denotes the whole collection (for `some`; §5.5).
+                level:
+                    enum:
+                        - span
+                        - resource
+                        - instrumentation
+                        - event
+                        - link
+                    type: string
+                    description: |-
+                        level is the scope. Empty means an unqualified span-or-resource attribute
+                         (always an attribute, whatever attr says); an explicit level defaults to a
+                         built-in field of that level.
+                attr:
+                    type: boolean
+                    description: |-
+                        attr selects, at an explicit level, an attribute (true) or a built-in field
+                         (false, default). Ignored when level is empty.
+            description: |-
+                Reference names a value on the span/trace: a built-in field of `level`
+                 (default) or an attribute (attr=true).
+        jaeger.expression.v1.Scalar:
+            type: object
+            properties:
+                value:
+                    type: string
+                type:
+                    enum:
+                        - string
+                        - int
+                        - double
+                        - bool
+                    type: string
+                    description: type is OPTIONAL; empty means any type, a set type is authoritative (§5.4).
+            description: Scalar is a single constant value.
         opentelemetry.proto.common.v1.AnyValue:
             type: object
             properties:

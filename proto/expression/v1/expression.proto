@@ -1,0 +1,108 @@
+// Copyright (c) 2021 The Jaeger Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package jaeger.expression.v1;
+
+import "gnostic/openapiv3/annotations.proto";
+
+option go_package = "expression";
+
+// The messages below are the structured trace-query filter AST proposed in Jaeger
+// RFC 0005, "Structured Query Filters for Trace Search":
+// https://github.com/jaegertracing/jaeger/blob/main/docs/rfc/0005-structured-query-filters.md
+// Section references (§N) in the comments below point into that document.
+
+// Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
+// List constant) or a Call over argument Expressions.
+message Expression {
+  option (openapi.v3.schema) = {
+    one_of: [
+      {schema: {required: ["ref"]}},
+      {schema: {required: ["scalar"]}},
+      {schema: {required: ["list"]}},
+      {schema: {required: ["call"]}}
+    ]
+  };
+  oneof term {
+    Reference ref    = 1;  // a value on the span/trace: attribute or built-in field
+    Scalar    scalar = 2;  // a single constant
+    List      list   = 3;  // a homogeneous list constant (right arg of in/not_in)
+    Call      call   = 4;  // an operator/function over argument Expressions
+  }
+}
+
+// Reference names a value on the span/trace: a built-in field of `level`
+// (default) or an attribute (attr=true).
+message Reference {
+  // name is the built-in field name, or the attribute key when attr=true. Empty
+  // at event/link level denotes the whole collection (for `some`; §5.5).
+  string name = 1;
+
+  // level is the scope. Empty means an unqualified span-or-resource attribute
+  // (always an attribute, whatever attr says); an explicit level defaults to a
+  // built-in field of that level.
+  string level = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "instrumentation"}, {yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+
+  // attr selects, at an explicit level, an attribute (true) or a built-in field
+  // (false, default). Ignored when level is empty.
+  bool attr = 3;
+}
+
+// Scalar is a single constant value.
+message Scalar {
+  string value = 1;
+
+  // type is OPTIONAL; empty means any type, a set type is authoritative (§5.4).
+  string type = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+    }
+  ];
+}
+
+// List is a homogeneous list constant, the right arg of in/not_in.
+message List {
+  repeated string values = 1;
+
+  // type is an OPTIONAL hint applied to every element (see Scalar.type).
+  string type = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+    }
+  ];
+}
+
+// Call applies operator/function `op` to argument Expressions. Arity follows the
+// operator: unary for not/exists, binary for the comparisons and in/not_in,
+// n-ary for and/or. `some` is an event/link existential; its args are
+// [collection Reference, predicate] (§5.5).
+message Call {
+  option (openapi.v3.schema) = {required: ["op"]};
+  string op = 1 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "and"}, {yaml: "or"}, {yaml: "not"}, {yaml: "eq"}, {yaml: "ne"}, {yaml: "gt"}, {yaml: "lt"}, {yaml: "gte"}, {yaml: "lte"}, {yaml: "regex"}, {yaml: "exists"}, {yaml: "in"}, {yaml: "not_in"}, {yaml: "some"}]
+    }
+  ];
+  repeated Expression args = 2;
+}

@@ -183,7 +183,10 @@ func collapseFilterParams(methodVal *yaml.Node) {
 		kept := make([]*yaml.Node, 0, len(params.Content))
 		collapsed := false
 		for _, p := range params.Content {
-			if strings.HasPrefix(paramName(p), "query.filter") {
+			// Match the flattened `query.filter.*` expansion exactly — the bare
+			// `query.filter` itself and its dotted children — without eating an
+			// unrelated sibling like a future `query.filter_mode`.
+			if name := paramName(p); name == "query.filter" || strings.HasPrefix(name, "query.filter.") {
 				collapsed = true
 				continue
 			}

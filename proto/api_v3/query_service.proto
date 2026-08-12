@@ -22,6 +22,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
 import "gnostic/openapiv3/annotations.proto";
+import "expression/v1/expression.proto";
 
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
@@ -41,79 +42,6 @@ message GetTraceRequest {
   // enrichments to the trace, such as clock skew adjustment.
   // Instead, the trace will be returned exactly as stored.
   bool raw_traces = 4;
-}
-
-// Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
-// Array constant) or a Call over argument Expressions. See RFC 0005 §5–§6.
-message Expression {
-  oneof term {
-    Reference ref    = 1;  // a value on the span/trace: attribute or built-in field
-    Scalar    scalar = 2;  // a single constant
-    List      list   = 3;  // a homogeneous list constant (right arg of in/not_in)
-    Call      call   = 4;  // an operator/function over argument Expressions
-  }
-}
-
-// Reference names a value on the span/trace: a built-in field of `level`
-// (default) or an attribute (attr=true). See RFC 0005 §5.1–§5.2.
-message Reference {
-  // name is the built-in field name, or the attribute key when attr=true. Empty
-  // at event/link level denotes the whole collection (for `some`; RFC 0005 §5.5).
-  string name = 1;
-
-  // level is the scope. Empty means an unqualified span-or-resource attribute
-  // (always an attribute, whatever attr says); an explicit level defaults to a
-  // built-in field of that level.
-  string level = 2 [
-    (openapi.v3.property) = {
-      type: "string",
-      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "instrumentation"}, {yaml: "event"}, {yaml: "link"}]
-    }
-  ];
-
-  // attr selects, at an explicit level, an attribute (true) or a built-in field
-  // (false, default). Ignored when level is empty.
-  bool attr = 3;
-}
-
-// Scalar is a single constant value.
-message Scalar {
-  string value = 1;
-
-  // type is OPTIONAL; empty means any type, a set type is authoritative. See RFC 0005 §5.4.
-  string type = 2 [
-    (openapi.v3.property) = {
-      type: "string",
-      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
-    }
-  ];
-}
-
-// List is a homogeneous list constant, the right arg of in/not_in.
-message List {
-  repeated string values = 1;
-
-  // type is an OPTIONAL hint applied to every element (see Scalar.type).
-  string type = 2 [
-    (openapi.v3.property) = {
-      type: "string",
-      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
-    }
-  ];
-}
-
-// Call applies operator/function `op` to argument Expressions. Arity follows the
-// operator: unary for not/exists, binary for the comparisons and in/not_in,
-// n-ary for and/or. `some` is an event/link existential; its args are
-// [collection Reference, predicate] (RFC 0005 §5.5).
-message Call {
-  string op = 1 [
-    (openapi.v3.property) = {
-      type: "string",
-      enum: [{yaml: "and"}, {yaml: "or"}, {yaml: "not"}, {yaml: "eq"}, {yaml: "ne"}, {yaml: "gt"}, {yaml: "lt"}, {yaml: "gte"}, {yaml: "lte"}, {yaml: "regex"}, {yaml: "exists"}, {yaml: "in"}, {yaml: "not_in"}, {yaml: "some"}]
-    }
-  ];
-  repeated Expression args = 2;
 }
 
 // Query parameters to find traces.
@@ -186,12 +114,17 @@ message TraceQueryParameters {
 
   // filter is the structured query filter: a single boolean-valued Call,
   // mutually exclusive with the legacy predicate fields (service_name,
-  // operation_name, duration_min/max, attributes). See RFC 0005 §6.
+  // operation_name, duration_min/max, attributes).
+  //
+  // Experimental. In Jaeger, the query service admits this field only when the
+  // `jaeger.query.structuredFilters` feature gate is enabled (Alpha, off by default);
+  // with the gate off the field is ignored and the request behaves as it did before the
+  // filter existed.
   //
   // Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
   // it is the structured Call. For example, the filter http.status_code == 500 is
   // {"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}
-  Call filter = 10;
+  jaeger.expression.v1.Call filter = 10;
 }
 
 // Request object to search traces.
