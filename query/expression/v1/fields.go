@@ -15,9 +15,8 @@ package expression
 // Most fields are a field of the corresponding OTLP message. A few are derived, computed from
 // the OTLP data rather than stored in it — a span's duration from its two timestamps, an
 // event's offset from its span's start — and are named because they are what people actually
-// filter on. The names follow TraceQL's camelCase intrinsics so that they read familiarly to
-// its users, which is why they are `startTime` and `traceID` rather than the proto's
-// `start_time_unix_nano` and `trace_id`.
+// filter on. Field names are camelCase — `startTime`, `traceID`, not the proto's
+// `start_time_unix_nano` and `trace_id`, nor the snake_case of the operator vocabulary.
 //
 // A constant compared against a field is written the way that field's values are written, and
 // for the two that measure time that means two different spellings, neither of them a bare
