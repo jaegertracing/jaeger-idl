@@ -6,6 +6,7 @@ package expression
 import (
 	"errors"
 	"fmt"
+	"slices"
 )
 
 // ValidateFilter checks that a filter is well formed: every operator is one this package
@@ -24,6 +25,9 @@ func ValidateFilter(filter *Call) error {
 }
 
 func validateCall(call *Call) error {
+	if call == nil {
+		return errors.New("filter has a missing predicate")
+	}
 	switch call.Op {
 	case OpAnd, OpOr:
 		if len(call.Args) < 2 {
@@ -57,7 +61,7 @@ func validateCall(call *Call) error {
 			return err
 		}
 		list, ok := call.Args[1].(*List)
-		if !ok {
+		if !ok || list == nil {
 			return fmt.Errorf("operator %q takes a list as its second argument, got %s", call.Op, termName(call.Args[1]))
 		}
 		return validateValueType(list.Type)
@@ -105,7 +109,7 @@ func validatePredicateArgs(call *Call) error {
 // predicate evaluated against the bound element.
 func validateSome(call *Call) error {
 	ref, ok := call.Args[0].(*Reference)
-	if !ok {
+	if !ok || ref == nil {
 		return fmt.Errorf("operator %q takes a collection reference as its first argument, got %s", call.Op, termName(call.Args[0]))
 	}
 	if ref.Level != LevelEvent && ref.Level != LevelLink {
@@ -129,6 +133,9 @@ func validateOperand(arg Expression) error {
 	case *Reference:
 		return validateReference(term)
 	case *Scalar:
+		if term == nil {
+			return errors.New("filter has a missing constant")
+		}
 		return validateValueType(term.Type)
 	case *Call:
 		return validateCall(term)
@@ -138,9 +145,10 @@ func validateOperand(arg Expression) error {
 }
 
 func validateReference(ref *Reference) error {
-	switch ref.Level {
-	case "", LevelSpan, LevelResource, LevelInstrumentation, LevelEvent, LevelLink:
-	default:
+	if ref == nil {
+		return errors.New("filter has a missing reference")
+	}
+	if ref.Level != "" && !slices.Contains(levels, ref.Level) {
 		return fmt.Errorf("unknown filter level %q", ref.Level)
 	}
 	if ref.Name == "" {
@@ -156,12 +164,10 @@ func validateReference(ref *Reference) error {
 }
 
 func validateValueType(t ValueType) error {
-	switch t {
-	case "", ValueTypeString, ValueTypeInt, ValueTypeDouble, ValueTypeBool:
-		return nil
-	default:
+	if t != "" && !slices.Contains(valueTypes, t) {
 		return fmt.Errorf("unknown filter value type %q", t)
 	}
+	return nil
 }
 
 // termName names the kind of a term for an error message.

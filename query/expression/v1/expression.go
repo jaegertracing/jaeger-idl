@@ -27,6 +27,10 @@ const (
 	LevelLink            Level = "link"
 )
 
+// levels is every explicit level. Validation walks it rather than repeating the constants in a
+// switch, so the vocabulary has one definition and a test can enumerate what is accepted.
+var levels = []Level{LevelSpan, LevelResource, LevelInstrumentation, LevelEvent, LevelLink}
+
 // Operator is what a Call applies to its arguments: a boolean combinator, a
 // comparison, a set-membership test, or the existential quantifier over a span's
 // events or links. See RFC 0005 §5.3 and §5.5.
@@ -49,6 +53,15 @@ const (
 	OpSome   Operator = "some"
 )
 
+// operators is every operator. Nothing dispatches on it — validateCall has a case per operator
+// — but a test walks it to catch an operator added without a case, which would otherwise be
+// reported as unknown.
+var operators = []Operator{
+	OpAnd, OpOr, OpNot,
+	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
+	OpSome,
+}
+
 // ValueType is the declared type of a constant. It is optional: empty means the
 // backend matches the value at whatever type it was stored, and a type that is set is
 // authoritative, so the backend matches only values of that type. See RFC 0005 §5.4.
@@ -60,6 +73,10 @@ const (
 	ValueTypeDouble ValueType = "double"
 	ValueTypeBool   ValueType = "bool"
 )
+
+// valueTypes is every type a constant may declare. An empty type is always allowed and is not
+// listed, because it means "any type" rather than a type.
+var valueTypes = []ValueType{ValueTypeString, ValueTypeInt, ValueTypeDouble, ValueTypeBool}
 
 // Expression is a node in a structured filter: an atom — a Reference to a value on
 // the span, or a Scalar or List constant — or a Call applying an operator to argument

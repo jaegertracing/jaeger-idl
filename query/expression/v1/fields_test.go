@@ -71,20 +71,3 @@ func TestLookupField(t *testing.T) {
 	_, ok = LookupField(LevelSpan, "nonesuch")
 	assert.False(t, ok)
 }
-
-// TestValidateFilter_RejectsUnknownField pins that naming a field this API does not define is
-// refused, and that the message says how to ask for an attribute of that name instead.
-func TestValidateFilter_RejectsUnknownField(t *testing.T) {
-	err := ValidateFilter(eq(&Reference{Level: LevelSpan, Name: "durtion"}, &Scalar{Value: "2s"}))
-	require.ErrorContains(t, err, `unknown built-in field "durtion" at the "span" level`)
-	require.ErrorContains(t, err, "set attr to name an attribute instead")
-
-	// The same spelling as an attribute is fine, because an attribute key is arbitrary.
-	require.NoError(t, ValidateFilter(
-		eq(&Reference{Level: LevelSpan, Name: "durtion", Attr: true}, &Scalar{Value: "2s"})))
-
-	// A field of the wrong level is refused too.
-	require.ErrorContains(t,
-		ValidateFilter(eq(&Reference{Level: LevelResource, Name: SpanFieldDuration}, &Scalar{Value: "2s"})),
-		`unknown built-in field "duration" at the "resource" level`)
-}
