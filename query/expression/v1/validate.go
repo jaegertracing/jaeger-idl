@@ -8,12 +8,14 @@ import (
 	"fmt"
 )
 
-// ValidateFilter checks that a filter is well formed: every operator is one this
-// package defines and has the number and kind of arguments it takes, every level and
-// value type is a defined one, and every reference names something. It does not type
-// check — comparing a duration against a word is a valid graph and a separate concern
-// (RFC 0005 §6.1) — and it says nothing about what a backend can serve, which is what
-// FilterCapabilities is for.
+// ValidateFilter checks that a filter is well formed: every operator is one this package
+// defines and has the number and kind of arguments it takes, every level and value type is a
+// defined one, every reference names something, and a reference to a built-in field names one
+// this API defines (see Field).
+//
+// It does not type check — comparing a duration against a word is a valid graph and a separate
+// concern (RFC 0005 §6.1) — and it says nothing about which of the valid things a given
+// backend can serve, which is what a backend's declared capabilities are for.
 func ValidateFilter(filter *Call) error {
 	if filter == nil {
 		return errors.New("filter is empty")
@@ -158,6 +160,12 @@ func validateReference(ref *Reference) error {
 	}
 	if ref.Name == "" {
 		return errors.New("filter reference has no name")
+	}
+	if !ref.IsAttribute() {
+		if _, ok := LookupField(ref.Level, ref.Name); !ok {
+			return fmt.Errorf("unknown built-in field %q at the %q level; set attr to name an attribute instead",
+				ref.Name, ref.Level)
+		}
 	}
 	return nil
 }

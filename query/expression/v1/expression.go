@@ -61,33 +61,6 @@ const (
 	ValueTypeBool   ValueType = "bool"
 )
 
-// Field is a built-in field: a value a span carries directly, rather than one held in an
-// attribute map (RFC 0005 §5.2). It pairs the name with the level it belongs to, because
-// which fields exist is a property of the level — the name of a span and the name of an
-// event are different fields that happen to share a spelling, and neither can be read at
-// the other's level.
-type Field struct {
-	Name  string
-	Level Level
-}
-
-// The built-in fields this build knows. There is no closed set to enumerate, as there is for
-// Level and Operator: a field name shares Reference.Name with arbitrary attribute keys, so a
-// name this build does not recognize cannot be told from a key. It passes validation and is
-// refused by whichever backend receives it, on the same gate an unsupported operator rides
-// (RFC 0005 §5.2). This list therefore grows as backends come to serve more of each level.
-var (
-	SpanName        = Field{Name: "name", Level: LevelSpan}
-	SpanDuration    = Field{Name: "duration", Level: LevelSpan}
-	ResourceService = Field{Name: "service", Level: LevelResource}
-	EventName       = Field{Name: "name", Level: LevelEvent}
-)
-
-// Ref returns the Reference that reads f off a span.
-func (f Field) Ref() *Reference {
-	return &Reference{Name: f.Name, Level: f.Level}
-}
-
 // Expression is a node in a structured filter: an atom — a Reference to a value on
 // the span, or a Scalar or List constant — or a Call applying an operator to argument
 // expressions. Only the four types in this package implement it, so a backend can
@@ -116,11 +89,12 @@ func (r *Reference) IsAttribute() bool {
 	return r.Level == "" || r.Attr
 }
 
-// IsField reports whether r references the built-in field f. A Reference that IsAttribute
-// names an attribute of its level and never that level's built-in field, however it is
-// spelled.
-func (r *Reference) IsField(f Field) bool {
-	return !r.IsAttribute() && r.Level == f.Level && r.Name == f.Name
+// IsField reports whether r references the built-in field of that level and name. Both are
+// given because neither identifies a field alone (see Field), and an attribute never matches
+// however it is spelled: level and name are not enough to tell a field from a tag that borrows
+// its spelling.
+func (r *Reference) IsField(level Level, name string) bool {
+	return !r.IsAttribute() && r.Level == level && r.Name == name
 }
 
 // Scalar is a single constant value. The value is carried as a string whatever its
