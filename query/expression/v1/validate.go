@@ -23,23 +23,6 @@ func ValidateFilter(filter *Call) error {
 	return validateCall(filter)
 }
 
-// operatorArity is the exact number of arguments each operator takes. OpAnd and OpOr
-// are absent because they are variadic.
-var operatorArity = map[Operator]int{
-	OpNot:    1,
-	OpExists: 1,
-	OpEq:     2,
-	OpNe:     2,
-	OpGt:     2,
-	OpLt:     2,
-	OpGte:    2,
-	OpLte:    2,
-	OpRegex:  2,
-	OpIn:     2,
-	OpNotIn:  2,
-	OpSome:   2,
-}
-
 func validateCall(call *Call) error {
 	switch call.Op {
 	case OpAnd, OpOr:
@@ -48,12 +31,12 @@ func validateCall(call *Call) error {
 		}
 		return validatePredicateArgs(call)
 	case OpNot:
-		if err := checkArity(call); err != nil {
+		if err := wantArgs(call, 1); err != nil {
 			return err
 		}
 		return validatePredicateArgs(call)
 	case OpExists:
-		if err := checkArity(call); err != nil {
+		if err := wantArgs(call, 1); err != nil {
 			return err
 		}
 		ref, ok := call.Args[0].(*Reference)
@@ -62,12 +45,12 @@ func validateCall(call *Call) error {
 		}
 		return validateReference(ref)
 	case OpSome:
-		if err := checkArity(call); err != nil {
+		if err := wantArgs(call, 2); err != nil {
 			return err
 		}
 		return validateSome(call)
 	case OpIn, OpNotIn:
-		if err := checkArity(call); err != nil {
+		if err := wantArgs(call, 2); err != nil {
 			return err
 		}
 		if err := validateOperand(call.Args[0]); err != nil {
@@ -79,7 +62,7 @@ func validateCall(call *Call) error {
 		}
 		return validateValueType(list.Type)
 	case OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex:
-		if err := checkArity(call); err != nil {
+		if err := wantArgs(call, 2); err != nil {
 			return err
 		}
 		for _, arg := range call.Args {
@@ -93,9 +76,11 @@ func validateCall(call *Call) error {
 	}
 }
 
-func checkArity(call *Call) error {
-	if want := operatorArity[call.Op]; len(call.Args) != want {
-		return fmt.Errorf("operator %q takes %d argument(s), got %d", call.Op, want, len(call.Args))
+// wantArgs checks an operator's arity in the case that knows it, beside the check on what kind
+// of arguments it takes — which is the part worth reading.
+func wantArgs(call *Call, n int) error {
+	if len(call.Args) != n {
+		return fmt.Errorf("operator %q takes %d argument(s), got %d", call.Op, n, len(call.Args))
 	}
 	return nil
 }
