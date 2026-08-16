@@ -18,33 +18,49 @@ package expression
 // filter on. The names follow TraceQL's camelCase intrinsics so that they read familiarly to
 // its users, which is why they are `startTime` and `traceID` rather than the proto's
 // `start_time_unix_nano` and `trace_id`.
+//
+// A constant compared against a field is written the way that field's values are written, and
+// for the two that measure time that means two different spellings, neither of them a bare
+// number in an assumed unit:
+//
+//   - A duration — `duration`, `timeSinceStart` — carries its unit, in Go duration syntax:
+//     "2s", "1h30m", "50us". This is what `duration_min`/`duration_max` have always accepted,
+//     and RFC 0005 §5.3 requires the unit rather than leaving nanoseconds and milliseconds to
+//     be guessed at.
+//   - A timestamp — `startTime`, `endTime`, `time` — is RFC 3339 with nanosecond precision:
+//     "2026-08-16T18:56:20.123456789Z". That is what api_v3 already accepts for the query's
+//     own time range, so a caller writes an instant one way throughout.
+//
+// Each level has its own vocabulary, so the constants are named for the level they belong to:
+// a span's startTime and an event's time are different fields, and the three levels that each
+// have a `name` have three different fields that spell it the same way.
 const (
-	// Shared by more than one level, which is why the level is always given separately: a span
-	// name and an event name are different fields that spell their name the same way.
-	FieldName       = "name"
-	FieldTraceID    = "traceID"
-	FieldSpanID     = "spanID"
-	FieldTraceState = "traceState"
-	FieldSchemaURL  = "schemaURL"
+	SpanFieldTraceID       = "traceID"
+	SpanFieldSpanID        = "spanID"
+	SpanFieldParentSpanID  = "parentSpanID"
+	SpanFieldTraceState    = "traceState"
+	SpanFieldName          = "name"
+	SpanFieldKind          = "kind"
+	SpanFieldStartTime     = "startTime"
+	SpanFieldEndTime       = "endTime"
+	SpanFieldDuration      = "duration"
+	SpanFieldStatus        = "status"
+	SpanFieldStatusMessage = "statusMessage"
 
-	// Span.
-	FieldParentSpanID  = "parentSpanID"
-	FieldKind          = "kind"
-	FieldStartTime     = "startTime"
-	FieldEndTime       = "endTime"
-	FieldDuration      = "duration"
-	FieldStatus        = "status"
-	FieldStatusMessage = "statusMessage"
+	ResourceFieldService   = "service"
+	ResourceFieldSchemaURL = "schemaURL"
 
-	// Resource.
-	FieldService = "service"
+	InstrumentationFieldName      = "name"
+	InstrumentationFieldVersion   = "version"
+	InstrumentationFieldSchemaURL = "schemaURL"
 
-	// Instrumentation scope.
-	FieldVersion = "version"
+	EventFieldName           = "name"
+	EventFieldTime           = "time"
+	EventFieldTimeSinceStart = "timeSinceStart"
 
-	// Event.
-	FieldTime           = "time"
-	FieldTimeSinceStart = "timeSinceStart"
+	LinkFieldTraceID    = "traceID"
+	LinkFieldSpanID     = "spanID"
+	LinkFieldTraceState = "traceState"
 )
 
 // Field is a built-in field: its name paired with the level it belongs to. The two travel
@@ -63,18 +79,18 @@ type Field struct {
 // listed: an attribute is reached with Attr set, not as a field.
 var fields = []Field{
 	// Span — opentelemetry.proto.trace.v1.Span.
-	{Level: LevelSpan, Name: FieldTraceID},
-	{Level: LevelSpan, Name: FieldSpanID},
-	{Level: LevelSpan, Name: FieldParentSpanID},
-	{Level: LevelSpan, Name: FieldTraceState},
-	{Level: LevelSpan, Name: FieldName},
-	{Level: LevelSpan, Name: FieldKind},
-	{Level: LevelSpan, Name: FieldStartTime},
-	{Level: LevelSpan, Name: FieldEndTime},
-	{Level: LevelSpan, Name: FieldStatus},
-	{Level: LevelSpan, Name: FieldStatusMessage},
-	// end_time_unix_nano - start_time_unix_nano.
-	{Level: LevelSpan, Name: FieldDuration, Derived: true},
+	{Level: LevelSpan, Name: SpanFieldTraceID},
+	{Level: LevelSpan, Name: SpanFieldSpanID},
+	{Level: LevelSpan, Name: SpanFieldParentSpanID},
+	{Level: LevelSpan, Name: SpanFieldTraceState},
+	{Level: LevelSpan, Name: SpanFieldName},
+	{Level: LevelSpan, Name: SpanFieldKind},
+	{Level: LevelSpan, Name: SpanFieldStartTime},
+	{Level: LevelSpan, Name: SpanFieldEndTime},
+	{Level: LevelSpan, Name: SpanFieldStatus},
+	{Level: LevelSpan, Name: SpanFieldStatusMessage},
+	// end_time_unix_nano - start_time_unix_nano, compared as a Go duration string.
+	{Level: LevelSpan, Name: SpanFieldDuration, Derived: true},
 
 	// Resource — opentelemetry.proto.resource.v1.Resource, which carries only attributes, plus
 	// the schema URL from the enclosing ResourceSpans.
@@ -82,25 +98,25 @@ var fields = []Field{
 	// service is the service.name attribute read as a field. It is the one attribute Jaeger
 	// treats as identity rather than metadata — it names every trace in the UI and keys the
 	// search index of several backends — so a query says resource.service, not a tag lookup.
-	{Level: LevelResource, Name: FieldService, Derived: true},
-	{Level: LevelResource, Name: FieldSchemaURL},
+	{Level: LevelResource, Name: ResourceFieldService, Derived: true},
+	{Level: LevelResource, Name: ResourceFieldSchemaURL},
 
 	// Instrumentation scope — opentelemetry.proto.common.v1.InstrumentationScope, plus the
 	// schema URL from the enclosing ScopeSpans.
-	{Level: LevelInstrumentation, Name: FieldName},
-	{Level: LevelInstrumentation, Name: FieldVersion},
-	{Level: LevelInstrumentation, Name: FieldSchemaURL},
+	{Level: LevelInstrumentation, Name: InstrumentationFieldName},
+	{Level: LevelInstrumentation, Name: InstrumentationFieldVersion},
+	{Level: LevelInstrumentation, Name: InstrumentationFieldSchemaURL},
 
 	// Event — Span.Event.
-	{Level: LevelEvent, Name: FieldName},
-	{Level: LevelEvent, Name: FieldTime},
-	// Event.time_unix_nano - Span.start_time_unix_nano.
-	{Level: LevelEvent, Name: FieldTimeSinceStart, Derived: true},
+	{Level: LevelEvent, Name: EventFieldName},
+	{Level: LevelEvent, Name: EventFieldTime},
+	// Event.time_unix_nano - Span.start_time_unix_nano, compared as a Go duration string.
+	{Level: LevelEvent, Name: EventFieldTimeSinceStart, Derived: true},
 
 	// Link — Span.Link. The IDs are the linked span's, not the linking one's.
-	{Level: LevelLink, Name: FieldTraceID},
-	{Level: LevelLink, Name: FieldSpanID},
-	{Level: LevelLink, Name: FieldTraceState},
+	{Level: LevelLink, Name: LinkFieldTraceID},
+	{Level: LevelLink, Name: LinkFieldSpanID},
+	{Level: LevelLink, Name: LinkFieldTraceState},
 }
 
 // Fields returns every built-in field a query may name. A caller that offers fields to choose

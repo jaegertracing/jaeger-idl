@@ -13,19 +13,19 @@ import (
 // TestReference_IsField covers the ways a reference can fail to be a given built-in field:
 // a different name, the same name at another level, and an attribute borrowing its spelling.
 func TestReference_IsField(t *testing.T) {
-	span := &Reference{Level: LevelSpan, Name: FieldDuration}
-	assert.True(t, span.IsField(LevelSpan, FieldDuration))
-	assert.False(t, span.IsField(LevelSpan, FieldName), "a different field of the same level")
+	span := &Reference{Level: LevelSpan, Name: SpanFieldDuration}
+	assert.True(t, span.IsField(LevelSpan, SpanFieldDuration))
+	assert.False(t, span.IsField(LevelSpan, SpanFieldName), "a different field of the same level")
 
-	event := &Reference{Level: LevelEvent, Name: FieldName}
-	assert.False(t, event.IsField(LevelSpan, FieldName), "the same name is a different field per level")
-	assert.True(t, event.IsField(LevelEvent, FieldName))
+	event := &Reference{Level: LevelEvent, Name: EventFieldName}
+	assert.False(t, event.IsField(LevelSpan, SpanFieldName), "the same name is a different field per level")
+	assert.True(t, event.IsField(LevelEvent, EventFieldName))
 
-	attribute := &Reference{Level: LevelSpan, Name: FieldDuration, Attr: true}
-	assert.False(t, attribute.IsField(LevelSpan, FieldDuration), "an attribute is never the field")
+	attribute := &Reference{Level: LevelSpan, Name: SpanFieldDuration, Attr: true}
+	assert.False(t, attribute.IsField(LevelSpan, SpanFieldDuration), "an attribute is never the field")
 
-	unqualified := &Reference{Name: FieldService}
-	assert.False(t, unqualified.IsField(LevelResource, FieldService), "unqualified is an attribute")
+	unqualified := &Reference{Name: ResourceFieldService}
+	assert.False(t, unqualified.IsField(LevelResource, ResourceFieldService), "unqualified is an attribute")
 }
 
 // TestFields pins the enumeration as the query API's own: every level a reference can name has
@@ -56,16 +56,16 @@ func TestFields(t *testing.T) {
 // query builder handing the slice to a UI would otherwise do.
 func TestFields_ReturnsACopy(t *testing.T) {
 	Fields()[0].Name = "mutated"
-	_, ok := LookupField(LevelSpan, FieldTraceID)
+	_, ok := LookupField(LevelSpan, SpanFieldTraceID)
 	assert.True(t, ok)
 }
 
 func TestLookupField(t *testing.T) {
-	f, ok := LookupField(LevelSpan, FieldDuration)
+	f, ok := LookupField(LevelSpan, SpanFieldDuration)
 	require.True(t, ok)
 	assert.True(t, f.Derived)
 
-	_, ok = LookupField(LevelResource, FieldDuration)
+	_, ok = LookupField(LevelResource, SpanFieldDuration)
 	assert.False(t, ok, "a span field is not a resource field")
 
 	_, ok = LookupField(LevelSpan, "nonesuch")
@@ -85,6 +85,6 @@ func TestValidateFilter_RejectsUnknownField(t *testing.T) {
 
 	// A field of the wrong level is refused too.
 	require.ErrorContains(t,
-		ValidateFilter(eq(&Reference{Level: LevelResource, Name: FieldDuration}, &Scalar{Value: "2s"})),
+		ValidateFilter(eq(&Reference{Level: LevelResource, Name: SpanFieldDuration}, &Scalar{Value: "2s"})),
 		`unknown built-in field "duration" at the "resource" level`)
 }
