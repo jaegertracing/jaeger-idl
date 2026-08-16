@@ -15,8 +15,13 @@ package expression
 // Most fields are a field of the corresponding OTLP message. A few are derived, computed from
 // the OTLP data rather than stored in it — a span's duration from its two timestamps, an
 // event's offset from its span's start — and are named because they are what people actually
-// filter on. Field names are camelCase — `startTime`, `traceID`, not the proto's
-// `start_time_unix_nano` and `trace_id`, nor the snake_case of the operator vocabulary.
+// filter on.
+//
+// Field names are camelCase — `startTime`, `traceID`, not the proto's `start_time_unix_nano`
+// and `trace_id` — because that is how proto3 JSON renders a message field, and how this API's
+// own query parameters are already spelled, so a field reads like the rest of the JSON surface.
+// The operators are snake_case (`not_in`) without contradicting that: those are values, not
+// field names.
 //
 // A constant compared against a field is written the way that field's values are written, and
 // for the two that measure time that means two different spellings, neither of them a bare
