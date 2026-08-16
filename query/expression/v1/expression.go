@@ -69,10 +69,23 @@ type Expression interface {
 	isExpression()
 }
 
+// expressionTerm is embedded by each of the four term types, which is how a type says it is
+// one: it shows in the declaration rather than in a marker method further down the file. Being
+// unexported is what closes the interface, since no other package can embed it.
+//
+// The receiver is a pointer so that only *Reference, *Scalar, *List and *Call satisfy
+// Expression, not the values. A tree is built from pointers throughout, and a value that also
+// satisfied the interface would slip past every type switch written for the pointer.
+type expressionTerm struct{}
+
+func (*expressionTerm) isExpression() {}
+
 // Reference names a value on the span. At an explicit Level, Attr chooses between the
 // built-in field called Name and the entry keyed by Name in that level's attribute
 // map. An empty Level is always an attribute, whatever Attr says.
 type Reference struct {
+	expressionTerm
+
 	// Name is empty only for the collection itself — an event- or link-level Reference
 	// standing for every event or link of the span, which is what OpSome quantifies over.
 	Name string
@@ -101,6 +114,8 @@ func (r *Reference) IsField(level Level, name string) bool {
 // Type, because a value with a unit — a duration such as "2s" — has no native scalar
 // form.
 type Scalar struct {
+	expressionTerm
+
 	Value string
 	Type  ValueType
 }
@@ -108,6 +123,8 @@ type Scalar struct {
 // List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn.
 // Type applies to every element.
 type List struct {
+	expressionTerm
+
 	Values []string
 	Type   ValueType
 }
@@ -117,11 +134,8 @@ type List struct {
 // more. Because an argument is itself an Expression, a predicate can compare two
 // references as readily as a reference against a constant.
 type Call struct {
+	expressionTerm
+
 	Op   Operator
 	Args []Expression
 }
-
-func (*Reference) isExpression() {}
-func (*Scalar) isExpression()    {}
-func (*List) isExpression()      {}
-func (*Call) isExpression()      {}
