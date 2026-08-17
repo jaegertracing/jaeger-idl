@@ -813,9 +813,8 @@ components:
                     type: string
                     description: level is event or link; required.
             description: |-
-                NestedReference names all of a span's events or all of its links — the collection
-                 rather than one element — which is what `some` quantifies over (§5.5). A span has
-                 many of each and one of everything else, so no other level can be quantified.
+                NestedReference names a span's events or links collection, which is what `some`
+                 quantifies over (§5.5).
         jaeger.expression.v1.Scalar:
             required:
                 - value
