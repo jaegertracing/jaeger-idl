@@ -215,6 +215,9 @@ func mappingNode(pairs ...*yaml.Node) *yaml.Node {
 	return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: pairs}
 }
 
+// filterQueryParam is the replacement parameter: a plain string, because a Call nests to no fixed
+// depth and a GET binding cannot expand that by field path. It documents the shape with an example
+// rather than an items schema, which would be invalid on a string.
 func filterQueryParam() *yaml.Node {
 	return mappingNode(
 		scalarNode("name", 0), scalarNode("query.filter", 0),
