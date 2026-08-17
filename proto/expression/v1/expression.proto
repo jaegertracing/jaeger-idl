@@ -85,9 +85,9 @@ message FieldReference {
   ];
 }
 
-// NestedReference names the events or links a span nests, which is what `some`
-// quantifies over (§5.5). Those are the only two levels a span holds many of, so
-// no other level is accepted.
+// NestedReference names all of a span's events or all of its links — the collection
+// rather than one element — which is what `some` quantifies over (§5.5). A span has
+// many of each and one of everything else, so no other level can be quantified.
 message NestedReference {
   option (openapi.v3.schema) = {required: ["level"]};
 

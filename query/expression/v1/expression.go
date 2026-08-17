@@ -127,9 +127,9 @@ type FieldRef struct {
 	Level Level
 }
 
-// NestedRef names the events or links a span nests, which is what OpSome
-// quantifies over and the only place it may appear. Those two are the only levels a span
-// holds many of. See RFC 0005 §5.5.
+// NestedRef names all of a span's events or all of its links — the collection rather than one
+// element — which is what OpSome quantifies over, and the only place it may appear. A span has
+// many of each and one of everything else, so no other level can be quantified. See RFC 0005 §5.5.
 type NestedRef struct {
 	expressionTerm
 
