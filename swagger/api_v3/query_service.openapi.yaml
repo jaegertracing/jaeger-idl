@@ -676,7 +676,7 @@ components:
             properties:
                 key:
                     type: string
-                    description: key is the attribute key.
+                    description: key is the attribute key; required.
                 level:
                     enum:
                         - span
@@ -686,8 +686,8 @@ components:
                         - link
                     type: string
                     description: |-
-                        level says which attribute map to read. Empty means the unqualified
-                         span-or-resource search (§5.1).
+                        level says which attribute map to read; optional, and the only reference level
+                         that is. Empty means the unqualified span-or-resource search (§5.1).
             description: |-
                 AttributeReference names an entry in one of the span's attribute maps. The arm
                  is spelled `attr` rather than `attribute` because a reference appears in every
@@ -762,7 +762,7 @@ components:
             properties:
                 name:
                     type: string
-                    description: name is one of the built-in fields of `level`.
+                    description: name is one of the built-in fields of `level`; required.
                 level:
                     enum:
                         - span
@@ -771,7 +771,9 @@ components:
                         - event
                         - link
                     type: string
-                    description: 'level has no empty form here: a built-in field belongs to a level by definition.'
+                    description: |-
+                        level is required: a built-in field belongs to a level by definition, so it has
+                         no unqualified form.
             description: |-
                 FieldReference names a built-in field — a value the data model defines
                  directly rather than an attribute-map entry (§5.2).
@@ -801,7 +803,7 @@ components:
                         - event
                         - link
                     type: string
-                    description: level is event or link.
+                    description: level is event or link; required.
             description: |-
                 NestedReference names the events or links a span nests, which is what `some`
                  quantifies over (§5.5). Those are the only two levels a span holds many of, so

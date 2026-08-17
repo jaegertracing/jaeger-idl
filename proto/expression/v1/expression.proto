@@ -53,11 +53,11 @@ message Expression {
 // predicate and the shorter key keeps the JSON readable (§6.2).
 message AttributeReference {
   option (openapi.v3.schema) = {required: ["key"]};
-  // key is the attribute key.
+  // key is the attribute key; required.
   string key = 1;
 
-  // level says which attribute map to read. Empty means the unqualified
-  // span-or-resource search (§5.1).
+  // level says which attribute map to read; optional, and the only reference level
+  // that is. Empty means the unqualified span-or-resource search (§5.1).
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
@@ -70,10 +70,11 @@ message AttributeReference {
 // directly rather than an attribute-map entry (§5.2).
 message FieldReference {
   option (openapi.v3.schema) = {required: ["name", "level"]};
-  // name is one of the built-in fields of `level`.
+  // name is one of the built-in fields of `level`; required.
   string name = 1;
 
-  // level has no empty form here: a built-in field belongs to a level by definition.
+  // level is required: a built-in field belongs to a level by definition, so it has
+  // no unqualified form.
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
@@ -87,7 +88,7 @@ message FieldReference {
 // no other level is accepted.
 message NestedReference {
   option (openapi.v3.schema) = {required: ["level"]};
-  // level is event or link.
+  // level is event or link; required.
   string level = 1 [
     (openapi.v3.property) = {
       type: "string",
