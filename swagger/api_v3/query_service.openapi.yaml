@@ -760,7 +760,7 @@ components:
             properties:
                 name:
                     type: string
-                    description: name is one of the built-in fields of `level` (§5.2), not any string.
+                    description: name of a built-in field of `level`, not an arbitrary key (§5.2).
                 level:
                     enum:
                         - span
