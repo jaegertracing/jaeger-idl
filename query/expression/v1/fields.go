@@ -54,9 +54,9 @@ const (
 	ResourceFieldService   = "service"
 	ResourceFieldSchemaURL = "schemaURL"
 
-	InstrumentationFieldName      = "name"
-	InstrumentationFieldVersion   = "version"
-	InstrumentationFieldSchemaURL = "schemaURL"
+	ScopeFieldName      = "name"
+	ScopeFieldVersion   = "version"
+	ScopeFieldSchemaURL = "schemaURL"
 
 	EventFieldName           = "name"
 	EventFieldTime           = "time"
@@ -105,11 +105,11 @@ var fields = []Field{
 	{Level: LevelResource, Name: ResourceFieldService, Derived: true},
 	{Level: LevelResource, Name: ResourceFieldSchemaURL},
 
-	// Instrumentation scope — opentelemetry.proto.common.v1.InstrumentationScope, plus the
+	// Scope — opentelemetry.proto.common.v1.InstrumentationScope, plus the
 	// schema URL from the enclosing ScopeSpans.
-	{Level: LevelInstrumentation, Name: InstrumentationFieldName},
-	{Level: LevelInstrumentation, Name: InstrumentationFieldVersion},
-	{Level: LevelInstrumentation, Name: InstrumentationFieldSchemaURL},
+	{Level: LevelScope, Name: ScopeFieldName},
+	{Level: LevelScope, Name: ScopeFieldVersion},
+	{Level: LevelScope, Name: ScopeFieldSchemaURL},
 
 	// Event — Span.Event.
 	{Level: LevelEvent, Name: EventFieldName},

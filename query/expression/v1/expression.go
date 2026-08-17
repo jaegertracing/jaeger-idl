@@ -20,16 +20,16 @@ package expression
 type Level string
 
 const (
-	LevelSpan            Level = "span"
-	LevelResource        Level = "resource"
-	LevelInstrumentation Level = "instrumentation"
-	LevelEvent           Level = "event"
-	LevelLink            Level = "link"
+	LevelSpan     Level = "span"
+	LevelResource Level = "resource"
+	LevelScope    Level = "scope"
+	LevelEvent    Level = "event"
+	LevelLink     Level = "link"
 )
 
 // levels is every explicit level. Validation walks it rather than repeating the constants in a
 // switch, so the vocabulary has one definition and a test can enumerate what is accepted.
-var levels = []Level{LevelSpan, LevelResource, LevelInstrumentation, LevelEvent, LevelLink}
+var levels = []Level{LevelSpan, LevelResource, LevelScope, LevelEvent, LevelLink}
 
 // Operator is what a Call applies to its arguments: a boolean combinator, a
 // comparison, a set-membership test, or the existential quantifier over a span's

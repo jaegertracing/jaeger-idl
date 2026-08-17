@@ -44,7 +44,7 @@ message SearchCapabilities {
 // listed here.
 message FilterCapabilities {
   // levels lists the attribute levels the backend can filter on
-  // (span|resource|instrumentation|event|link). Empty means it cannot serve a
+  // (span|resource|scope|event|link). Empty means it cannot serve a
   // level-qualified predicate, so only unqualified (empty-level) filters reach it.
   repeated string levels = 1;
 

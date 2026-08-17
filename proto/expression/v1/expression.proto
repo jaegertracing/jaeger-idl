@@ -51,13 +51,13 @@ message Reference {
   // at event/link level denotes the whole collection (for `some`; §5.5).
   string name = 1;
 
-  // level is the scope. Empty means an unqualified span-or-resource attribute
-  // (always an attribute, whatever attr says); an explicit level defaults to a
-  // built-in field of that level.
+  // level says which part of the span the reference names. Empty means an
+  // unqualified span-or-resource attribute (always an attribute, whatever attr
+  // says); an explicit level defaults to a built-in field of that level.
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
-      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "instrumentation"}, {yaml: "event"}, {yaml: "link"}]
+      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
     }
   ];
 

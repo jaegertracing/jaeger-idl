@@ -42,7 +42,7 @@ func TestFields(t *testing.T) {
 			derived[string(f.Level)+"."+f.Name] = true
 		}
 	}
-	for _, level := range []Level{LevelSpan, LevelResource, LevelInstrumentation, LevelEvent, LevelLink} {
+	for _, level := range []Level{LevelSpan, LevelResource, LevelScope, LevelEvent, LevelLink} {
 		assert.NotZero(t, byLevel[level], "level %q defines no field", level)
 	}
 	assert.Equal(t, map[string]bool{
