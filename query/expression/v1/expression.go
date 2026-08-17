@@ -103,10 +103,7 @@ type expressionTerm struct{}
 
 func (*expressionTerm) isExpression() {}
 
-// AttributeRef names an entry in one of the span's attribute maps. There is no flag saying
-// that it is an attribute rather than a built-in field: the three reference terms are
-// separate types, so a visitor gets exhaustive cases and no state means nothing. See
-// RFC 0005 §5.1.
+// AttributeRef names an entry in one of the span's attribute maps. See RFC 0005 §5.1.
 type AttributeRef struct {
 	expressionTerm
 
@@ -117,9 +114,8 @@ type AttributeRef struct {
 }
 
 // FieldRef names a built-in field — a value the data model defines directly rather than an
-// attribute-map entry, such as a span's duration. Level and Name travel together because
-// neither identifies a field on its own, and Level is never empty: a built-in field belongs
-// to a level by definition. See RFC 0005 §5.2 and Field.
+// attribute-map entry, such as a span's duration. Level is never empty. See RFC 0005 §5.2
+// and Field.
 type FieldRef struct {
 	expressionTerm
 
@@ -195,8 +191,7 @@ type TimestampValue struct {
 }
 
 // List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn. Its
-// elements stay in the spelling they were written in, with Type saying how to read all of
-// them, because that is what the wire carries.
+// elements stay in the spelling they were written in, and Type says how to read all of them.
 type List struct {
 	expressionTerm
 

@@ -687,10 +687,7 @@ components:
                     description: |-
                         level says which attribute map to read; optional, and the only reference level
                          that is. Empty means the unqualified span-or-resource search (§5.1).
-            description: |-
-                AttributeReference names an entry in one of the span's attribute maps. The arm
-                 is spelled `attr` rather than `attribute` because a reference appears in almost
-                 every Call and the shorter key keeps the JSON readable (§6.2).
+            description: AttributeReference names an entry in one of the span's attribute maps.
         jaeger.expression.v1.Call:
             required:
                 - op

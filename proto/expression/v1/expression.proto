@@ -48,9 +48,7 @@ message Expression {
   }
 }
 
-// AttributeReference names an entry in one of the span's attribute maps. The arm
-// is spelled `attr` rather than `attribute` because a reference appears in almost
-// every Call and the shorter key keeps the JSON readable (§6.2).
+// AttributeReference names an entry in one of the span's attribute maps.
 message AttributeReference {
   option (openapi.v3.schema) = {required: ["key"]};
 
