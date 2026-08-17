@@ -751,14 +751,14 @@ components:
                     enum:
                         - span
                         - resource
-                        - instrumentation
+                        - scope
                         - event
                         - link
                     type: string
                     description: |-
-                        level is the scope. Empty means an unqualified span-or-resource attribute
-                         (always an attribute, whatever attr says); an explicit level defaults to a
-                         built-in field of that level.
+                        level says which part of the span the reference names. Empty means an
+                         unqualified span-or-resource attribute (always an attribute, whatever attr
+                         says); an explicit level defaults to a built-in field of that level.
                 attr:
                     type: boolean
                     description: |-
