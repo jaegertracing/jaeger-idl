@@ -71,6 +71,11 @@ const (
 // together because neither identifies a field on its own — `name` is a field of the span, the
 // event and the instrumentation scope alike, and `traceID` of the span and the link.
 type Field struct {
+	// A Field is built with keyed literals only, which is what the unexported member enforces:
+	// a later release may declare a field's type here, and that has to stay an additive change
+	// once this package is public API.
+	_ struct{}
+
 	Level Level
 	Name  string
 	// Derived is true when the field is computed from the OTLP data rather than being a field
