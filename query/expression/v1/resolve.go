@@ -6,6 +6,8 @@ package expression
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -132,9 +134,23 @@ func readConstant(t FieldType, raw string) (Expression, error) {
 			return nil, err
 		}
 		return &TimestampValue{Value: value}, nil
+	case FieldTypeSpanKind:
+		return readWord(raw, SpanKinds)
+	case FieldTypeSpanStatus:
+		return readWord(raw, SpanStatuses)
 	default:
 		return nil, fmt.Errorf("no rule for reading a constant as %q", t)
 	}
+}
+
+// readWord reads a constant that has to be one of a closed set of words. The set is small
+// enough to name in the error, which is the whole value of refusing here rather than letting a
+// backend match nothing.
+func readWord(raw string, words []string) (Expression, error) {
+	if slices.Contains(words, raw) {
+		return &StringValue{Value: raw}, nil
+	}
+	return nil, fmt.Errorf("not one of %s", strings.Join(words, ", "))
 }
 
 // isComparison reports whether an operator compares its two operands by value, which is what

@@ -49,8 +49,8 @@ message Expression {
 }
 
 // AttributeReference names an entry in one of the span's attribute maps. The arm
-// is spelled `attr` rather than `attribute` because a reference appears in every
-// predicate and the shorter key keeps the JSON readable (§6.2).
+// is spelled `attr` rather than `attribute` because a reference appears in almost
+// every Call and the shorter key keeps the JSON readable (§6.2).
 message AttributeReference {
   option (openapi.v3.schema) = {required: ["key"]};
   // key is the attribute key; required.
@@ -128,8 +128,8 @@ message List {
 
 // Call applies operator/function `op` to argument Expressions. Arity follows the
 // operator: unary for not/exists, binary for the comparisons and in/not_in,
-// n-ary for and/or. `some` is an event/link existential; its args are
-// [NestedReference, predicate] (§5.5).
+// n-ary for and/or. `some` is an event/link existential; its args are a
+// NestedReference and the Call evaluated against each element (§5.5).
 message Call {
   option (openapi.v3.schema) = {required: ["op"]};
   string op = 1 [

@@ -208,6 +208,36 @@ func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 	require.NoError(t, err, "an undefined field has no type to read against")
 }
 
+// TestResolveConstants_ChecksEnumSpellings pins the two fields that hold one of a closed set of
+// words. A misspelling can never match any span, so it is answered here with the set named,
+// rather than passed to a backend that would return nothing and say why.
+func TestResolveConstants_ChecksEnumSpellings(t *testing.T) {
+	kind := &FieldRef{Name: SpanFieldKind, Level: LevelSpan}
+	status := &FieldRef{Name: SpanFieldStatus, Level: LevelSpan}
+
+	got, err := ResolveConstants(&Call{Op: OpEq, Args: []Expression{kind, &AnyValue{Value: "server"}}})
+	require.NoError(t, err)
+	assert.Equal(t, &StringValue{Value: "server"}, got.Args[1])
+
+	_, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{kind, &AnyValue{Value: "SPAN_KIND_SERVER"}}})
+	require.ErrorContains(t, err, `cannot compare span.kind against "SPAN_KIND_SERVER"`)
+	require.ErrorContains(t, err, "not one of unspecified, internal, server, client, producer, consumer")
+
+	_, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{status, &AnyValue{Value: "Error"}}})
+	require.ErrorContains(t, err, "not one of unset, ok, error")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		status, &List{Values: []string{"ok", "banana"}},
+	}})
+	require.ErrorContains(t, err, `cannot compare span.status against "banana"`)
+
+	// An ID stays a string: one nobody recorded reads the same as one being looked for.
+	_, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{
+		&FieldRef{Name: SpanFieldTraceID, Level: LevelSpan}, &AnyValue{Value: "not-hex"},
+	}})
+	require.NoError(t, err)
+}
+
 func TestResolveConstants_LeavesItsInputAlone(t *testing.T) {
 	constant := &AnyValue{Value: "2s"}
 	filter := &Call{Op: OpGt, Args: []Expression{spanField(SpanFieldDuration), constant}}

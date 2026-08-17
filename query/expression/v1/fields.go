@@ -82,11 +82,29 @@ const (
 	FieldTypeString    FieldType = "string"
 	FieldTypeDuration  FieldType = "duration"
 	FieldTypeTimestamp FieldType = "timestamp"
+	// FieldTypeSpanKind and FieldTypeSpanStatus hold one of a closed set of words, so a
+	// constant compared against one is refused unless it is a member. An ID is a string
+	// rather than a type of its own: a misspelled span kind can never match any span,
+	// while an ID nobody recorded is indistinguishable from one the caller is looking for.
+	FieldTypeSpanKind   FieldType = "spanKind"
+	FieldTypeSpanStatus FieldType = "spanStatus"
 )
 
 // fieldTypes is every declared field type, walked by a test so that a type added without a
 // rule to parse its constants fails there rather than when a caller sends one.
-var fieldTypes = []FieldType{FieldTypeString, FieldTypeDuration, FieldTypeTimestamp}
+var fieldTypes = []FieldType{
+	FieldTypeString, FieldTypeDuration, FieldTypeTimestamp,
+	FieldTypeSpanKind, FieldTypeSpanStatus,
+}
+
+// SpanKinds and SpanStatuses are the words those two fields hold. They are lower case, like
+// the operators and levels and unlike OTLP's own SPAN_KIND_SERVER, because this API spells a
+// value the way the rest of its vocabulary is spelled (RFC 0005 §6.2). A backend maps them to
+// whatever it stored.
+var (
+	SpanKinds    = []string{"unspecified", "internal", "server", "client", "producer", "consumer"}
+	SpanStatuses = []string{"unset", "ok", "error"}
+)
 
 // Field is a built-in field: its name paired with the level it belongs to, and the type it
 // holds. The name and level travel together because neither identifies a field on its own —
@@ -118,10 +136,10 @@ var fields = []Field{
 	{Level: LevelSpan, Name: SpanFieldParentSpanID, Type: FieldTypeString},
 	{Level: LevelSpan, Name: SpanFieldTraceState, Type: FieldTypeString},
 	{Level: LevelSpan, Name: SpanFieldName, Type: FieldTypeString},
-	{Level: LevelSpan, Name: SpanFieldKind, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldKind, Type: FieldTypeSpanKind},
 	{Level: LevelSpan, Name: SpanFieldStartTime, Type: FieldTypeTimestamp},
 	{Level: LevelSpan, Name: SpanFieldEndTime, Type: FieldTypeTimestamp},
-	{Level: LevelSpan, Name: SpanFieldStatus, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldStatus, Type: FieldTypeSpanStatus},
 	{Level: LevelSpan, Name: SpanFieldStatusMessage, Type: FieldTypeString},
 	// end_time_unix_nano - start_time_unix_nano, compared as a Go duration string.
 	{Level: LevelSpan, Name: SpanFieldDuration, Type: FieldTypeDuration, Derived: true},

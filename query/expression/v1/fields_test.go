@@ -46,8 +46,11 @@ func TestFields_DeclaredTypes(t *testing.T) {
 	}
 	assert.Equal(t, []string{"span.duration", "event.timeSinceStart"}, byType[FieldTypeDuration])
 	assert.Equal(t, []string{"span.startTime", "span.endTime", "event.time"}, byType[FieldTypeTimestamp])
-	for _, name := range []string{"span.traceID", "span.status", "span.kind", "resource.service"} {
-		assert.Contains(t, byType[FieldTypeString], name)
+	assert.Equal(t, []string{"span.kind"}, byType[FieldTypeSpanKind])
+	assert.Equal(t, []string{"span.status"}, byType[FieldTypeSpanStatus])
+	for _, name := range []string{"span.traceID", "span.statusMessage", "resource.service"} {
+		assert.Contains(t, byType[FieldTypeString], name,
+			"an ID is a string: an ID nobody recorded reads the same as one being looked for")
 	}
 }
 
@@ -93,6 +96,10 @@ func spellingFor(t FieldType) string {
 		return "2s"
 	case FieldTypeTimestamp:
 		return "2026-08-16T18:56:20.123456789Z"
+	case FieldTypeSpanKind:
+		return SpanKinds[0]
+	case FieldTypeSpanStatus:
+		return SpanStatuses[0]
 	default:
 		return "anything"
 	}
