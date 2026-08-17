@@ -54,7 +54,6 @@ message Expression {
 message AttributeReference {
   option (openapi.v3.schema) = {required: ["key"]};
 
-  // key is the attribute key; required.
   string key = 1;
 
   // level says which attribute map to read; optional, and the only reference level
@@ -72,11 +71,9 @@ message AttributeReference {
 message FieldReference {
   option (openapi.v3.schema) = {required: ["name", "level"]};
 
-  // name is one of the built-in fields of `level`; required.
+  // name is one of the built-in fields of `level` (§5.2), not any string.
   string name = 1;
 
-  // level is required: a built-in field belongs to a level by definition, so it has
-  // no unqualified form.
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
@@ -90,7 +87,6 @@ message FieldReference {
 message NestedReference {
   option (openapi.v3.schema) = {required: ["level"]};
 
-  // level is event or link; required.
   string level = 1 [
     (openapi.v3.property) = {
       type: "string",
@@ -107,9 +103,8 @@ message NestedReference {
 message Scalar {
   option (openapi.v3.schema) = {required: ["value"]};
 
-  // value is the constant's spelling; required. It is a plain string so that a
-  // duration ("2s") and a timestamp (RFC 3339) can travel with the unit they are
-  // written in (§5.4).
+  // value is the constant's spelling, so a duration or a timestamp travels with the
+  // unit it is written in (§5.4).
   string value = 1;
 
   // type is OPTIONAL; empty means any type, a set type is authoritative (§5.4).
@@ -125,8 +120,7 @@ message Scalar {
 message List {
   option (openapi.v3.schema) = {required: ["values"]};
 
-  // values are the elements; required, though a validator refuses an empty list —
-  // membership in nothing matches nothing.
+  // values must have at least one element: membership in nothing matches nothing.
   repeated string values = 1;
 
   // type is an OPTIONAL hint applied to every element (see Scalar.type).
@@ -145,7 +139,6 @@ message List {
 message Call {
   option (openapi.v3.schema) = {required: ["op", "args"]};
 
-  // op is the operator or function applied to args; required.
   string op = 1 [
     (openapi.v3.property) = {
       type: "string",
@@ -153,6 +146,6 @@ message Call {
     }
   ];
 
-  // args are the operands, and how many is a property of op; required.
+  // args are the operands, and how many an operator takes is a property of op.
   repeated Expression args = 2;
 }

@@ -676,7 +676,6 @@ components:
             properties:
                 key:
                     type: string
-                    description: key is the attribute key; required.
                 level:
                     enum:
                         - span
@@ -715,12 +714,11 @@ components:
                         - not_in
                         - some
                     type: string
-                    description: op is the operator or function applied to args; required.
                 args:
                     type: array
                     items:
                         $ref: '#/components/schemas/jaeger.expression.v1.Expression'
-                    description: args are the operands, and how many is a property of op; required.
+                    description: args are the operands, and how many an operator takes is a property of op.
             description: |-
                 Call applies operator/function `op` to argument Expressions. Arity follows the
                  operator: unary for not/exists, binary for the comparisons and in/not_in,
@@ -765,7 +763,7 @@ components:
             properties:
                 name:
                     type: string
-                    description: name is one of the built-in fields of `level`; required.
+                    description: name is one of the built-in fields of `level` (§5.2), not any string.
                 level:
                     enum:
                         - span
@@ -774,9 +772,6 @@ components:
                         - event
                         - link
                     type: string
-                    description: |-
-                        level is required: a built-in field belongs to a level by definition, so it has
-                         no unqualified form.
             description: |-
                 FieldReference names a built-in field — a value the data model defines
                  directly rather than an attribute-map entry (§5.2).
@@ -789,9 +784,7 @@ components:
                     type: array
                     items:
                         type: string
-                    description: |-
-                        values are the elements; required, though a validator refuses an empty list —
-                         membership in nothing matches nothing.
+                    description: 'values must have at least one element: membership in nothing matches nothing.'
                 type:
                     enum:
                         - string
@@ -811,7 +804,6 @@ components:
                         - event
                         - link
                     type: string
-                    description: level is event or link; required.
             description: |-
                 NestedReference names a span's events or links collection, which is what `some`
                  quantifies over (§5.5).
@@ -823,9 +815,8 @@ components:
                 value:
                     type: string
                     description: |-
-                        value is the constant's spelling; required. It is a plain string so that a
-                         duration ("2s") and a timestamp (RFC 3339) can travel with the unit they are
-                         written in (§5.4).
+                        value is the constant's spelling, so a duration or a timestamp travels with the
+                         unit it is written in (§5.4).
                 type:
                     enum:
                         - string
