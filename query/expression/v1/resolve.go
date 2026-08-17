@@ -44,8 +44,15 @@ func resolveCall(call *Call) (*Call, error) {
 		}
 		args[i] = resolved
 	}
-	if isComparison(call.Op) && len(args) == 2 {
-		if err := resolveComparison(args); err != nil {
+	if len(args) == 2 {
+		var err error
+		switch {
+		case isComparison(call.Op):
+			err = resolveComparison(args)
+		case call.Op == OpIn || call.Op == OpNotIn:
+			err = checkMembership(args)
+		}
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -77,6 +84,32 @@ func resolveComparison(args []Expression) error {
 			return fmt.Errorf("cannot compare %s.%s against %q: %w", ref.Level, ref.Name, raw.Value, err)
 		}
 		args[other] = value
+	}
+	return nil
+}
+
+// checkMembership reads every element of a list compared against a built-in field as that
+// field's type, so a spelling refused under `gt` is refused under `in` as well. The list is not
+// rewritten — it carries its elements as spellings and there is no typed list node — so this
+// only refuses what cannot be read.
+func checkMembership(args []Expression) error {
+	ref, ok := args[0].(*FieldRef)
+	if !ok || ref == nil {
+		return nil
+	}
+	list, ok := args[1].(*List)
+	if !ok || list == nil || list.Type != "" {
+		// A list that declares its own element type says how to read itself.
+		return nil
+	}
+	field, ok := LookupField(ref.Level, ref.Name)
+	if !ok {
+		return nil
+	}
+	for _, element := range list.Values {
+		if _, err := readConstant(field.Type, element); err != nil {
+			return fmt.Errorf("cannot compare %s.%s against %q: %w", ref.Level, ref.Name, element, err)
+		}
 	}
 	return nil
 }

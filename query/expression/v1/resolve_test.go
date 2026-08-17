@@ -170,6 +170,44 @@ func TestResolveConstants_RefusesAConstantThatWillNotParse(t *testing.T) {
 // TestResolveConstants_LeavesItsInputAlone pins that resolution rewrites nodes into a new tree
 // rather than annotating the one it was given, which is what keeps a query interceptor's later
 // edit from leaving anything stale behind.
+// TestResolveConstants_ChecksMembershipElements pins that a spelling refused under a comparison
+// is refused under membership too. The list is not rewritten, so what this asserts is the
+// refusal; a list declaring its own element type says how to read itself and is left alone.
+func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
+	duration := &FieldRef{Name: SpanFieldDuration, Level: LevelSpan}
+
+	_, err := ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		duration, &List{Values: []string{"2s", "banana"}},
+	}})
+	require.ErrorContains(t, err, `cannot compare span.duration against "banana"`)
+
+	_, err = ResolveConstants(&Call{Op: OpNotIn, Args: []Expression{
+		duration, &List{Values: []string{"2s", "3m"}},
+	}})
+	require.NoError(t, err)
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		duration, &List{Values: []string{"banana"}, Type: ValueTypeString},
+	}})
+	require.NoError(t, err, "a declared element type says how to read the list")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&AttributeRef{Key: "size"}, &List{Values: []string{"banana"}},
+	}})
+	require.NoError(t, err, "an attribute's values are storage's to read")
+
+	// ValidateFilter refuses both of these, so resolution only has to not choke on them.
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		duration, &AnyValue{Value: "2s"},
+	}})
+	require.NoError(t, err, "membership without a list is ValidateFilter's refusal")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&FieldRef{Name: "nosuchfield", Level: LevelSpan}, &List{Values: []string{"banana"}},
+	}})
+	require.NoError(t, err, "an undefined field has no type to read against")
+}
+
 func TestResolveConstants_LeavesItsInputAlone(t *testing.T) {
 	constant := &AnyValue{Value: "2s"}
 	filter := &Call{Op: OpGt, Args: []Expression{spanField(SpanFieldDuration), constant}}
