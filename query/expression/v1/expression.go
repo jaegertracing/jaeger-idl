@@ -14,9 +14,11 @@
 // owns a wire.
 package expression
 
-// Level is the scope a referenced value lives in. The five explicit levels are the
-// OTLP attribute maps; an empty Level means an unqualified attribute, searched at the
-// span and resource levels. See RFC 0005 §5.1.
+import "time"
+
+// Level is the scope a referenced value lives in. The five levels are the OTLP attribute
+// maps; an attribute reference may also leave it empty, which searches the span and
+// resource levels. See RFC 0005 §5.1.
 type Level string
 
 const (
@@ -62,9 +64,12 @@ var operators = []Operator{
 	OpSome,
 }
 
-// ValueType is the declared type of a constant. It is optional: empty means the
-// backend matches the value at whatever type it was stored, and a type that is set is
-// authoritative, so the backend matches only values of that type. See RFC 0005 §5.4.
+// ValueType is the type a constant declares on the wire. It is optional there: empty means
+// the backend matches the value at whatever type it was stored, and a type that is set is
+// authoritative, so the backend matches only values of that type. In this AST a constant is a
+// typed node instead (see AnyValue and the values beside it), so the vocabulary is left for
+// List, whose elements are strings, and for whoever converts a wire message into a node.
+// See RFC 0005 §5.4.
 type ValueType string
 
 const (
@@ -78,67 +83,119 @@ const (
 // listed, because it means "any type" rather than a type.
 var valueTypes = []ValueType{ValueTypeString, ValueTypeInt, ValueTypeDouble, ValueTypeBool}
 
-// Expression is a node in a structured filter: an atom — a Reference to a value on
-// the span, or a Scalar or List constant — or a Call applying an operator to argument
-// expressions. Only the four types in this package implement it, so a backend can
-// switch on the concrete type and cover every case. See RFC 0005 §6.
+// Expression is a node in a structured filter: an atom — a reference to a value on the
+// span, or a constant — or a Call applying an operator to argument expressions. Only the
+// types in this package implement it, so a backend can switch on the concrete type and
+// cover every case. See RFC 0005 §6.
 type Expression interface {
 	isExpression()
 }
 
-// expressionTerm is embedded by each of the four term types, which is how a type says it is
-// one: it shows in the declaration rather than in a marker method further down the file. Being
-// unexported is what closes the interface, since no other package can embed it.
+// expressionTerm is embedded by each term type, which is how a type says it is one: it shows
+// in the declaration rather than in a marker method further down the file. Being unexported is
+// what closes the interface, since no other package can embed it. It also means a term is
+// built with keyed literals only, so a later release can add a field to one.
 //
-// The receiver is a pointer so that only *Reference, *Scalar, *List and *Call satisfy
-// Expression, not the values. A tree is built from pointers throughout, and a value that also
-// satisfied the interface would slip past every type switch written for the pointer.
+// The receiver is a pointer so that only the pointer types satisfy Expression, not the values.
+// A tree is built from pointers throughout, and a value that also satisfied the interface would
+// slip past every type switch written for the pointer.
 type expressionTerm struct{}
 
 func (*expressionTerm) isExpression() {}
 
-// Reference names a value on the span. At an explicit Level, Attr chooses between the
-// built-in field called Name and the entry keyed by Name in that level's attribute
-// map. An empty Level is always an attribute, whatever Attr says.
-type Reference struct {
+// AttributeRef names an entry in one of the span's attribute maps. There is no flag saying
+// that it is an attribute rather than a built-in field: the three reference terms are
+// separate types, so a visitor gets exhaustive cases and no state means nothing. See
+// RFC 0005 §5.1.
+type AttributeRef struct {
 	expressionTerm
 
-	// Name is empty only for the collection itself — an event- or link-level Reference
-	// standing for every event or link of the span, which is what OpSome quantifies over.
-	Name string
-	// Level is empty (unqualified) or one of the five explicit levels.
+	// Key is the attribute key, and every attribute reference has one.
+	Key string
+	// Level is empty for the unqualified span-or-resource search, or one of the five levels.
 	Level Level
-	// Attr is true for an attribute of Level, false for its built-in field.
-	Attr bool
 }
 
-// IsAttribute reports whether r names an entry in an attribute map rather than a built-in
-// field. It is not the Attr bit on its own: an unqualified reference is an attribute of the
-// span or resource however Attr is set, because no built-in field has an unqualified form.
-func (r *Reference) IsAttribute() bool {
-	return r.Level == "" || r.Attr
+// FieldRef names a built-in field — a value the data model defines directly rather than an
+// attribute-map entry, such as a span's duration. Level and Name travel together because
+// neither identifies a field on its own, and Level is never empty: a built-in field belongs
+// to a level by definition. See RFC 0005 §5.2 and Field.
+type FieldRef struct {
+	expressionTerm
+
+	Name  string
+	Level Level
 }
 
-// IsField reports whether r references the built-in field of that level and name. Both are
-// given because neither identifies a field alone (see Field), and an attribute never matches
-// however it is spelled: level and name are not enough to tell a field from a tag that borrows
-// its spelling.
-func (r *Reference) IsField(level Level, name string) bool {
-	return !r.IsAttribute() && r.Level == level && r.Name == name
+// CollectionRef names a whole collection of a span's events or links, which is what OpSome
+// quantifies over and the only place it may appear. Those two are the only levels a span
+// holds many of. See RFC 0005 §5.5.
+type CollectionRef struct {
+	expressionTerm
+
+	Level Level
 }
 
-// Scalar is a single constant value. The value is carried as a string whatever its
-// Type, because a value with a unit — a duration such as "2s" — has no native scalar
-// form.
-type Scalar struct {
+// AnyValue is a constant under no type constraint: the caller wrote a value and said nothing
+// about how to read it, so a backend matches it at whatever type the value was stored. It is
+// also what an unhinted duration or timestamp arrives as, until it is resolved against the
+// field it is compared with (see ResolveConstants).
+type AnyValue struct {
 	expressionTerm
 
 	Value string
-	Type  ValueType
 }
 
-// List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn.
-// Type applies to every element.
+// StringValue is a constant to be matched as text.
+type StringValue struct {
+	expressionTerm
+
+	Value string
+}
+
+// IntValue is a constant to be matched as an integer.
+type IntValue struct {
+	expressionTerm
+
+	Value int64
+}
+
+// DoubleValue is a constant to be matched as a floating-point number.
+type DoubleValue struct {
+	expressionTerm
+
+	Value float64
+}
+
+// BoolValue is a constant to be matched as a boolean.
+type BoolValue struct {
+	expressionTerm
+
+	Value bool
+}
+
+// DurationValue is a length of time, which is what a duration field is compared against. The
+// wire has no type spelling for it — it travels as an unhinted constant in Go duration syntax,
+// "2s" or "50us" — so this node is reached by resolving that constant against the field
+// (see ResolveConstants).
+type DurationValue struct {
+	expressionTerm
+
+	Value time.Duration
+}
+
+// TimestampValue is an instant, which is what a timestamp field is compared against. Like
+// DurationValue it has no wire spelling of its own and arrives as an unhinted RFC 3339
+// constant.
+type TimestampValue struct {
+	expressionTerm
+
+	Value time.Time
+}
+
+// List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn. Its
+// elements stay in the spelling they were written in, with Type saying how to read all of
+// them, because that is what the wire carries.
 type List struct {
 	expressionTerm
 

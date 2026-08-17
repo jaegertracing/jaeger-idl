@@ -123,7 +123,7 @@ message TraceQueryParameters {
   //
   // Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
   // it is the structured Call. For example, the filter http.status_code == 500 is
-  // {"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}
+  // {"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}
   jaeger.expression.v1.Call filter = 10;
 }
 

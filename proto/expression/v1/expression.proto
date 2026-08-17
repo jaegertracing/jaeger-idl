@@ -25,48 +25,79 @@ option go_package = "expression";
 // https://github.com/jaegertracing/jaeger/blob/main/docs/rfc/0005-structured-query-filters.md
 // Section references (§N) in the comments below point into that document.
 
-// Expression is a node in the filter AST: an atom (a Reference, or a Scalar or
-// List constant) or a Call over argument Expressions.
+// Expression is a node in the filter AST: an atom (one of the three references,
+// or a Scalar or List constant) or a Call over argument Expressions.
 message Expression {
   option (openapi.v3.schema) = {
     one_of: [
-      {schema: {required: ["ref"]}},
+      {schema: {required: ["attr"]}},
+      {schema: {required: ["field"]}},
+      {schema: {required: ["collection"]}},
       {schema: {required: ["scalar"]}},
       {schema: {required: ["list"]}},
       {schema: {required: ["call"]}}
     ]
   };
   oneof term {
-    Reference ref    = 1;  // a value on the span/trace: attribute or built-in field
-    Scalar    scalar = 2;  // a single constant
-    List      list   = 3;  // a homogeneous list constant (right arg of in/not_in)
-    Call      call   = 4;  // an operator/function over argument Expressions
+    AttributeReference  attr       = 1;  // an entry in an attribute map, by key
+    FieldReference      field      = 2;  // a built-in field of a level (§5.2)
+    CollectionReference collection = 3;  // a whole collection, for `some` (§5.5)
+    Scalar              scalar     = 4;  // a single constant
+    List                list       = 5;  // a homogeneous list constant (right arg of in/not_in)
+    Call                call       = 6;  // an operator/function over argument Expressions
   }
 }
 
-// Reference names a value on the span/trace: a built-in field of `level`
-// (default) or an attribute (attr=true).
-message Reference {
-  // name is the built-in field name, or the attribute key when attr=true. Empty
-  // at event/link level denotes the whole collection (for `some`; §5.5).
-  string name = 1;
+// AttributeReference names an entry in one of the span's attribute maps. The arm
+// is spelled `attr` rather than `attribute` because a reference appears in every
+// predicate and the shorter key keeps the JSON readable (§6.2).
+message AttributeReference {
+  // key is the attribute key; required.
+  string key = 1;
 
-  // level says which part of the span the reference names. Empty means an
-  // unqualified span-or-resource attribute (always an attribute, whatever attr
-  // says); an explicit level defaults to a built-in field of that level.
+  // level says which attribute map to read. Empty means the unqualified
+  // span-or-resource search (§5.1).
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
       enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
     }
   ];
-
-  // attr selects, at an explicit level, an attribute (true) or a built-in field
-  // (false, default). Ignored when level is empty.
-  bool attr = 3;
 }
 
-// Scalar is a single constant value.
+// FieldReference names a built-in field — a value the data model defines
+// directly rather than an attribute-map entry (§5.2).
+message FieldReference {
+  // name is one of the built-in fields of `level`; required.
+  string name = 1;
+
+  // level is required: a built-in field belongs to a level by definition, so it
+  // has no unqualified form.
+  string level = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+}
+
+// CollectionReference names a whole collection of events or links, which is what
+// `some` quantifies over (§5.5). Those are the only two levels a span holds many
+// of, so no other level is accepted.
+message CollectionReference {
+  // level is event or link; required.
+  string level = 1 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+}
+
+// Scalar is a single constant value. A duration ("2s") and a timestamp
+// (RFC 3339) have no `type` spelling of their own: they travel as an unhinted
+// constant, and the receiving side resolves them from the built-in field they are
+// compared against (§5.4).
 message Scalar {
   string value = 1;
 
@@ -95,7 +126,7 @@ message List {
 // Call applies operator/function `op` to argument Expressions. Arity follows the
 // operator: unary for not/exists, binary for the comparisons and in/not_in,
 // n-ary for and/or. `some` is an event/link existential; its args are
-// [collection Reference, predicate] (§5.5).
+// [CollectionReference, predicate] (§5.5).
 message Call {
   option (openapi.v3.schema) = {required: ["op"]};
   string op = 1 [

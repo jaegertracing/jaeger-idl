@@ -4,7 +4,7 @@
 package expression
 
 // Built-in fields are the values a span carries directly, rather than entries in one of its
-// attribute maps. A Reference names one by giving its level and leaving Attr unset.
+// attribute maps. A FieldRef names one by giving its level and its name.
 //
 // The set is defined here rather than left to each backend, because which fields a query may
 // name is part of the query API: a caller writes one query against Jaeger, not a different one
@@ -67,17 +67,41 @@ const (
 	LinkFieldTraceState = "traceState"
 )
 
-// Field is a built-in field: its name paired with the level it belongs to. The two travel
-// together because neither identifies a field on its own — `name` is a field of the span, the
-// event and the instrumentation scope alike, and `traceID` of the span and the link.
+// FieldType is the type a built-in field holds, and so the type a constant compared against
+// that field is read as. It is what ResolveConstants rewrites an unconstrained constant into,
+// and what makes `span.duration > "banana"` refusable at the query boundary.
+//
+// It is a smaller vocabulary than it might be, because the fields below are the only ones that
+// exist: IDs, a status, a span kind and a trace state are all validated spellings, and a
+// distinct type only pays once something wants the parsed form (RFC 0005 §5.4). A level gains
+// numeric fields the day one is defined, and the type for it is added here with the rule that
+// parses it.
+type FieldType string
+
+const (
+	FieldTypeString    FieldType = "string"
+	FieldTypeDuration  FieldType = "duration"
+	FieldTypeTimestamp FieldType = "timestamp"
+)
+
+// fieldTypes is every declared field type, walked by a test so that a type added without a
+// rule to parse its constants fails there rather than when a caller sends one.
+var fieldTypes = []FieldType{FieldTypeString, FieldTypeDuration, FieldTypeTimestamp}
+
+// Field is a built-in field: its name paired with the level it belongs to, and the type it
+// holds. The name and level travel together because neither identifies a field on its own —
+// `name` is a field of the span, the event and the instrumentation scope alike, and `traceID`
+// of the span and the link.
 type Field struct {
 	// A Field is built with keyed literals only, which is what the unexported member enforces:
-	// a later release may declare a field's type here, and that has to stay an additive change
-	// once this package is public API.
+	// a later release may declare more about a field here, and that has to stay an additive
+	// change once this package is public API.
 	_ struct{}
 
 	Level Level
 	Name  string
+	// Type is what a constant compared against this field is read as.
+	Type FieldType
 	// Derived is true when the field is computed from the OTLP data rather than being a field
 	// of it. A backend has to be able to compute it to serve a predicate on it, which is why
 	// it is worth knowing apart.
@@ -85,21 +109,22 @@ type Field struct {
 }
 
 // fields enumerates every built-in field, level by level. A level's own attribute map is not
-// listed: an attribute is reached with Attr set, not as a field.
+// listed: an attribute is named by an AttributeRef, not as a field.
 var fields = []Field{
-	// Span — opentelemetry.proto.trace.v1.Span.
-	{Level: LevelSpan, Name: SpanFieldTraceID},
-	{Level: LevelSpan, Name: SpanFieldSpanID},
-	{Level: LevelSpan, Name: SpanFieldParentSpanID},
-	{Level: LevelSpan, Name: SpanFieldTraceState},
-	{Level: LevelSpan, Name: SpanFieldName},
-	{Level: LevelSpan, Name: SpanFieldKind},
-	{Level: LevelSpan, Name: SpanFieldStartTime},
-	{Level: LevelSpan, Name: SpanFieldEndTime},
-	{Level: LevelSpan, Name: SpanFieldStatus},
-	{Level: LevelSpan, Name: SpanFieldStatusMessage},
+	// Span — opentelemetry.proto.trace.v1.Span. The IDs are hex, the kind and the status are
+	// their OTLP spellings ("client", "error"), and all of them are compared as text.
+	{Level: LevelSpan, Name: SpanFieldTraceID, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldSpanID, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldParentSpanID, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldTraceState, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldName, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldKind, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldStartTime, Type: FieldTypeTimestamp},
+	{Level: LevelSpan, Name: SpanFieldEndTime, Type: FieldTypeTimestamp},
+	{Level: LevelSpan, Name: SpanFieldStatus, Type: FieldTypeString},
+	{Level: LevelSpan, Name: SpanFieldStatusMessage, Type: FieldTypeString},
 	// end_time_unix_nano - start_time_unix_nano, compared as a Go duration string.
-	{Level: LevelSpan, Name: SpanFieldDuration, Derived: true},
+	{Level: LevelSpan, Name: SpanFieldDuration, Type: FieldTypeDuration, Derived: true},
 
 	// Resource — opentelemetry.proto.resource.v1.Resource, which carries only attributes, plus
 	// the schema URL from the enclosing ResourceSpans.
@@ -107,25 +132,25 @@ var fields = []Field{
 	// service is the service.name attribute read as a field. It is the one attribute Jaeger
 	// treats as identity rather than metadata — it names every trace in the UI and keys the
 	// search index of several backends — so a query says resource.service, not a tag lookup.
-	{Level: LevelResource, Name: ResourceFieldService, Derived: true},
-	{Level: LevelResource, Name: ResourceFieldSchemaURL},
+	{Level: LevelResource, Name: ResourceFieldService, Type: FieldTypeString, Derived: true},
+	{Level: LevelResource, Name: ResourceFieldSchemaURL, Type: FieldTypeString},
 
 	// Scope — opentelemetry.proto.common.v1.InstrumentationScope, plus the
 	// schema URL from the enclosing ScopeSpans.
-	{Level: LevelScope, Name: ScopeFieldName},
-	{Level: LevelScope, Name: ScopeFieldVersion},
-	{Level: LevelScope, Name: ScopeFieldSchemaURL},
+	{Level: LevelScope, Name: ScopeFieldName, Type: FieldTypeString},
+	{Level: LevelScope, Name: ScopeFieldVersion, Type: FieldTypeString},
+	{Level: LevelScope, Name: ScopeFieldSchemaURL, Type: FieldTypeString},
 
 	// Event — Span.Event.
-	{Level: LevelEvent, Name: EventFieldName},
-	{Level: LevelEvent, Name: EventFieldTime},
+	{Level: LevelEvent, Name: EventFieldName, Type: FieldTypeString},
+	{Level: LevelEvent, Name: EventFieldTime, Type: FieldTypeTimestamp},
 	// Event.time_unix_nano - Span.start_time_unix_nano, compared as a Go duration string.
-	{Level: LevelEvent, Name: EventFieldTimeSinceStart, Derived: true},
+	{Level: LevelEvent, Name: EventFieldTimeSinceStart, Type: FieldTypeDuration, Derived: true},
 
 	// Link — Span.Link. The IDs are the linked span's, not the linking one's.
-	{Level: LevelLink, Name: LinkFieldTraceID},
-	{Level: LevelLink, Name: LinkFieldSpanID},
-	{Level: LevelLink, Name: LinkFieldTraceState},
+	{Level: LevelLink, Name: LinkFieldTraceID, Type: FieldTypeString},
+	{Level: LevelLink, Name: LinkFieldSpanID, Type: FieldTypeString},
+	{Level: LevelLink, Name: LinkFieldTraceState, Type: FieldTypeString},
 }
 
 // Fields returns every built-in field a query may name. A caller that offers fields to choose
