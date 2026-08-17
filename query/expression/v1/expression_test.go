@@ -20,7 +20,7 @@ var allTerms = []struct {
 }{
 	{&AttributeRef{}, "an attribute reference"},
 	{&FieldRef{}, "a field reference"},
-	{&CollectionRef{}, "a collection reference"},
+	{&NestedRef{}, "a collection reference"},
 	{&AnyValue{}, "an untyped constant"},
 	{&StringValue{}, "a string constant"},
 	{&IntValue{}, "an integer constant"},

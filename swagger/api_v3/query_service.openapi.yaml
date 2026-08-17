@@ -722,22 +722,7 @@ components:
                 Call applies operator/function `op` to argument Expressions. Arity follows the
                  operator: unary for not/exists, binary for the comparisons and in/not_in,
                  n-ary for and/or. `some` is an event/link existential; its args are
-                 [CollectionReference, predicate] (§5.5).
-        jaeger.expression.v1.CollectionReference:
-            required:
-                - level
-            type: object
-            properties:
-                level:
-                    enum:
-                        - event
-                        - link
-                    type: string
-                    description: level is event or link.
-            description: |-
-                CollectionReference names a whole collection of events or links, which is what
-                 `some` quantifies over (§5.5). Those are the only two levels a span holds many
-                 of, so no other level is accepted.
+                 [NestedReference, predicate] (§5.5).
         jaeger.expression.v1.Expression:
             type: object
             oneOf:
@@ -746,7 +731,7 @@ components:
                 - required:
                     - field
                 - required:
-                    - collection
+                    - nested
                 - required:
                     - scalar
                 - required:
@@ -758,8 +743,8 @@ components:
                     $ref: '#/components/schemas/jaeger.expression.v1.AttributeReference'
                 field:
                     $ref: '#/components/schemas/jaeger.expression.v1.FieldReference'
-                collection:
-                    $ref: '#/components/schemas/jaeger.expression.v1.CollectionReference'
+                nested:
+                    $ref: '#/components/schemas/jaeger.expression.v1.NestedReference'
                 scalar:
                     $ref: '#/components/schemas/jaeger.expression.v1.Scalar'
                 list:
@@ -806,6 +791,21 @@ components:
                     type: string
                     description: type is an OPTIONAL hint applied to every element (see Scalar.type).
             description: List is a homogeneous list constant, the right arg of in/not_in.
+        jaeger.expression.v1.NestedReference:
+            required:
+                - level
+            type: object
+            properties:
+                level:
+                    enum:
+                        - event
+                        - link
+                    type: string
+                    description: level is event or link.
+            description: |-
+                NestedReference names the events or links a span nests, which is what `some`
+                 quantifies over (§5.5). Those are the only two levels a span holds many of, so
+                 no other level is accepted.
         jaeger.expression.v1.Scalar:
             type: object
             properties:

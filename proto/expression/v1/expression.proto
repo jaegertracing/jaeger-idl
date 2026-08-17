@@ -32,7 +32,7 @@ message Expression {
     one_of: [
       {schema: {required: ["attr"]}},
       {schema: {required: ["field"]}},
-      {schema: {required: ["collection"]}},
+      {schema: {required: ["nested"]}},
       {schema: {required: ["scalar"]}},
       {schema: {required: ["list"]}},
       {schema: {required: ["call"]}}
@@ -41,7 +41,7 @@ message Expression {
   oneof term {
     AttributeReference  attr       = 1;  // an entry in an attribute map, by key
     FieldReference      field      = 2;  // a built-in field of a level (§5.2)
-    CollectionReference collection = 3;  // a whole collection, for `some` (§5.5)
+    NestedReference     nested     = 3;  // the nested events or links, for `some` (§5.5)
     Scalar              scalar     = 4;  // a single constant
     List                list       = 5;  // a homogeneous list constant (right arg of in/not_in)
     Call                call       = 6;  // an operator/function over argument Expressions
@@ -82,10 +82,10 @@ message FieldReference {
   ];
 }
 
-// CollectionReference names a whole collection of events or links, which is what
-// `some` quantifies over (§5.5). Those are the only two levels a span holds many
-// of, so no other level is accepted.
-message CollectionReference {
+// NestedReference names the events or links a span nests, which is what `some`
+// quantifies over (§5.5). Those are the only two levels a span holds many of, so
+// no other level is accepted.
+message NestedReference {
   option (openapi.v3.schema) = {required: ["level"]};
   // level is event or link.
   string level = 1 [
@@ -128,7 +128,7 @@ message List {
 // Call applies operator/function `op` to argument Expressions. Arity follows the
 // operator: unary for not/exists, binary for the comparisons and in/not_in,
 // n-ary for and/or. `some` is an event/link existential; its args are
-// [CollectionReference, predicate] (§5.5).
+// [NestedReference, predicate] (§5.5).
 message Call {
   option (openapi.v3.schema) = {required: ["op"]};
   string op = 1 [

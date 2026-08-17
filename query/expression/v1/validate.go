@@ -118,7 +118,7 @@ func validatePredicateArgs(call *Call, quantified []Level) error {
 // events or links, so its first argument names that collection and its second is the
 // predicate evaluated against the bound element.
 func validateSome(call *Call, quantified []Level) error {
-	ref, ok := call.Args[0].(*CollectionRef)
+	ref, ok := call.Args[0].(*NestedRef)
 	if !ok || ref == nil {
 		return fmt.Errorf("operator %q takes a collection reference as its first argument, got %s", call.Op, termName(call.Args[0]))
 	}
@@ -178,7 +178,7 @@ func validateOperand(op Operator, arg Expression, quantified []Level) error {
 		return validateAttributeRef(term)
 	case *FieldRef:
 		return validateFieldRef(term)
-	case *CollectionRef:
+	case *NestedRef:
 		return errCollectionOutOfPlace()
 	case *Call:
 		return validateCall(term, quantified)
@@ -205,7 +205,7 @@ func validateReference(op Operator, arg Expression) error {
 		return validateAttributeRef(term)
 	case *FieldRef:
 		return validateFieldRef(term)
-	case *CollectionRef:
+	case *NestedRef:
 		return errCollectionOutOfPlace()
 	default:
 		return fmt.Errorf("operator %q takes a reference, got %s", op, termName(arg))
@@ -302,7 +302,7 @@ func termName(e Expression) string {
 		return "an attribute reference"
 	case *FieldRef:
 		return "a field reference"
-	case *CollectionRef:
+	case *NestedRef:
 		return "a collection reference"
 	case *AnyValue:
 		return "an untyped constant"

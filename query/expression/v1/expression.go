@@ -127,10 +127,10 @@ type FieldRef struct {
 	Level Level
 }
 
-// CollectionRef names a whole collection of a span's events or links, which is what OpSome
+// NestedRef names the events or links a span nests, which is what OpSome
 // quantifies over and the only place it may appear. Those two are the only levels a span
 // holds many of. See RFC 0005 §5.5.
-type CollectionRef struct {
+type NestedRef struct {
 	expressionTerm
 
 	Level Level

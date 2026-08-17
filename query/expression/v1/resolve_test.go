@@ -84,7 +84,7 @@ func TestResolveConstants(t *testing.T) {
 		{
 			name: "a predicate buried under a quantifier and a negation",
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelEvent},
+				&NestedRef{Level: LevelEvent},
 				&Call{Op: OpNot, Args: []Expression{
 					&Call{Op: OpGt, Args: []Expression{
 						&FieldRef{Name: EventFieldTimeSinceStart, Level: LevelEvent},
@@ -93,7 +93,7 @@ func TestResolveConstants(t *testing.T) {
 				}},
 			}},
 			expected: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelEvent},
+				&NestedRef{Level: LevelEvent},
 				&Call{Op: OpNot, Args: []Expression{
 					&Call{Op: OpGt, Args: []Expression{
 						&FieldRef{Name: EventFieldTimeSinceStart, Level: LevelEvent},

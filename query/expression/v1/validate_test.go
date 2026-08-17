@@ -103,7 +103,7 @@ func TestValidateFilter_Accepts(t *testing.T) {
 		{
 			name: "correlated match over the event collection",
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelEvent},
+				&NestedRef{Level: LevelEvent},
 				&Call{Op: OpAnd, Args: []Expression{
 					eq(&FieldRef{Name: EventFieldName, Level: LevelEvent}, &StringValue{Value: "exception"}),
 					&Call{Op: OpGt, Args: []Expression{
@@ -116,9 +116,9 @@ func TestValidateFilter_Accepts(t *testing.T) {
 		{
 			name: "a quantifier nested over the other collection",
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelEvent},
+				&NestedRef{Level: LevelEvent},
 				&Call{Op: OpSome, Args: []Expression{
-					&CollectionRef{Level: LevelLink},
+					&NestedRef{Level: LevelLink},
 					&Call{Op: OpExists, Args: []Expression{&FieldRef{Name: LinkFieldTraceID, Level: LevelLink}}},
 				}},
 			}},
@@ -127,11 +127,11 @@ func TestValidateFilter_Accepts(t *testing.T) {
 			name: "two quantifiers over the same level side by side",
 			filter: &Call{Op: OpAnd, Args: []Expression{
 				&Call{Op: OpSome, Args: []Expression{
-					&CollectionRef{Level: LevelEvent},
+					&NestedRef{Level: LevelEvent},
 					eq(&FieldRef{Name: EventFieldName, Level: LevelEvent}, &StringValue{Value: "exception"}),
 				}},
 				&Call{Op: OpSome, Args: []Expression{
-					&CollectionRef{Level: LevelEvent},
+					&NestedRef{Level: LevelEvent},
 					eq(&FieldRef{Name: EventFieldName, Level: LevelEvent}, &StringValue{Value: "retry"}),
 				}},
 			}},
@@ -321,7 +321,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			name:        "quantifier over the span",
 			expectedErr: `operator "some" quantifies over "event" or "link", got level "span"`,
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelSpan},
+				&NestedRef{Level: LevelSpan},
 				&Call{Op: OpExists, Args: []Expression{attr("a")}},
 			}},
 		},
@@ -329,7 +329,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			name:        "quantifier over a level-less collection",
 			expectedErr: `operator "some" quantifies over "event" or "link", got level ""`,
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{},
+				&NestedRef{},
 				&Call{Op: OpExists, Args: []Expression{attr("a")}},
 			}},
 		},
@@ -337,7 +337,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			name:        "quantifier over a constant predicate",
 			expectedErr: `operator "some" takes a predicate as its second argument, got an untyped constant`,
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelEvent},
+				&NestedRef{Level: LevelEvent},
 				&AnyValue{Value: "true"},
 			}},
 		},
@@ -345,14 +345,14 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			name:        "quantifier with an invalid predicate",
 			expectedErr: `unknown filter operator "matches"`,
 			filter: &Call{Op: OpSome, Args: []Expression{
-				&CollectionRef{Level: LevelLink},
+				&NestedRef{Level: LevelLink},
 				&Call{Op: "matches", Args: []Expression{attr("a")}},
 			}},
 		},
 		{
 			name:        "quantifier of one argument",
 			expectedErr: `operator "some" takes 2 argument(s), got 1`,
-			filter:      &Call{Op: OpSome, Args: []Expression{&CollectionRef{Level: LevelEvent}}},
+			filter:      &Call{Op: OpSome, Args: []Expression{&NestedRef{Level: LevelEvent}}},
 		},
 		{
 			name:        "existence of two references",
@@ -400,11 +400,11 @@ func TestValidateFilter_Rejects(t *testing.T) {
 	}
 }
 
-// TestValidateFilter_RejectsACollectionOutsideSome pins that the whole collection is readable
+// TestValidateFilter_RejectsANestedRefOutsideSome pins that the nested collection is readable
 // only by the quantifier. Anywhere else it is many values where one is expected.
-func TestValidateFilter_RejectsACollectionOutsideSome(t *testing.T) {
+func TestValidateFilter_RejectsANestedRefOutsideSome(t *testing.T) {
 	expected := `a collection reference is only the first argument of "some"`
-	collection := &CollectionRef{Level: LevelEvent}
+	collection := &NestedRef{Level: LevelEvent}
 
 	tests := map[string]*Call{
 		"compared against a constant": eq(collection, &AnyValue{Value: "1"}),
@@ -413,7 +413,7 @@ func TestValidateFilter_RejectsACollectionOutsideSome(t *testing.T) {
 			collection, &List{Values: []string{"1"}},
 		}},
 		"as the predicate of a quantifier": {Op: OpSome, Args: []Expression{
-			&CollectionRef{Level: LevelLink},
+			&NestedRef{Level: LevelLink},
 			&Call{Op: OpExists, Args: []Expression{collection}},
 		}},
 	}
@@ -430,12 +430,12 @@ func TestValidateFilter_RejectsACollectionOutsideSome(t *testing.T) {
 func TestValidateFilter_RejectsANestedSomeOverTheSameLevel(t *testing.T) {
 	inner := func(level Level) *Call {
 		return &Call{Op: OpSome, Args: []Expression{
-			&CollectionRef{Level: level},
+			&NestedRef{Level: level},
 			&Call{Op: OpExists, Args: []Expression{&FieldRef{Name: EventFieldName, Level: LevelEvent}}},
 		}}
 	}
 	directly := &Call{Op: OpSome, Args: []Expression{
-		&CollectionRef{Level: LevelEvent},
+		&NestedRef{Level: LevelEvent},
 		inner(LevelEvent),
 	}}
 	require.ErrorContains(t, ValidateFilter(directly),
@@ -443,7 +443,7 @@ func TestValidateFilter_RejectsANestedSomeOverTheSameLevel(t *testing.T) {
 
 	// However deep the inner one sits, and whichever level is doubled up.
 	deeper := &Call{Op: OpSome, Args: []Expression{
-		&CollectionRef{Level: LevelLink},
+		&NestedRef{Level: LevelLink},
 		&Call{Op: OpAnd, Args: []Expression{
 			eq(&FieldRef{Name: LinkFieldTraceID, Level: LevelLink}, &StringValue{Value: "abc"}),
 			&Call{Op: OpNot, Args: []Expression{inner(LevelLink)}},
@@ -557,7 +557,7 @@ func TestValidateFilter_CatchesAnInvalidNodeAtAnyDepth(t *testing.T) {
 		"as the subject of regex": {Op: OpRegex, Args: []Expression{bad, &StringValue{Value: "1"}}},
 		"under exists":            {Op: OpExists, Args: []Expression{bad}},
 		"inside a nested call":    eq(&Call{Op: OpExists, Args: []Expression{bad}}, &AnyValue{Value: "1"}),
-		"inside a some predicate": {Op: OpSome, Args: []Expression{&CollectionRef{Level: LevelEvent}, eq(bad, &AnyValue{Value: "1"})}},
+		"inside a some predicate": {Op: OpSome, Args: []Expression{&NestedRef{Level: LevelEvent}, eq(bad, &AnyValue{Value: "1"})}},
 		"two conjunctions deep":   {Op: OpAnd, Args: []Expression{good, &Call{Op: OpAnd, Args: []Expression{good, eq(bad, &AnyValue{Value: "1"})}}}},
 	}
 	for name, filter := range tests {
@@ -583,7 +583,7 @@ func TestValidateFilter_NeverPanics(t *testing.T) {
 		"a nil argument":                   {Op: OpEq, Args: []Expression{nil, nil}},
 		"a nil attribute reference":        {Op: OpEq, Args: []Expression{(*AttributeRef)(nil), &AnyValue{Value: "1"}}},
 		"a nil field reference":            {Op: OpEq, Args: []Expression{(*FieldRef)(nil), &AnyValue{Value: "1"}}},
-		"a nil collection reference":       {Op: OpSome, Args: []Expression{(*CollectionRef)(nil), &Call{Op: OpExists}}},
+		"a nil collection reference":       {Op: OpSome, Args: []Expression{(*NestedRef)(nil), &Call{Op: OpExists}}},
 		"a nil constant":                   {Op: OpEq, Args: []Expression{attr("a"), (*AnyValue)(nil)}},
 		"a nil list":                       {Op: OpIn, Args: []Expression{attr("a"), (*List)(nil)}},
 		"a nil nested call":                {Op: OpAnd, Args: []Expression{(*Call)(nil), (*Call)(nil)}},
