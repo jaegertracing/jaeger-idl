@@ -107,7 +107,6 @@ func (*expressionTerm) isExpression() {}
 type AttributeRef struct {
 	expressionTerm
 
-	// Key is the attribute key, and every attribute reference has one.
 	Key string
 	// Level is empty for the unqualified span-or-resource search, or one of the five levels.
 	Level Level

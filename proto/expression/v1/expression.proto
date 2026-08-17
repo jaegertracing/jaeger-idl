@@ -54,8 +54,8 @@ message AttributeReference {
 
   string key = 1;
 
-  // level says which attribute map to read; optional, and the only reference level
-  // that is. Empty means the unqualified span-or-resource search (§5.1).
+  // level says which attribute map to read. Empty means the unqualified
+  // span-or-resource search (§5.1).
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
