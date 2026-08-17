@@ -100,10 +100,11 @@ message NestedReference {
   ];
 }
 
-// Scalar is a single constant value. A duration ("2s") and a timestamp
-// (RFC 3339) have no `type` spelling of their own: they travel as an unhinted
-// constant, and the receiving side resolves them from the built-in field they are
-// compared against (§5.4).
+// Scalar is a single constant value with an optional type hint.
+//
+// A duration ("2s") and a timestamp (RFC 3339) have no `type` spelling of their
+// own: they travel as an unhinted constant, and the receiving side resolves them
+// from the built-in field they are compared against (§5.4).
 message Scalar {
   option (openapi.v3.schema) = {required: ["value"]};
 

@@ -174,18 +174,20 @@ type BoolValue struct {
 	Value bool
 }
 
-// DurationValue is a length of time, which is what a duration field is compared against. The
-// wire has no type spelling for it — it travels as an unhinted constant in Go duration syntax,
-// "2s" or "50us" — so this node is reached by resolving that constant against the field
-// (see ResolveConstants).
+// DurationValue is a length of time, which is what a duration field is compared against.
+//
+// The wire has no type spelling for it. It travels as an unhinted constant in Go duration
+// syntax, "2s" or "50us", so this node is reached by resolving that constant against the field
+// it is compared to (see ResolveConstants).
 type DurationValue struct {
 	expressionTerm
 
 	Value time.Duration
 }
 
-// TimestampValue is an instant, which is what a timestamp field is compared against. Like
-// DurationValue it has no wire spelling of its own and arrives as an unhinted RFC 3339
+// TimestampValue is an instant, which is what a timestamp field is compared against.
+//
+// Like DurationValue it has no wire spelling of its own, and arrives as an unhinted RFC 3339
 // constant.
 type TimestampValue struct {
 	expressionTerm

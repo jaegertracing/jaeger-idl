@@ -836,10 +836,11 @@ components:
                     type: string
                     description: type is OPTIONAL; empty means any type, a set type is authoritative (§5.4).
             description: |-
-                Scalar is a single constant value. A duration ("2s") and a timestamp
-                 (RFC 3339) have no `type` spelling of their own: they travel as an unhinted
-                 constant, and the receiving side resolves them from the built-in field they are
-                 compared against (§5.4).
+                Scalar is a single constant value with an optional type hint.
+
+                 A duration ("2s") and a timestamp (RFC 3339) have no `type` spelling of their
+                 own: they travel as an unhinted constant, and the receiving side resolves them
+                 from the built-in field they are compared against (§5.4).
         opentelemetry.proto.common.v1.AnyValue:
             type: object
             properties:
