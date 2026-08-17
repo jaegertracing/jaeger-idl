@@ -244,6 +244,11 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			filter:      &Call{Op: OpIn, Args: []Expression{attr("a"), &AnyValue{Value: "1"}}},
 		},
 		{
+			name:        "membership in an empty list",
+			expectedErr: `operator "in" takes a list with at least one element`,
+			filter:      &Call{Op: OpIn, Args: []Expression{attr("a"), &List{}}},
+		},
+		{
 			name:        "membership of a constant subject",
 			expectedErr: `operator "in" takes a reference, got a string constant`,
 			filter:      &Call{Op: OpIn, Args: []Expression{&StringValue{Value: "a"}, &List{Values: []string{"1"}}}},

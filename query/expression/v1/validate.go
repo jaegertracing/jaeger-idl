@@ -63,6 +63,11 @@ func validateCall(call *Call, quantified []Level) error {
 		if !ok || list == nil {
 			return fmt.Errorf("operator %q takes a list as its second argument, got %s", call.Op, termName(call.Args[1]))
 		}
+		if len(list.Values) == 0 {
+			// Membership in nothing matches nothing, so the query asks for an empty result in a
+			// way that reads like an oversight. Refusing says so.
+			return fmt.Errorf("operator %q takes a list with at least one element", call.Op)
+		}
 		return validateValueType(list.Type)
 	case OpRegex:
 		if err := wantArgs(call, 2); err != nil {

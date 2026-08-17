@@ -690,11 +690,12 @@ components:
                          that is. Empty means the unqualified span-or-resource search (§5.1).
             description: |-
                 AttributeReference names an entry in one of the span's attribute maps. The arm
-                 is spelled `attr` rather than `attribute` because a reference appears in every
-                 predicate and the shorter key keeps the JSON readable (§6.2).
+                 is spelled `attr` rather than `attribute` because a reference appears in almost
+                 every Call and the shorter key keeps the JSON readable (§6.2).
         jaeger.expression.v1.Call:
             required:
                 - op
+                - args
             type: object
             properties:
                 op:
@@ -714,15 +715,17 @@ components:
                         - not_in
                         - some
                     type: string
+                    description: op is the operator or function applied to args; required.
                 args:
                     type: array
                     items:
                         $ref: '#/components/schemas/jaeger.expression.v1.Expression'
+                    description: args are the operands, and how many is a property of op; required.
             description: |-
                 Call applies operator/function `op` to argument Expressions. Arity follows the
                  operator: unary for not/exists, binary for the comparisons and in/not_in,
-                 n-ary for and/or. `some` is an event/link existential; its args are
-                 [NestedReference, predicate] (§5.5).
+                 n-ary for and/or. `some` is an event/link existential; its args are a
+                 NestedReference and the Call evaluated against each element (§5.5).
         jaeger.expression.v1.Expression:
             type: object
             oneOf:
@@ -778,12 +781,17 @@ components:
                 FieldReference names a built-in field — a value the data model defines
                  directly rather than an attribute-map entry (§5.2).
         jaeger.expression.v1.List:
+            required:
+                - values
             type: object
             properties:
                 values:
                     type: array
                     items:
                         type: string
+                    description: |-
+                        values are the elements; required, though a validator refuses an empty list —
+                         membership in nothing matches nothing.
                 type:
                     enum:
                         - string
@@ -809,10 +817,16 @@ components:
                  quantifies over (§5.5). Those are the only two levels a span holds many of, so
                  no other level is accepted.
         jaeger.expression.v1.Scalar:
+            required:
+                - value
             type: object
             properties:
                 value:
                     type: string
+                    description: |-
+                        value is the constant's spelling; required. It is a plain string so that a
+                         duration ("2s") and a timestamp (RFC 3339) can travel with the unit they are
+                         written in (§5.4).
                 type:
                     enum:
                         - string
