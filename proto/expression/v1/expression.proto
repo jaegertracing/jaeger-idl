@@ -52,7 +52,8 @@ message Expression {
 // is spelled `attr` rather than `attribute` because a reference appears in every
 // predicate and the shorter key keeps the JSON readable (§6.2).
 message AttributeReference {
-  // key is the attribute key; required.
+  option (openapi.v3.schema) = {required: ["key"]};
+  // key is the attribute key.
   string key = 1;
 
   // level says which attribute map to read. Empty means the unqualified
@@ -68,11 +69,11 @@ message AttributeReference {
 // FieldReference names a built-in field — a value the data model defines
 // directly rather than an attribute-map entry (§5.2).
 message FieldReference {
-  // name is one of the built-in fields of `level`; required.
+  option (openapi.v3.schema) = {required: ["name", "level"]};
+  // name is one of the built-in fields of `level`.
   string name = 1;
 
-  // level is required: a built-in field belongs to a level by definition, so it
-  // has no unqualified form.
+  // level has no empty form here: a built-in field belongs to a level by definition.
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
@@ -85,7 +86,8 @@ message FieldReference {
 // `some` quantifies over (§5.5). Those are the only two levels a span holds many
 // of, so no other level is accepted.
 message CollectionReference {
-  // level is event or link; required.
+  option (openapi.v3.schema) = {required: ["level"]};
+  // level is event or link.
   string level = 1 [
     (openapi.v3.property) = {
       type: "string",

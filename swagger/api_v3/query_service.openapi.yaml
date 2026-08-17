@@ -670,11 +670,13 @@ components:
                 TraceSummary contains lightweight summary information about a trace,
                  suitable for display in search result lists.
         jaeger.expression.v1.AttributeReference:
+            required:
+                - key
             type: object
             properties:
                 key:
                     type: string
-                    description: key is the attribute key; required.
+                    description: key is the attribute key.
                 level:
                     enum:
                         - span
@@ -722,6 +724,8 @@ components:
                  n-ary for and/or. `some` is an event/link existential; its args are
                  [CollectionReference, predicate] (§5.5).
         jaeger.expression.v1.CollectionReference:
+            required:
+                - level
             type: object
             properties:
                 level:
@@ -729,7 +733,7 @@ components:
                         - event
                         - link
                     type: string
-                    description: level is event or link; required.
+                    description: level is event or link.
             description: |-
                 CollectionReference names a whole collection of events or links, which is what
                  `some` quantifies over (§5.5). Those are the only two levels a span holds many
@@ -766,11 +770,14 @@ components:
                 Expression is a node in the filter AST: an atom (one of the three references,
                  or a Scalar or List constant) or a Call over argument Expressions.
         jaeger.expression.v1.FieldReference:
+            required:
+                - name
+                - level
             type: object
             properties:
                 name:
                     type: string
-                    description: name is one of the built-in fields of `level`; required.
+                    description: name is one of the built-in fields of `level`.
                 level:
                     enum:
                         - span
@@ -779,9 +786,7 @@ components:
                         - event
                         - link
                     type: string
-                    description: |-
-                        level is required: a built-in field belongs to a level by definition, so it
-                         has no unqualified form.
+                    description: 'level has no empty form here: a built-in field belongs to a level by definition.'
             description: |-
                 FieldReference names a built-in field — a value the data model defines
                  directly rather than an attribute-map entry (§5.2).
