@@ -52,6 +52,31 @@ func TestValidateFilter_Accepts(t *testing.T) {
 			}},
 		},
 		{
+			name: "the same attribute key at two levels",
+			filter: eq(
+				&AttributeRef{Key: "enduser.id", Level: LevelSpan},
+				&AttributeRef{Key: "enduser.id", Level: LevelResource},
+			),
+		},
+		{
+			name: "two attributes ordered against each other",
+			filter: &Call{Op: OpGt, Args: []Expression{
+				&AttributeRef{Key: "queue.depth.after"},
+				&AttributeRef{Key: "queue.depth.before"},
+			}},
+		},
+		{
+			name: "two built-in fields holding the same kind of value",
+			filter: &Call{Op: OpLt, Args: []Expression{
+				&FieldRef{Name: SpanFieldStartTime, Level: LevelSpan},
+				&FieldRef{Name: SpanFieldEndTime, Level: LevelSpan},
+			}},
+		},
+		{
+			name:   "two constants, which asks nothing about the span but is still a comparison",
+			filter: eq(&IntValue{Value: 1}, &IntValue{Value: 1}),
+		},
+		{
 			name: "conjunction of two predicates",
 			filter: &Call{Op: OpAnd, Args: []Expression{
 				eq(attr("a"), &AnyValue{Value: "1"}),
@@ -214,9 +239,9 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			filter:      &Call{Op: OpEq, Args: []Expression{attr("a")}},
 		},
 		{
-			name:        "equality of two constants",
-			expectedErr: `operator "eq" compares a reference against a constant, got two constants`,
-			filter:      eq(&AnyValue{Value: "1"}, &AnyValue{Value: "1"}),
+			name:        "equality of constants of different kinds",
+			expectedErr: `operator "eq" compares an integer constant against a string constant, which hold different kinds of value`,
+			filter:      eq(&IntValue{Value: 1}, &StringValue{Value: "1"}),
 		},
 		{
 			name:        "existence of a constant",
@@ -286,7 +311,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "an ordered comparison of a word-valued field",
-			expectedErr: `operator "gt" has no ordering for a field reference`,
+			expectedErr: `operator "gt" has no ordering for span.kind`,
 			filter:      &Call{Op: OpGt, Args: []Expression{&FieldRef{Name: SpanFieldKind, Level: LevelSpan}, &AnyValue{Value: "server"}}},
 		},
 		{
@@ -296,7 +321,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "a duration field against a number",
-			expectedErr: `have no common ordering`,
+			expectedErr: `operator "gt" compares span.duration against an integer constant, which hold different kinds of value`,
 			filter:      &Call{Op: OpGt, Args: []Expression{&FieldRef{Name: SpanFieldDuration, Level: LevelSpan}, &IntValue{Value: 42}}},
 		},
 		{
@@ -306,16 +331,16 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "an ordered comparison against text",
-			expectedErr: `compares a field reference against a string constant, which have no common ordering`,
+			expectedErr: `operator "gt" compares span.duration against a string constant, which hold different kinds of value`,
 			filter: &Call{Op: OpGt, Args: []Expression{
 				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
 				&StringValue{Value: "2s"},
 			}},
 		},
 		{
-			name:        "an ordered comparison of two constants",
-			expectedErr: `operator "gte" compares a reference against a constant, got two constants`,
-			filter:      &Call{Op: OpGte, Args: []Expression{&IntValue{Value: 1}, &IntValue{Value: 2}}},
+			name:        "an ordered comparison of constants of different kinds",
+			expectedErr: `operator "gte" compares an integer constant against a boolean constant, which hold different kinds of value`,
+			filter:      &Call{Op: OpGte, Args: []Expression{&IntValue{Value: 1}, &BoolValue{Value: true}}},
 		},
 		{
 			name:        "an ordered comparison against a boolean",
@@ -323,25 +348,48 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			filter:      &Call{Op: OpLte, Args: []Expression{attr("a"), &BoolValue{Value: true}}},
 		},
 		{
-			name:        "a comparison of two built-in fields",
-			expectedErr: `operator "eq" compares a reference against a constant, and this version does not define what comparing two references means`,
+			name:        "two built-in fields holding different kinds of value",
+			expectedErr: `operator "eq" compares span.duration against span.name, which hold different kinds of value`,
 			filter: &Call{Op: OpEq, Args: []Expression{
 				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
 				&FieldRef{Name: SpanFieldName, Level: LevelSpan},
 			}},
 		},
 		{
-			name:        "an ordered comparison of two built-in fields",
-			expectedErr: `operator "gt" compares a reference against a constant, and this version does not define what comparing two references means`,
+			name:        "an instant ordered against a duration",
+			expectedErr: `operator "gt" compares span.startTime against span.duration, which hold different kinds of value`,
 			filter: &Call{Op: OpGt, Args: []Expression{
 				&FieldRef{Name: SpanFieldStartTime, Level: LevelSpan},
-				&FieldRef{Name: SpanFieldEndTime, Level: LevelSpan},
+				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
 			}},
 		},
 		{
-			name:        "a comparison of two attributes",
-			expectedErr: `operator "eq" compares a reference against a constant, and this version does not define what comparing two references means`,
-			filter:      &Call{Op: OpEq, Args: []Expression{attr("a"), attr("b")}},
+			name:        "an integer against a duration field",
+			expectedErr: `operator "eq" compares span.duration against an integer constant, which hold different kinds of value`,
+			filter: &Call{Op: OpEq, Args: []Expression{
+				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan}, &IntValue{Value: 2},
+			}},
+		},
+		{
+			name:        "a duration against a text field",
+			expectedErr: `operator "eq" compares span.name against a duration constant, which hold different kinds of value`,
+			filter: &Call{Op: OpEq, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &DurationValue{Value: time.Second},
+			}},
+		},
+		{
+			name:        "a number against a field holding one of a set of words",
+			expectedErr: `operator "eq" compares span.kind against an integer constant, which hold different kinds of value`,
+			filter: &Call{Op: OpEq, Args: []Expression{
+				&FieldRef{Name: SpanFieldKind, Level: LevelSpan}, &IntValue{Value: 1},
+			}},
+		},
+		{
+			name:        "a boolean against a text field",
+			expectedErr: `operator "eq" compares span.name against a boolean constant, which hold different kinds of value`,
+			filter: &Call{Op: OpEq, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &BoolValue{Value: true},
+			}},
 		},
 		{
 			name:        "a duration constant compared against an attribute",

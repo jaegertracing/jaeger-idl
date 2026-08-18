@@ -289,7 +289,8 @@ func TestResolveConstants_ChecksEnumSpellings(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	// Declaring the constant a string does not get it past the vocabulary.
+	// Declaring the constant a string does not get it past the vocabulary. Validation has nothing
+	// to say about it: span.status holds text and so does the constant.
 	_, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{status, &StringValue{Value: "banana"}}})
 	require.ErrorContains(t, err, `cannot compare span.status against "banana"`)
 	require.ErrorContains(t, err, "not one of unset, ok, error")
@@ -297,60 +298,6 @@ func TestResolveConstants_ChecksEnumSpellings(t *testing.T) {
 	got, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{kind, &StringValue{Value: "client"}}})
 	require.NoError(t, err)
 	assert.Equal(t, &StringValue{Value: "client"}, got.Args[1])
-}
-
-// TestResolveConstants_ChecksTypedConstants pins that declaring a constant's type does not excuse
-// it from being one the field can hold: an `int` where a duration belongs is a question the field
-// cannot answer, however it was spelled.
-func TestResolveConstants_ChecksTypedConstants(t *testing.T) {
-	tests := []struct {
-		name        string
-		filter      *Call
-		expectedErr string
-	}{
-		{
-			name: "an int against a duration field",
-			filter: &Call{Op: OpGt, Args: []Expression{
-				spanField(SpanFieldDuration), &IntValue{Value: 2},
-			}},
-			expectedErr: "cannot compare span.duration against an integer constant: the field holds duration",
-		},
-		{
-			name: "a duration against a text field",
-			filter: &Call{Op: OpEq, Args: []Expression{
-				spanField(SpanFieldName), &DurationValue{Value: time.Second},
-			}},
-			expectedErr: "cannot compare span.name against a duration constant: the field holds string",
-		},
-		{
-			name: "a number against a field that holds one of a set of words",
-			filter: &Call{Op: OpEq, Args: []Expression{
-				spanField(SpanFieldKind), &IntValue{Value: 1},
-			}},
-			expectedErr: "not one of unspecified, internal, server, client, producer, consumer",
-		},
-		{
-			name: "a boolean against a text field",
-			filter: &Call{Op: OpEq, Args: []Expression{
-				spanField(SpanFieldName), &BoolValue{Value: true},
-			}},
-			expectedErr: "cannot compare span.name against a boolean constant: the field holds string",
-		},
-		{
-			name: "a timestamp against a duration field",
-			filter: &Call{Op: OpGt, Args: []Expression{
-				spanField(SpanFieldDuration), &TimestampValue{Value: time.Unix(0, 0)},
-			}},
-			expectedErr: "cannot compare span.duration against a timestamp constant: the field holds duration",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			resolved, err := ResolveConstants(test.filter)
-			require.ErrorContains(t, err, test.expectedErr)
-			assert.Nil(t, resolved)
-		})
-	}
 }
 
 // TestResolveConstants_AcceptsCompatibleTypedConstants is the other half: a constant whose

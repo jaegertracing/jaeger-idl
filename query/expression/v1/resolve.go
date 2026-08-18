@@ -84,14 +84,15 @@ func resolveComparison(args []Expression) error {
 			// resolve against and nothing useful to say about it here.
 			continue
 		}
-		value, err := readOperand(field.Type, args[other])
+		spelling, ok := spellingToRead(field.Type, args[other])
+		if !ok {
+			continue
+		}
+		value, err := readConstant(field.Type, spelling)
 		if err != nil {
-			return fmt.Errorf("cannot compare %s.%s against %s: %w",
-				ref.Level, ref.Name, describeOperand(args[other]), err)
+			return fmt.Errorf("cannot compare %s.%s against %q: %w", ref.Level, ref.Name, spelling, err)
 		}
-		if value != nil {
-			args[other] = value
-		}
+		args[other] = value
 	}
 	return nil
 }
@@ -100,7 +101,7 @@ func resolveComparison(args []Expression) error {
 // there instead, and swapping the operands asks the same question as long as an ordered operator
 // turns around with them.
 func referenceFirst(op Operator, args []Expression) (Operator, []Expression) {
-	if !isConstant(args[0]) {
+	if !isConstant(args[0]) || isConstant(args[1]) {
 		return op, args
 	}
 	return turnedAround(op), []Expression{args[1], args[0]}
@@ -186,44 +187,20 @@ func readValue(t ValueType, raw string) error {
 	return err
 }
 
-// describeOperand names an operand in an error the way a caller wrote it: the spelling it sent
-// when there is one, since that is what they have to change, and the term's name otherwise.
-func describeOperand(e Expression) string {
-	switch value := e.(type) {
+// spellingToRead reads the spelling of a constant that still has to be read as a field's type: an
+// untyped one always, and a string beside a field holding one of a closed set of words, since it
+// has to be one of those words however it was spelled. Every other constant already carries its
+// value, and validation has refused the ones the field cannot hold.
+func spellingToRead(t FieldType, operand Expression) (string, bool) {
+	switch value := operand.(type) {
 	case *AnyValue:
-		return strconv.Quote(value.Value)
+		return value.Value, true
 	case *StringValue:
-		return strconv.Quote(value.Value)
-	}
-	return termName(e)
-}
-
-// readOperand reads the constant a field is compared against. An untyped one is rewritten as the
-// field's type. One that arrives already typed is checked against the field instead of trusted:
-// a caller who says `int` where the field holds a duration has asked something the field cannot
-// answer, and a word-valued field takes one of its words however the word was spelled.
-//
-// It returns nil when there is nothing to rewrite, which covers the operands that are not
-// constants at all — the other reference in a field-to-field comparison, say.
-func readOperand(t FieldType, operand Expression) (Expression, error) {
-	if raw, ok := operand.(*AnyValue); ok {
-		return readConstant(t, raw.Value)
-	}
-	if !isConstant(operand) {
-		return nil, nil
-	}
-	if t == FieldTypeSpanKind || t == FieldTypeSpanStatus {
-		// A constant of any other type is already outside the set of words.
-		text, ok := operand.(*StringValue)
-		if !ok {
-			return nil, fmt.Errorf("not one of %s", strings.Join(wordsOf(t), ", "))
+		if t == FieldTypeSpanKind || t == FieldTypeSpanStatus {
+			return value.Value, true
 		}
-		return readWord(text.Value, wordsOf(t))
 	}
-	if domainOf(operand) != domainOfFieldType(t) {
-		return nil, fmt.Errorf("the field holds %s", t)
-	}
-	return nil, nil
+	return "", false
 }
 
 // readConstant reads a constant's spelling as the type a field holds. The two that measure time

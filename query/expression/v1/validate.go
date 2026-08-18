@@ -148,42 +148,43 @@ func validateSome(call *Call, quantified []Level) error {
 	return validateCall(predicate, append(slices.Clone(quantified), ref.Level))
 }
 
-// validateComparison checks the two operands of a comparison: one names a value on the span and
-// the other supplies the constant to compare it against, in either order. Two constants ask
-// nothing about the span, and what comparing two references means — a duration against a name,
-// say — is a question this version does not answer, so neither is accepted.
+// validateComparison checks the two operands of a comparison. Each names a value on the span or
+// supplies a constant, and the two have to hold the same kind of value: a duration against a name
+// is a comparison no backend can answer, so it is refused here rather than lowered. Whether either
+// operand is a reference does not come into it — `span.startTime < span.endTime` compares two
+// instants, and two attributes hold whatever storage wrote, which is compatible with anything.
 func validateComparison(call *Call, quantified []Level) error {
 	for _, arg := range call.Args {
 		if err := validateOperand(call.Op, arg, quantified); err != nil {
 			return err
 		}
 	}
-	if isConstant(call.Args[0]) && isConstant(call.Args[1]) {
-		return fmt.Errorf("operator %q compares a reference against a constant, got two constants", call.Op)
+	if err := validateTimeConstant(call.Op, call.Args); err != nil {
+		return err
 	}
-	if !isConstant(call.Args[0]) && !isConstant(call.Args[1]) {
-		return fmt.Errorf("operator %q compares a reference against a constant, and this version does not define what comparing two references means", call.Op)
+	left, right := domainOfOperand(call.Args[0]), domainOfOperand(call.Args[1])
+	if left != domainUnknown && right != domainUnknown && left != right {
+		return fmt.Errorf("operator %q compares %s against %s, which hold different kinds of value",
+			call.Op, describe(call.Args[0]), describe(call.Args[1]))
 	}
-	reference, constant := call.Args[0], call.Args[1]
-	if isConstant(reference) {
-		reference, constant = constant, reference
-	}
-	return validateTimeConstant(call.Op, reference, constant)
+	return nil
 }
 
 // validateTimeConstant refuses a duration or an instant compared against an attribute. The wire
 // spells neither (§5.4), so one survives only where a built-in field's declared type rebuilds it.
 // An attribute declares nothing, so the constant would come back untyped and ask the backend a
 // different question; comparing the attribute against the spelling asks that question directly.
-func validateTimeConstant(op Operator, reference, constant Expression) error {
-	if _, ok := reference.(*AttributeRef); !ok {
-		return nil
-	}
-	switch constant.(type) {
-	case *DurationValue:
-		return errNoWireSpelling(op, constant, "duration")
-	case *TimestampValue:
-		return errNoWireSpelling(op, constant, "timestamp")
+func validateTimeConstant(op Operator, args []Expression) error {
+	for i, arg := range args {
+		if _, ok := arg.(*AttributeRef); !ok {
+			continue
+		}
+		switch args[1-i].(type) {
+		case *DurationValue:
+			return errNoWireSpelling(op, args[1-i], "duration")
+		case *TimestampValue:
+			return errNoWireSpelling(op, args[1-i], "timestamp")
+		}
 	}
 	return nil
 }
@@ -193,24 +194,17 @@ func errNoWireSpelling(op Operator, constant Expression, kind string) error {
 		op, termName(constant), kind)
 }
 
-// validateOrderedComparison checks an ordered comparison. Its operands have to be comparable in
-// one domain — numbers with numbers, durations with durations, instants with instants, text with
-// text — because there is no defensible answer to a duration against a bare number. Text is
-// ordered lexicographically, which is a real query: `span.name > "m"` asks for the names that
-// sort after it.
+// validateOrderedComparison adds the one question ordering asks beyond a comparison: whether the
+// values have an order to be compared within. Text does, lexicographically, which is a real query
+// — `span.name > "m"` asks for the names that sort after it.
 func validateOrderedComparison(call *Call, quantified []Level) error {
 	if err := validateComparison(call, quantified); err != nil {
 		return err
 	}
 	for _, arg := range call.Args {
 		if !orderable(arg) {
-			return fmt.Errorf("operator %q has no ordering for %s", call.Op, termName(arg))
+			return fmt.Errorf("operator %q has no ordering for %s", call.Op, describe(arg))
 		}
-	}
-	left, right := domainOfOperand(call.Args[0]), domainOfOperand(call.Args[1])
-	if left != domainUnknown && right != domainUnknown && left != right {
-		return fmt.Errorf("operator %q compares %s against %s, which have no common ordering",
-			call.Op, termName(call.Args[0]), termName(call.Args[1]))
 	}
 	return nil
 }
@@ -467,6 +461,15 @@ func patternText(e Expression) (string, bool) {
 		return value.Value, true
 	}
 	return "", false
+}
+
+// describe names an operand the way a caller wrote it, so an error about two operands points at
+// which ones. A built-in field is worth naming exactly; anything else is named by its kind.
+func describe(e Expression) string {
+	if ref, ok := e.(*FieldRef); ok && ref != nil {
+		return fmt.Sprintf("%s.%s", ref.Level, ref.Name)
+	}
+	return termName(e)
 }
 
 // termName names the kind of a term for an error message.
