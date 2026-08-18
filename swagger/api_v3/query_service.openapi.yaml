@@ -171,6 +171,12 @@ paths:
                      This field is optional.
                   schema:
                     type: boolean
+                - name: query.filter
+                  in: query
+                  description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
+                  schema:
+                    type: string
+                    example: '{"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}'
             responses:
                 "200":
                     description: OK
@@ -295,6 +301,12 @@ paths:
                      This field is optional.
                   schema:
                     type: boolean
+                - name: query.filter
+                  in: query
+                  description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
+                  schema:
+                    type: string
+                    example: '{"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}'
             responses:
                 "200":
                     description: OK
@@ -581,6 +593,22 @@ components:
                          The trace will be returned exactly as stored.
 
                          This field is optional.
+                filter:
+                    allOf:
+                        - $ref: '#/components/schemas/jaeger.expression.v1.Call'
+                    description: |-
+                        filter is the structured query filter: a single boolean-valued Call,
+                         mutually exclusive with the legacy predicate fields (service_name,
+                         operation_name, duration_min/max, attributes).
+
+                         Experimental. In Jaeger, the query service admits this field only when the
+                         `jaeger.query.structuredFilters` feature gate is enabled (Alpha, off by default);
+                         with the gate off a request carrying it is refused. The field is never ignored,
+                         because dropping a predicate would answer with more traces than were asked for.
+
+                         Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
+                         it is the structured Call. For example, the filter http.status_code == 500 is
+                         {"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}
             description: |-
                 Query parameters to find traces.
 
@@ -641,6 +669,180 @@ components:
             description: |-
                 TraceSummary contains lightweight summary information about a trace,
                  suitable for display in search result lists.
+        jaeger.expression.v1.AttributeReference:
+            required:
+                - key
+            type: object
+            properties:
+                key:
+                    type: string
+                level:
+                    enum:
+                        - ''
+                        - span
+                        - resource
+                        - scope
+                        - event
+                        - link
+                    type: string
+                    description: |-
+                        level says which attribute map to read. Empty means the unqualified
+                         span-or-resource search (§5.1), so the empty value is one of the enum's own.
+            description: AttributeReference names an entry in one of the span's attribute maps.
+        jaeger.expression.v1.Call:
+            required:
+                - op
+                - args
+            type: object
+            properties:
+                op:
+                    enum:
+                        - and
+                        - or
+                        - not
+                        - eq
+                        - ne
+                        - gt
+                        - lt
+                        - gte
+                        - lte
+                        - regex
+                        - exists
+                        - in
+                        - not_in
+                        - some
+                    type: string
+                args:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/jaeger.expression.v1.Expression'
+                    description: args are the operands, and how many an operator takes is a property of op.
+            description: |-
+                Call applies operator/function `op` to argument Expressions. Arity follows the
+                 operator: unary for not/exists, binary for the comparisons and in/not_in,
+                 n-ary for and/or. `some` is an event/link existential; its args are a
+                 NestedReference and the Call evaluated against each element (§5.5).
+        jaeger.expression.v1.Expression:
+            type: object
+            oneOf:
+                - required:
+                    - attr
+                - required:
+                    - field
+                - required:
+                    - nested
+                - required:
+                    - scalar
+                - required:
+                    - list
+                - required:
+                    - call
+            properties:
+                attr:
+                    $ref: '#/components/schemas/jaeger.expression.v1.AttributeReference'
+                field:
+                    $ref: '#/components/schemas/jaeger.expression.v1.FieldReference'
+                nested:
+                    $ref: '#/components/schemas/jaeger.expression.v1.NestedReference'
+                scalar:
+                    $ref: '#/components/schemas/jaeger.expression.v1.Scalar'
+                list:
+                    $ref: '#/components/schemas/jaeger.expression.v1.List'
+                call:
+                    $ref: '#/components/schemas/jaeger.expression.v1.Call'
+            description: |-
+                Expression is a node in the filter AST: an atom (one of the three references,
+                 or a Scalar or List constant) or a Call over argument Expressions.
+        jaeger.expression.v1.FieldReference:
+            required:
+                - name
+                - level
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: name of a built-in field of `level`, not an arbitrary key (§5.2).
+                level:
+                    enum:
+                        - span
+                        - resource
+                        - scope
+                        - event
+                        - link
+                    type: string
+            description: |-
+                FieldReference names a built-in field — a value the data model defines
+                 directly rather than an attribute-map entry (§5.2).
+        jaeger.expression.v1.List:
+            required:
+                - values
+            type: object
+            properties:
+                values:
+                    minItems: 1
+                    type: array
+                    items:
+                        type: string
+                    description: 'values must have at least one element: membership in nothing matches nothing.'
+                type:
+                    enum:
+                        - ''
+                        - string
+                        - int
+                        - double
+                        - bool
+                    type: string
+                    description: |-
+                        type is the type every element is read as, and a list matches only values of that type. It is
+                         OPTIONAL only where the field opposite it declares one (see Scalar.type) — a condition on the
+                         enclosing call that this schema cannot state, which is why the empty value is listed here and
+                         the validator checks the rest.
+            description: |-
+                List is a homogeneous list constant, the right arg of in/not_in. Every element is read as
+                 one type, and that type is always known: either type declares it, or the built-in field the
+                 list is compared against supplies it. A list compared against an attribute must declare it,
+                 since an attribute declares nothing itself. A list is not a legacy predicate — the legacy
+                 fields have no form for membership — so nothing has to accept an element type nobody stated.
+        jaeger.expression.v1.NestedReference:
+            required:
+                - level
+            type: object
+            properties:
+                level:
+                    enum:
+                        - event
+                        - link
+                    type: string
+            description: |-
+                NestedReference names a span's events or links collection, which is what `some`
+                 quantifies over (§5.5).
+        jaeger.expression.v1.Scalar:
+            required:
+                - value
+            type: object
+            properties:
+                value:
+                    type: string
+                    description: |-
+                        value is the constant as text, so a duration or a timestamp travels with the
+                         unit it is written in (§5.4).
+                type:
+                    enum:
+                        - ''
+                        - string
+                        - int
+                        - double
+                        - bool
+                    type: string
+                    description: |-
+                        type is OPTIONAL; empty means any type, a set type is authoritative (§5.4), so the empty
+                         value is one of the enum's own.
+            description: |-
+                Scalar is a single constant value with an optional type hint.
+
+                 A duration ("2s") and a timestamp (RFC 3339) have no `type` of their
+                 own: they travel as an unhinted constant, and the receiving side resolves them
+                 from the built-in field they are compared against (§5.4).
         opentelemetry.proto.common.v1.AnyValue:
             type: object
             properties:

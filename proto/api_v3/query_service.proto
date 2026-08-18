@@ -22,6 +22,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
 import "gnostic/openapiv3/annotations.proto";
+import "expression/v1/expression.proto";
 
 option go_package = "api_v3";
 option java_package = "io.jaegertracing.api_v3";
@@ -110,6 +111,20 @@ message TraceQueryParameters {
   //
   // This field is optional.
   bool raw_traces = 9;
+
+  // filter is the structured query filter: a single boolean-valued Call,
+  // mutually exclusive with the legacy predicate fields (service_name,
+  // operation_name, duration_min/max, attributes).
+  //
+  // Experimental. In Jaeger, the query service admits this field only when the
+  // `jaeger.query.structuredFilters` feature gate is enabled (Alpha, off by default);
+  // with the gate off a request carrying it is refused. The field is never ignored,
+  // because dropping a predicate would answer with more traces than were asked for.
+  //
+  // Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
+  // it is the structured Call. For example, the filter http.status_code == 500 is
+  // {"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}
+  jaeger.expression.v1.Call filter = 10;
 }
 
 // Request object to search traces.

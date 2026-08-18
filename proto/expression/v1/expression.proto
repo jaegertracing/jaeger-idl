@@ -1,0 +1,157 @@
+// Copyright (c) 2021 The Jaeger Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package jaeger.expression.v1;
+
+import "gnostic/openapiv3/annotations.proto";
+
+option go_package = "expression";
+
+// The messages below are the structured trace-query filter AST proposed in Jaeger
+// RFC 0005, "Structured Query Filters for Trace Search":
+// https://github.com/jaegertracing/jaeger/blob/main/docs/rfc/0005-structured-query-filters.md
+// Section references (§N) in the comments below point into that document.
+
+// Expression is a node in the filter AST: an atom (one of the three references,
+// or a Scalar or List constant) or a Call over argument Expressions.
+message Expression {
+  option (openapi.v3.schema) = {
+    one_of: [
+      {schema: {required: ["attr"]}},
+      {schema: {required: ["field"]}},
+      {schema: {required: ["nested"]}},
+      {schema: {required: ["scalar"]}},
+      {schema: {required: ["list"]}},
+      {schema: {required: ["call"]}}
+    ]
+  };
+  oneof term {
+    AttributeReference  attr       = 1;  // an entry in an attribute map, by key
+    FieldReference      field      = 2;  // a built-in field of a level (§5.2)
+    NestedReference     nested     = 3;  // the nested events or links, for `some` (§5.5)
+    Scalar              scalar     = 4;  // a single constant
+    List                list       = 5;  // a homogeneous list constant (right arg of in/not_in)
+    Call                call       = 6;  // an operator/function over argument Expressions
+  }
+}
+
+// AttributeReference names an entry in one of the span's attribute maps.
+message AttributeReference {
+  option (openapi.v3.schema) = {required: ["key"]};
+
+  string key = 1;
+
+  // level says which attribute map to read. Empty means the unqualified
+  // span-or-resource search (§5.1), so the empty value is one of the enum's own.
+  string level = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "''"}, {yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+}
+
+// FieldReference names a built-in field — a value the data model defines
+// directly rather than an attribute-map entry (§5.2).
+message FieldReference {
+  option (openapi.v3.schema) = {required: ["name", "level"]};
+
+  // name of a built-in field of `level`, not an arbitrary key (§5.2).
+  string name = 1;
+
+  string level = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+}
+
+// NestedReference names a span's events or links collection, which is what `some`
+// quantifies over (§5.5).
+message NestedReference {
+  option (openapi.v3.schema) = {required: ["level"]};
+
+  string level = 1 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "event"}, {yaml: "link"}]
+    }
+  ];
+}
+
+// Scalar is a single constant value with an optional type hint.
+//
+// A duration ("2s") and a timestamp (RFC 3339) have no `type` of their
+// own: they travel as an unhinted constant, and the receiving side resolves them
+// from the built-in field they are compared against (§5.4).
+message Scalar {
+  option (openapi.v3.schema) = {required: ["value"]};
+
+  // value is the constant as text, so a duration or a timestamp travels with the
+  // unit it is written in (§5.4).
+  string value = 1;
+
+  // type is OPTIONAL; empty means any type, a set type is authoritative (§5.4), so the empty
+  // value is one of the enum's own.
+  string type = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "''"}, {yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+    }
+  ];
+}
+
+// List is a homogeneous list constant, the right arg of in/not_in. Every element is read as
+// one type, and that type is always known: either type declares it, or the built-in field the
+// list is compared against supplies it. A list compared against an attribute must declare it,
+// since an attribute declares nothing itself. A list is not a legacy predicate — the legacy
+// fields have no form for membership — so nothing has to accept an element type nobody stated.
+message List {
+  option (openapi.v3.schema) = {required: ["values"]};
+
+  // values must have at least one element: membership in nothing matches nothing.
+  repeated string values = 1 [(openapi.v3.property) = {min_items: 1}];
+
+  // type is the type every element is read as, and a list matches only values of that type. It is
+  // OPTIONAL only where the field opposite it declares one (see Scalar.type) — a condition on the
+  // enclosing call that this schema cannot state, which is why the empty value is listed here and
+  // the validator checks the rest.
+  string type = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "''"}, {yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+    }
+  ];
+}
+
+// Call applies operator/function `op` to argument Expressions. Arity follows the
+// operator: unary for not/exists, binary for the comparisons and in/not_in,
+// n-ary for and/or. `some` is an event/link existential; its args are a
+// NestedReference and the Call evaluated against each element (§5.5).
+message Call {
+  option (openapi.v3.schema) = {required: ["op", "args"]};
+
+  string op = 1 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "and"}, {yaml: "or"}, {yaml: "not"}, {yaml: "eq"}, {yaml: "ne"}, {yaml: "gt"}, {yaml: "lt"}, {yaml: "gte"}, {yaml: "lte"}, {yaml: "regex"}, {yaml: "exists"}, {yaml: "in"}, {yaml: "not_in"}, {yaml: "some"}]
+    }
+  ];
+
+  // args are the operands, and how many an operator takes is a property of op.
+  repeated Expression args = 2;
+}

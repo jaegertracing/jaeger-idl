@@ -15,6 +15,66 @@ message SearchCapabilities {
   // than as an error or an empty result. Backends that index by service name, such as
   // Cassandra, cannot do this.
   bool without_service_name = 1;
+
+  // same_span_conjunction is true when a multi-predicate conjunction — the legacy
+  // attributes map, or an `and` in the structured filter — is matched within a single
+  // span. false means the backend may satisfy different conjuncts from different spans
+  // of the same trace, as a flat inverted index intersecting at trace granularity does.
+  // It is reported, not enforced: the query service does not refuse a conjunction, it
+  // surfaces the looser scoping so a caller that needs strict single-span matching is
+  // not surprised by the result.
+  bool same_span_conjunction = 2;
+
+  // filter describes structured-filter support (see FilterCapabilities below). An absent message and an
+  // empty one (both lists below empty) mean the same thing — no structured-filter
+  // support — so the query service down-converts any filter to the legacy service_name /
+  // attributes / duration fields, refusing what those cannot express. This follows the
+  // opt-in, zero-value-is-least-capable rule above: a backend advertises filter support
+  // only by populating the lists below, and there is no distinct "present but empty"
+  // state to get wrong.
+  FilterCapabilities filter = 3;
+}
+
+// FilterCapabilities declares how much of the structured trace-query filter a backend
+// can serve, by listing the levels and operators it evaluates. (The filter is Jaeger
+// RFC 0005: https://github.com/jaegertracing/jaeger/blob/main/docs/rfc/0005-structured-query-filters.md.)
+// A backend opts in only by naming what it serves, and what each state means is fixed:
+//
+//   - absent, or present with both lists empty: no structured-filter support. The query service
+//     converts a filter to the legacy service_name / attributes / duration fields and refuses
+//     what those cannot express.
+//   - operators non-empty, levels empty: the backend serves unqualified references only. An
+//     unqualified reference always reaches it; a level-qualified one is refused.
+//   - both non-empty: the backend serves the named levels, plus unqualified references, under the
+//     named operators.
+//   - operators empty, levels non-empty: nothing. A filter's root is always a call, so a backend
+//     that names no operator has named nothing it can evaluate, and every predicate is refused
+//     rather than converted to the legacy fields. Do not declare this state.
+//
+// Where the lists are non-empty they are refusal gates: the query service rejects a predicate that
+// names a level or an operator not listed here.
+//
+// These two lists are coarse admission gates rather than a guarantee of evaluation. They are
+// deliberately narrower than the AST: a backend that lists `span` and `eq` says nothing about
+// which built-in fields it holds, which type hints it honors, which list element types it can
+// match, or which regular expressions its engine can evaluate faithfully. So a reader may still
+// refuse a filter this gate admitted, and it owes a refusal rather than the results of the part
+// it could evaluate. Reliable preflight — a UI graying out what a backend cannot serve — needs a
+// capability surface of its own rather than more meaning read into these two lists.
+message FilterCapabilities {
+  // levels lists the attribute levels the backend can filter on
+  // (span|resource|scope|event|link). Empty means it serves no level-qualified predicate, so only
+  // unqualified (empty-level) references reach it — which is support, not the absence of it, as
+  // long as operators names something (see the table above).
+  repeated string levels = 1;
+
+  // operators lists the op values the backend evaluates
+  // (and|or|not|eq|ne|gt|lt|gte|lte|regex|exists|in|not_in|some). A predicate whose op is
+  // not listed is refused. The boolean combinators are listed here like any other
+  // operator: a flat inverted index declares `and` and omits `or` and `not`, which is
+  // what confines it to the conjunctive subset. Nesting is not separately declared,
+  // because `and` is associative and a caller flattens it before asking.
+  repeated string operators = 2;
 }
 
 // GetCapabilitiesRequest represents a request for the backend's capabilities.

@@ -5,6 +5,7 @@ package jaeger.storage.v2;
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
+import "expression/v1/expression.proto";
 
 option go_package = "storage";
 
@@ -102,6 +103,14 @@ message TraceQueryParameters {
   google.protobuf.Duration duration_min = 6;
   google.protobuf.Duration duration_max = 7;
   int32 search_depth = 8;
+  // filter is the structured query filter: a single boolean-valued Call.
+  // Mutually exclusive with the legacy predicate fields (service_name,
+  // operation_name, duration_min/max, attributes).
+  //
+  // Experimental. A filter reaches a remote backend only when Jaeger's query service
+  // has the `jaeger.query.structuredFilters` feature gate enabled (Alpha, off by
+  // default) and the backend declares support via SearchCapabilities.filter.
+  jaeger.expression.v1.Call filter = 9;
 }
 
 // FindTracesRequest represents a request to find traces.
