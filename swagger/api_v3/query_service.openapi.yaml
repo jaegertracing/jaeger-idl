@@ -678,6 +678,7 @@ components:
                     type: string
                 level:
                     enum:
+                        - ''
                         - span
                         - resource
                         - scope
@@ -686,7 +687,7 @@ components:
                     type: string
                     description: |-
                         level says which attribute map to read. Empty means the unqualified
-                         span-or-resource search (§5.1).
+                         span-or-resource search (§5.1), so the empty value is one of the enum's own.
             description: AttributeReference names an entry in one of the span's attribute maps.
         jaeger.expression.v1.Call:
             required:
@@ -785,14 +786,17 @@ components:
                     description: 'values must have at least one element: membership in nothing matches nothing.'
                 type:
                     enum:
+                        - ''
                         - string
                         - int
                         - double
                         - bool
                     type: string
                     description: |-
-                        type is the type every element is read as, and a list matches only values of that type. It
-                         is OPTIONAL only where the field opposite it declares one (see Scalar.type).
+                        type is the type every element is read as, and a list matches only values of that type. It is
+                         OPTIONAL only where the field opposite it declares one (see Scalar.type) — a condition on the
+                         enclosing call that this schema cannot state, which is why the empty value is listed here and
+                         the validator checks the rest.
             description: |-
                 List is a homogeneous list constant, the right arg of in/not_in. Every element is read as
                  one type, and that type is always known: either type declares it, or the built-in field the
@@ -824,12 +828,15 @@ components:
                          unit it is written in (§5.4).
                 type:
                     enum:
+                        - ''
                         - string
                         - int
                         - double
                         - bool
                     type: string
-                    description: type is OPTIONAL; empty means any type, a set type is authoritative (§5.4).
+                    description: |-
+                        type is OPTIONAL; empty means any type, a set type is authoritative (§5.4), so the empty
+                         value is one of the enum's own.
             description: |-
                 Scalar is a single constant value with an optional type hint.
 

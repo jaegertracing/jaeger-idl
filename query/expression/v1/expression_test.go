@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // allTerms is every term type, as the pointer a tree is built from, paired with the name an
@@ -51,6 +52,24 @@ func TestExpressionTerms(t *testing.T) {
 		assert.Equal(t, test.name, termName(test.term))
 	}
 	assert.Equal(t, "an empty term", termName(nil))
+}
+
+// unknownTerm is a term this package does not define. Only a test inside the package can build one,
+// because the unexported marker closes the interface, and it exists so that the switches naming and
+// validating a term are answerable for a term added later rather than falling off the end of a case
+// list.
+type unknownTerm struct {
+	expressionTerm
+}
+
+func TestUnknownTerm(t *testing.T) {
+	term := &unknownTerm{}
+	assert.Equal(t, "an unknown term", termName(term))
+	assert.False(t, isConstant(term))
+	assert.False(t, isMissing(term))
+
+	err := ValidateFilter(&Call{Op: OpEq, Args: []Expression{attr("a"), term}})
+	require.ErrorContains(t, err, "got an unknown term")
 }
 
 // TestConstantsCarryTheirParsedValue pins the point of a typed constant: a consumer reads the

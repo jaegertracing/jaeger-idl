@@ -55,11 +55,11 @@ message AttributeReference {
   string key = 1;
 
   // level says which attribute map to read. Empty means the unqualified
-  // span-or-resource search (§5.1).
+  // span-or-resource search (§5.1), so the empty value is one of the enum's own.
   string level = 2 [
     (openapi.v3.property) = {
       type: "string",
-      enum: [{yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
+      enum: [{yaml: "''"}, {yaml: "span"}, {yaml: "resource"}, {yaml: "scope"}, {yaml: "event"}, {yaml: "link"}]
     }
   ];
 }
@@ -105,11 +105,12 @@ message Scalar {
   // unit it is written in (§5.4).
   string value = 1;
 
-  // type is OPTIONAL; empty means any type, a set type is authoritative (§5.4).
+  // type is OPTIONAL; empty means any type, a set type is authoritative (§5.4), so the empty
+  // value is one of the enum's own.
   string type = 2 [
     (openapi.v3.property) = {
       type: "string",
-      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+      enum: [{yaml: "''"}, {yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
     }
   ];
 }
@@ -125,12 +126,14 @@ message List {
   // values must have at least one element: membership in nothing matches nothing.
   repeated string values = 1 [(openapi.v3.property) = {min_items: 1}];
 
-  // type is the type every element is read as, and a list matches only values of that type. It
-  // is OPTIONAL only where the field opposite it declares one (see Scalar.type).
+  // type is the type every element is read as, and a list matches only values of that type. It is
+  // OPTIONAL only where the field opposite it declares one (see Scalar.type) — a condition on the
+  // enclosing call that this schema cannot state, which is why the empty value is listed here and
+  // the validator checks the rest.
   string type = 2 [
     (openapi.v3.property) = {
       type: "string",
-      enum: [{yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
+      enum: [{yaml: "''"}, {yaml: "string"}, {yaml: "int"}, {yaml: "double"}, {yaml: "bool"}]
     }
   ];
 }

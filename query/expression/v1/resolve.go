@@ -192,6 +192,10 @@ func readValue(t ValueType, raw string) error {
 // it has to be one of those words. Every other constant already carries its value, and validation
 // has refused the ones the field cannot hold.
 func textToRead(t FieldType, operand Expression) (string, bool) {
+	if isMissing(operand) {
+		// Resolution answers for any tree, including one validation would have refused.
+		return "", false
+	}
 	switch value := operand.(type) {
 	case *AnyValue:
 		return value.Value, true

@@ -6,6 +6,7 @@ package expression
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"regexp/syntax"
 	"slices"
 )
@@ -316,8 +317,13 @@ func validateValueType(t ValueType) error {
 }
 
 // isConstant reports whether a term is a single constant value. A List is not one: it is only
-// ever the right-hand side of membership, never a value an operator reads or compares.
+// ever the right-hand side of membership, never a value an operator reads or compares. Neither is
+// a nil pointer of a constant type: it names a kind of value while holding none, so accepting it
+// would hand every stage below something to dereference.
 func isConstant(e Expression) bool {
+	if isMissing(e) {
+		return false
+	}
 	switch e.(type) {
 	case *AnyValue, *StringValue, *IntValue, *DoubleValue, *BoolValue, *DurationValue, *TimestampValue:
 		return true
@@ -473,6 +479,9 @@ func checkPortable(re *syntax.Regexp) error {
 // patternText returns the text of a constant that can serve as a regular expression. An untyped
 // constant can: a pattern is written as a bare string and carries no wire hint.
 func patternText(e Expression) (string, bool) {
+	if isMissing(e) {
+		return "", false
+	}
 	switch value := e.(type) {
 	case *AnyValue:
 		return value.Value, true
@@ -480,6 +489,18 @@ func patternText(e Expression) (string, bool) {
 		return value.Value, true
 	}
 	return "", false
+}
+
+// isMissing reports whether a term holds nothing: either no term at all, or a nil pointer of one
+// of the term types, which reads as a term of that type through the Expression interface. It is
+// reflection rather than a ten-case type switch because every term type has the same answer, and a
+// term added later has to inherit it rather than be remembered here.
+func isMissing(e Expression) bool {
+	if e == nil {
+		return true
+	}
+	value := reflect.ValueOf(e)
+	return value.Kind() == reflect.Pointer && value.IsNil()
 }
 
 // describe names an operand the way a caller wrote it, so an error about two operands points at
@@ -493,6 +514,11 @@ func describe(e Expression) string {
 
 // termName names the kind of a term for an error message.
 func termName(e Expression) string {
+	if isMissing(e) {
+		// A nil pointer of a term type would otherwise be named after the type it points at, so an
+		// error would read "got a list" about an argument that carries no list.
+		return "an empty term"
+	}
 	switch e.(type) {
 	case *AttributeRef:
 		return "an attribute reference"
@@ -519,6 +545,6 @@ func termName(e Expression) string {
 	case *Call:
 		return "a predicate"
 	default:
-		return "an empty term"
+		return "an unknown term"
 	}
 }

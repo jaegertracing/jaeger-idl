@@ -809,8 +809,61 @@ func TestValidateFilter_NeverPanics(t *testing.T) {
 	}
 	for name, filter := range trees {
 		t.Run(name, func(t *testing.T) {
-			assert.NotPanics(t, func() { _ = ValidateFilter(filter) })
+			var err error
+			require.NotPanics(t, func() { err = ValidateFilter(filter) })
+			if name == "deeply nested" {
+				// The one well-formed tree here: it is about recursion, not about malformedness.
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err, "a malformed tree is refused, not merely survived")
 		})
 	}
-	assert.NotPanics(t, func() { _ = ValidateFilter(nil) })
+	assert.Error(t, ValidateFilter(nil))
+}
+
+// TestValidateFilter_RejectsATypedNilConstant walks every constant type through both positions a
+// constant can occupy. A nil pointer of one reads through the Expression interface as a term of
+// that type while holding no value, so validation has to refuse it rather than leave a later stage
+// to dereference it.
+func TestValidateFilter_RejectsATypedNilConstant(t *testing.T) {
+	constants := map[string]Expression{
+		"an untyped constant":       (*AnyValue)(nil),
+		"a string constant":         (*StringValue)(nil),
+		"an integer constant":       (*IntValue)(nil),
+		"a floating-point constant": (*DoubleValue)(nil),
+		"a boolean constant":        (*BoolValue)(nil),
+		"a duration constant":       (*DurationValue)(nil),
+		"a timestamp constant":      (*TimestampValue)(nil),
+	}
+	positions := map[string]func(Expression) *Call{
+		"compared against an attribute": func(c Expression) *Call {
+			return &Call{Op: OpEq, Args: []Expression{attr("a"), c}}
+		},
+		"compared against a built-in field": func(c Expression) *Call {
+			return &Call{Op: OpGt, Args: []Expression{spanField(SpanFieldDuration), c}}
+		},
+		"written on the left of a comparison": func(c Expression) *Call {
+			return &Call{Op: OpEq, Args: []Expression{c, spanField(SpanFieldName)}}
+		},
+		"as a regular expression": func(c Expression) *Call {
+			return &Call{Op: OpRegex, Args: []Expression{spanField(SpanFieldName), c}}
+		},
+		"as a list element's neighbour": func(c Expression) *Call {
+			return &Call{Op: OpAnd, Args: []Expression{
+				&Call{Op: OpIn, Args: []Expression{attr("a"), &List{Values: []string{"1"}, Type: ValueTypeInt}}},
+				&Call{Op: OpEq, Args: []Expression{attr("b"), c}},
+			}}
+		},
+	}
+	for name, constant := range constants {
+		for where, build := range positions {
+			t.Run(name+" "+where, func(t *testing.T) {
+				filter := build(constant)
+				require.ErrorContains(t, ValidateFilter(filter), "an empty term")
+				assert.NotPanics(t, func() { _, _ = ResolveConstants(filter) },
+					"resolution answers for a tree validation refused")
+			})
+		}
+	}
 }
