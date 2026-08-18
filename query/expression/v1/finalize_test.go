@@ -71,6 +71,17 @@ func TestFinalize_IsIdempotent(t *testing.T) {
 	}
 }
 
+// TestFinalize_RefusesADepthNoConsumerCouldWalk covers the bound at the entry point every boundary
+// calls, since that is where a tree arriving off a wire is stopped.
+func TestFinalize_RefusesADepthNoConsumerCouldWalk(t *testing.T) {
+	deep := eq(&AttributeRef{Key: "a"}, &AnyValue{Value: "1"})
+	for range MaxNestingDepth {
+		deep = &Call{Op: OpNot, Args: []Expression{deep}}
+	}
+	_, err := Finalize(deep)
+	require.ErrorIs(t, err, ErrTooDeeplyNested)
+}
+
 func TestFinalize_RefusesWhatValidationRefuses(t *testing.T) {
 	_, err := Finalize(&Call{Op: "matches", Args: []Expression{
 		&AttributeRef{Key: "a"}, &AnyValue{Value: "b"},

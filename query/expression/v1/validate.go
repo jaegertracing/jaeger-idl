@@ -24,26 +24,45 @@ func ValidateFilter(filter *Call) error {
 	if filter == nil {
 		return errors.New("filter is empty")
 	}
-	return validateCall(filter, nil)
+	return validateCall(filter, nil, 1)
 }
 
+// MaxNestingDepth is how deeply calls may nest, counting the filter itself as the first level. A
+// filter is a tree a person or a query builder wrote, and twenty levels of nesting is far past
+// anything either produces.
+//
+// The bound is what makes walking a filter safe rather than merely usual. The AST is built from
+// pointers, so a caller can hand a call itself as one of its own arguments, and nothing about the
+// types prevents it; a walk without a bound would follow that cycle until the stack ran out. With
+// the bound, a cycle is refused for being too deep, and so is an honest tree that no consumer
+// downstream could walk either.
+const MaxNestingDepth = 20
+
+// ErrTooDeeplyNested is returned for a filter that nests calls beyond MaxNestingDepth, which is
+// also how a filter that contains itself is answered.
+var ErrTooDeeplyNested = fmt.Errorf("filter nests calls more than %d deep", MaxNestingDepth)
+
 // validateCall checks one call. quantified carries the collection levels of the enclosing
-// OpSome calls, which is what lets a nested quantifier over an already-bound level be refused.
-func validateCall(call *Call, quantified []Level) error {
+// OpSome calls, which is what lets a nested quantifier over an already-bound level be refused, and
+// depth is how many calls deep this one sits, counting itself.
+func validateCall(call *Call, quantified []Level, depth int) error {
 	if call == nil {
 		return errors.New("filter has a missing predicate")
+	}
+	if depth > MaxNestingDepth {
+		return ErrTooDeeplyNested
 	}
 	switch call.Op {
 	case OpAnd, OpOr:
 		if len(call.Args) < 2 {
 			return fmt.Errorf("operator %q takes at least two arguments, got %d", call.Op, len(call.Args))
 		}
-		return validatePredicateArgs(call, quantified)
+		return validatePredicateArgs(call, quantified, depth)
 	case OpNot:
 		if err := wantArgs(call, 1); err != nil {
 			return err
 		}
-		return validatePredicateArgs(call, quantified)
+		return validatePredicateArgs(call, quantified, depth)
 	case OpExists:
 		if err := wantArgs(call, 1); err != nil {
 			return err
@@ -53,7 +72,7 @@ func validateCall(call *Call, quantified []Level) error {
 		if err := wantArgs(call, 2); err != nil {
 			return err
 		}
-		return validateSome(call, quantified)
+		return validateSome(call, quantified, depth)
 	case OpIn, OpNotIn:
 		if err := wantArgs(call, 2); err != nil {
 			return err
@@ -115,13 +134,13 @@ func wantArgs(call *Call, n int) error {
 
 // validatePredicateArgs checks the arguments of a boolean combinator, each of which
 // must itself be a predicate rather than a bare reference or constant.
-func validatePredicateArgs(call *Call, quantified []Level) error {
+func validatePredicateArgs(call *Call, quantified []Level, depth int) error {
 	for _, arg := range call.Args {
 		nested, ok := arg.(*Call)
 		if !ok {
 			return fmt.Errorf("operator %q takes predicates as arguments, got %s", call.Op, termName(arg))
 		}
-		if err := validateCall(nested, quantified); err != nil {
+		if err := validateCall(nested, quantified, depth+1); err != nil {
 			return err
 		}
 	}
@@ -131,7 +150,7 @@ func validatePredicateArgs(call *Call, quantified []Level) error {
 // validateSome checks the existential quantifier: it binds one element of a span's
 // events or links, so its first argument names that collection and its second is the
 // predicate evaluated against the bound element.
-func validateSome(call *Call, quantified []Level) error {
+func validateSome(call *Call, quantified []Level, depth int) error {
 	ref, ok := call.Args[0].(*NestedRef)
 	if !ok || ref == nil {
 		return fmt.Errorf("operator %q takes a collection reference as its first argument, got %s", call.Op, termName(call.Args[0]))
@@ -149,7 +168,7 @@ func validateSome(call *Call, quantified []Level) error {
 	if !ok {
 		return fmt.Errorf("operator %q takes a predicate as its second argument, got %s", call.Op, termName(call.Args[1]))
 	}
-	return validateCall(predicate, append(slices.Clone(quantified), ref.Level))
+	return validateCall(predicate, append(slices.Clone(quantified), ref.Level), depth+1)
 }
 
 // validateComparison checks the two operands of a comparison. Each names a value on the span or

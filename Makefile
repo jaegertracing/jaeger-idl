@@ -48,6 +48,7 @@ TOOLS_BIN_DIR      := $(SRC_ROOT)/.tools
 LINT               := $(TOOLS_BIN_DIR)/golangci-lint
 PROTOC_GEN_OPENAPI := $(TOOLS_BIN_DIR)/protoc-gen-openapi
 PRUNE_OPENAPI      := $(TOOLS_BIN_DIR)/prune-openapi
+YAML2JSON          := $(TOOLS_BIN_DIR)/yaml2json
 
 # Determine the directory of the gnostic module.
 # Using deferred expansion to ensure the build step was done already.
@@ -67,9 +68,22 @@ $(PROTOC_GEN_OPENAPI): $(TOOLS_BIN_DIR)
 $(PRUNE_OPENAPI): $(TOOLS_BIN_DIR)
 	cd $(TOOLS_MOD_DIR) && go build -o $@ ./prune-openapi
 
+$(YAML2JSON): $(TOOLS_BIN_DIR)
+	cd $(TOOLS_MOD_DIR) && go build -o $@ ./yaml2json
+
+# swagger-json republishes the OpenAPI document as JSON. YAML and JSON describe the same document,
+# and the JSON form is what the vocabulary tests read: they live in the module that defines the
+# domain package, which takes no dependency on a YAML parser.
+.PHONY: swagger-json
+swagger-json: $(YAML2JSON)
+	$(YAML2JSON) \
+		< ./swagger/api_v3/query_service.openapi.yaml \
+		> ./swagger/api_v3/query_service.openapi.json
+
 .PHONY: test-code-gen
 test-code-gen: thrift-all proto-all proto-zipkin
 	git diff --exit-code ./swagger/api_v3/query_service.openapi.yaml
+	git diff --exit-code ./swagger/api_v3/query_service.openapi.json
 
 
 .PHONY: clean
@@ -320,6 +334,7 @@ proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
 	$(PRUNE_OPENAPI) ./swagger/api_v3/query_service.openapi.yaml
+	$(MAKE) swagger-json
 
 
 .PHONY: proto-storage-all

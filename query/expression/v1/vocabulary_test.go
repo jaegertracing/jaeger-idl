@@ -4,9 +4,8 @@
 package expression
 
 import (
+	"encoding/json"
 	"os"
-	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,123 +13,107 @@ import (
 )
 
 // The closed vocabularies are written down twice: as enum annotations on the proto fields, which
-// are published in the OpenAPI schema, and as the slices this package validates against. The tests
-// here compare the two, so a level or an operator added to one and forgotten in the other cannot
-// pass — it would otherwise be schema-valid and refused by the validator, or accepted by the
-// validator and unrepresentable on the wire.
+// the OpenAPI document publishes, and as the slices this package validates against. The tests here
+// compare the two, so a level or an operator added to one and forgotten in the other cannot pass —
+// it would otherwise be schema-valid and refused by the validator, or accepted by the validator and
+// unrepresentable on the wire.
 //
-// They read the annotations rather than the published document because the annotations are the
-// authority, and because CI regenerates the document from them and diffs it, which ties the
-// published schema to whatever these tests just read.
-const wireProtoPath = "../../../proto/expression/v1/expression.proto"
+// They read the published document rather than the annotations, because the document is what a
+// client generates from, and CI regenerates it from the annotations and diffs it. It is read as
+// JSON, which is the same document in a form the standard library parses: a YAML parser is not a
+// dependency this module takes, since every direct dependency of the IDL reaches whoever imports it
+// (see the swagger-json target).
+const publishedSchema = "../../../swagger/api_v3/query_service.openapi.json"
 
-var (
-	messageLine = regexp.MustCompile(`^message (\w+) \{`)
-	valueInEnum = regexp.MustCompile(`\{yaml: "([^"]*)"\}`)
-)
+func schemas(t *testing.T) map[string]any {
+	raw, err := os.ReadFile(publishedSchema)
+	require.NoError(t, err, "run `make swagger-json` if the published document is missing")
 
-// wireEnum reads the values a proto field's OpenAPI annotation enumerates. The annotation carries
-// each value as the YAML text that produces it, so the empty value is written as a pair of quotes;
-// this reads it back as the empty string it publishes.
-func wireEnum(t *testing.T, message, field string) []string {
-	annotation := wireAnnotation(t, message, field)
-
-	var values []string
-	for _, match := range valueInEnum.FindAllStringSubmatch(annotation, -1) {
-		if match[1] == `''` {
-			values = append(values, "")
-			continue
-		}
-		values = append(values, match[1])
+	var document struct {
+		Components struct {
+			Schemas map[string]any `json:"schemas"`
+		} `json:"components"`
 	}
-	require.NotEmpty(t, values, "%s.%s enumerates its values", message, field)
-	return values
+	require.NoError(t, json.Unmarshal(raw, &document))
+	require.NotEmpty(t, document.Components.Schemas, "the document publishes its schemas")
+	return document.Components.Schemas
 }
 
-// wireAnnotation returns the text of the annotation on one field of one message, from the opening
-// bracket to the closing one.
-func wireAnnotation(t *testing.T, message, field string) string {
-	raw, err := os.ReadFile(wireProtoPath)
-	require.NoError(t, err)
-
-	var (
-		current    string
-		annotation []string
-		collecting bool
-	)
-	for _, line := range strings.Split(string(raw), "\n") {
-		if match := messageLine.FindStringSubmatch(line); match != nil {
-			current = match[1]
-			continue
-		}
-		if collecting {
-			annotation = append(annotation, line)
-			if strings.Contains(line, "];") {
-				break
-			}
-			continue
-		}
-		if current != message || !strings.Contains(line, " "+field+" = ") {
-			continue
-		}
-		annotation = append(annotation, line)
-		collecting = !strings.Contains(line, "];")
-	}
-	require.NotEmpty(t, annotation, "%s declares %s with an annotation", message, field)
-	return strings.Join(annotation, "\n")
+func publishedProperty(t *testing.T, message, field string) map[string]any {
+	definition, ok := schemas(t)[message].(map[string]any)
+	require.True(t, ok, "the document defines %s", message)
+	properties, ok := definition["properties"].(map[string]any)
+	require.True(t, ok, "%s publishes properties", message)
+	property, ok := properties[field].(map[string]any)
+	require.True(t, ok, "%s publishes %s", message, field)
+	return property
 }
 
-// TestWireLevelsMatchTheDomain compares the three reference terms against the levels this package
-// accepts. The three do not carry the same set: only an attribute reference may leave the level
-// empty, and only a collection reference is restricted to the two levels a span holds many of.
-func TestWireLevelsMatchTheDomain(t *testing.T) {
+func publishedEnum(t *testing.T, message, field string) []string {
+	values, ok := publishedProperty(t, message, field)["enum"].([]any)
+	require.True(t, ok, "%s.%s is an enumeration", message, field)
+
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		text, ok := value.(string)
+		require.True(t, ok, "%s.%s enumerates strings, got %#v", message, field, value)
+		out = append(out, text)
+	}
+	return out
+}
+
+// TestPublishedLevelsMatchTheDomain compares the three reference terms against the levels this
+// package accepts. The three do not carry the same set: only an attribute reference may leave the
+// level empty, and only a collection reference is restricted to the two levels a span holds many of.
+func TestPublishedLevelsMatchTheDomain(t *testing.T) {
 	var declared []string
 	for _, level := range levels {
 		declared = append(declared, string(level))
 	}
 
-	assert.ElementsMatch(t, declared, wireEnum(t, "FieldReference", "level"))
-	assert.ElementsMatch(t, append([]string{""}, declared...), wireEnum(t, "AttributeReference", "level"),
+	assert.ElementsMatch(t, declared, publishedEnum(t, "jaeger.expression.v1.FieldReference", "level"))
+	assert.ElementsMatch(t, append([]string{""}, declared...),
+		publishedEnum(t, "jaeger.expression.v1.AttributeReference", "level"),
 		"an empty level is the unqualified span-or-resource search")
 
-	nested := wireEnum(t, "NestedReference", "level")
+	nested := publishedEnum(t, "jaeger.expression.v1.NestedReference", "level")
 	assert.ElementsMatch(t, []string{string(LevelEvent), string(LevelLink)}, nested,
 		"only events and links are collections to quantify over")
 	assert.Subset(t, declared, nested)
 }
 
-func TestWireOperatorsMatchTheDomain(t *testing.T) {
+func TestPublishedOperatorsMatchTheDomain(t *testing.T) {
 	var declared []string
 	for _, op := range operators {
 		declared = append(declared, string(op))
 	}
-	assert.ElementsMatch(t, declared, wireEnum(t, "Call", "op"))
+	assert.ElementsMatch(t, declared, publishedEnum(t, "jaeger.expression.v1.Call", "op"))
 }
 
-// TestWireValueTypesMatchTheDomain covers both places a type is declared. Each also accepts the
-// empty value, which means something in both: any type for a constant, and "the field opposite the
-// list declares it" for a list.
-func TestWireValueTypesMatchTheDomain(t *testing.T) {
+// TestPublishedValueTypesMatchTheDomain covers both places a type is declared. Each also accepts
+// the empty value, which means something in both: any type for a constant, and "the field opposite
+// the list declares it" for a list.
+func TestPublishedValueTypesMatchTheDomain(t *testing.T) {
 	declared := []string{""}
 	for _, valueType := range valueTypes {
 		declared = append(declared, string(valueType))
 	}
 
-	assert.ElementsMatch(t, declared, wireEnum(t, "Scalar", "type"))
-	assert.ElementsMatch(t, declared, wireEnum(t, "List", "type"))
+	assert.ElementsMatch(t, declared, publishedEnum(t, "jaeger.expression.v1.Scalar", "type"))
+	assert.ElementsMatch(t, declared, publishedEnum(t, "jaeger.expression.v1.List", "type"))
 }
 
-// TestWireListIsNotEmpty pins the one cardinality rule the schema can state. The validator refuses
-// an empty list too, because a protobuf or gRPC caller is not governed by that schema.
-func TestWireListIsNotEmpty(t *testing.T) {
-	assert.Contains(t, wireAnnotation(t, "List", "values"), "min_items: 1")
+// TestPublishedListIsNotEmpty pins the one cardinality rule the schema can state. The validator
+// refuses an empty list too, because a protobuf or gRPC caller is not governed by this document.
+func TestPublishedListIsNotEmpty(t *testing.T) {
+	assert.EqualValues(t, 1, publishedProperty(t, "jaeger.expression.v1.List", "values")["minItems"])
 }
 
-// TestFieldsUseDeclaredLevels is the closest the field registry comes to a wire check: a field name
-// travels as a free string, so the wire says nothing about which names exist, but the level a field
-// is registered at has to be one the wire declares.
+// TestFieldsUseDeclaredLevels is the closest the field registry comes to a published check: a field
+// name travels as a free string, so the document says nothing about which names exist, but the level
+// a field is registered at has to be one the document declares.
 func TestFieldsUseDeclaredLevels(t *testing.T) {
-	declared := wireEnum(t, "FieldReference", "level")
+	declared := publishedEnum(t, "jaeger.expression.v1.FieldReference", "level")
 	for _, field := range Fields() {
 		assert.Contains(t, declared, string(field.Level), "field %s", field.Name)
 	}
