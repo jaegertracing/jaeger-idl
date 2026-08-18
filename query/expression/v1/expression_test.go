@@ -65,30 +65,31 @@ func TestConstantsCarryTheirParsedValue(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 0).UTC(), (&TimestampValue{Value: time.Unix(0, 0).UTC()}).Value)
 }
 
-// TestConstantKinds pins which constants an ordered comparison and a regular expression accept.
-// The untyped constant is in both, because it is what a value with no wire hint arrives as and
-// neither operator can refuse it on its spelling alone.
+// TestConstantKinds pins the domain each constant is ordered within, and which ones a regular
+// expression reads as text. The untyped constant is unconstrained in both, because it is what a
+// value with no wire hint arrives as and neither operator can refuse it on its spelling alone.
+// A boolean has no ordering at all: nobody asks which spans sort after false.
 func TestConstantKinds(t *testing.T) {
-	ordered := map[string]bool{}
+	domains := map[string]domain{}
 	text := map[string]bool{}
 	for _, test := range allTerms {
 		if !isConstant(test.term) {
 			continue
 		}
-		if isOrderedConstant(test.term) {
-			ordered[test.name] = true
-		}
+		domains[test.name] = domainOf(test.term)
 		if isTextConstant(test.term) {
 			text[test.name] = true
 		}
 	}
-	assert.Equal(t, map[string]bool{
-		"an untyped constant":       true,
-		"an integer constant":       true,
-		"a floating-point constant": true,
-		"a duration constant":       true,
-		"a timestamp constant":      true,
-	}, ordered)
+	assert.Equal(t, map[string]domain{
+		"an untyped constant":       domainAny,
+		"a string constant":         domainText,
+		"an integer constant":       domainNumber,
+		"a floating-point constant": domainNumber,
+		"a boolean constant":        domainNone,
+		"a duration constant":       domainDuration,
+		"a timestamp constant":      domainTimestamp,
+	}, domains)
 	assert.Equal(t, map[string]bool{
 		"an untyped constant": true,
 		"a string constant":   true,

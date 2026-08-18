@@ -158,26 +158,33 @@ func validateComparison(call *Call, quantified []Level) error {
 	return nil
 }
 
-// validateOrderedComparison checks an ordered comparison, which is an equality's operands plus
-// the one restriction RFC 0005 §5.3 spells out: the values are read as numbers or instants,
-// never as text, so a constant that only has a text ordering is a type error rather than a
-// comparison a backend may answer its own way.
+// validateOrderedComparison checks an ordered comparison. Its operands have to be comparable in
+// one domain — numbers with numbers, durations with durations, instants with instants, text with
+// text — because there is no defensible answer to a duration against a bare number. Text is
+// ordered lexicographically, which is a real query: `span.name > "m"` asks for the names that
+// sort after it.
 func validateOrderedComparison(call *Call, quantified []Level) error {
 	if err := validateComparison(call, quantified); err != nil {
 		return err
 	}
 	for _, arg := range call.Args {
-		if isConstant(arg) && !isOrderedConstant(arg) {
-			return fmt.Errorf("operator %q reads its operands as numbers or instants, got %s", call.Op, termName(arg))
+		if domainOfOperand(arg) == domainNone {
+			return fmt.Errorf("operator %q has no ordering for %s", call.Op, termName(arg))
 		}
+	}
+	left, right := domainOfOperand(call.Args[0]), domainOfOperand(call.Args[1])
+	if left != domainAny && right != domainAny && left != right {
+		return fmt.Errorf("operator %q compares %s against %s, which have no common ordering",
+			call.Op, termName(call.Args[0]), termName(call.Args[1]))
 	}
 	return nil
 }
 
-// validateOperand checks a value an operator compares. A nested call is allowed
-// because a call's result is itself a value — the property that lets a future
-// arithmetic or extraction function sit under a comparison.
-func validateOperand(op Operator, arg Expression, quantified []Level) error {
+// validateOperand checks a value an operator compares. A call is not one: no operator in this
+// vocabulary has a result type, so there is nothing to say about what comparing one would mean.
+// An operator that takes a call result — a future extraction function, say — arrives with its
+// signature declared rather than through this door (§5.3).
+func validateOperand(op Operator, arg Expression, _ []Level) error {
 	switch term := arg.(type) {
 	case *AttributeRef:
 		return validateAttributeRef(term)
@@ -185,21 +192,16 @@ func validateOperand(op Operator, arg Expression, quantified []Level) error {
 		return validateFieldRef(term)
 	case *NestedRef:
 		return errCollectionOutOfPlace()
-	case *Call:
-		return validateCall(term, quantified)
 	}
 	if isConstant(arg) {
 		return nil
 	}
-	return fmt.Errorf("operator %q cannot compare %s; only a reference, a constant, or a call result can be compared", op, termName(arg))
+	return fmt.Errorf("operator %q compares a reference or a constant, got %s", op, termName(arg))
 }
 
 // validateSubject checks the operand an operator reads a value from rather than supplies one
 // to: the left-hand side of membership and of a regular expression.
-func validateSubject(op Operator, arg Expression, quantified []Level) error {
-	if call, ok := arg.(*Call); ok {
-		return validateCall(call, quantified)
-	}
+func validateSubject(op Operator, arg Expression, _ []Level) error {
 	return validateReference(op, arg)
 }
 
@@ -276,15 +278,66 @@ func isConstant(e Expression) bool {
 	}
 }
 
-// isOrderedConstant reports whether an ordering is defined on a constant. An untyped constant
-// counts, because it is what an unhinted number or duration arrives as and what a numeric
-// operator asks a backend to read numerically.
-func isOrderedConstant(e Expression) bool {
+// domain is the set a value is ordered within. Two operands of an ordered comparison have to
+// share one, and an untyped constant or an attribute shares every one because nothing has said
+// what it holds yet.
+type domain int
+
+const (
+	domainNone domain = iota // no ordering: a boolean
+	domainAny                // unconstrained: an untyped constant, or an attribute
+	domainNumber
+	domainDuration
+	domainTimestamp
+	domainText
+)
+
+// domainOf reads the domain a constant is ordered within.
+func domainOf(e Expression) domain {
 	switch e.(type) {
-	case *AnyValue, *IntValue, *DoubleValue, *DurationValue, *TimestampValue:
-		return true
+	case *AnyValue:
+		return domainAny
+	case *IntValue, *DoubleValue:
+		return domainNumber
+	case *DurationValue:
+		return domainDuration
+	case *TimestampValue:
+		return domainTimestamp
+	case *StringValue:
+		return domainText
 	default:
-		return false
+		return domainNone
+	}
+}
+
+// domainOfOperand reads the domain of either side of a comparison. A built-in field is ordered
+// within the domain of the type it holds; an attribute is unconstrained, because only storage
+// knows how it was written.
+func domainOfOperand(e Expression) domain {
+	if ref, ok := e.(*FieldRef); ok && ref != nil {
+		// A field this API does not define is refused before an ordering is asked about, so the
+		// zero Field's empty type is only ever reached by a caller checking one term directly.
+		field, _ := LookupField(ref.Level, ref.Name)
+		return domainOfFieldType(field.Type)
+	}
+	if _, ok := e.(*AttributeRef); ok {
+		return domainAny
+	}
+	return domainOf(e)
+}
+
+// domainOfFieldType reads the domain a built-in field is ordered within. The two word-valued
+// fields have none: asking for the kinds after "server" is not a question about span kinds.
+func domainOfFieldType(t FieldType) domain {
+	switch t {
+	case FieldTypeDuration:
+		return domainDuration
+	case FieldTypeTimestamp:
+		return domainTimestamp
+	case FieldTypeString:
+		return domainText
+	default:
+		return domainNone
 	}
 }
 

@@ -5,6 +5,7 @@ package expression
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,18 @@ func TestValidateFilter_Accepts(t *testing.T) {
 		{
 			name:   "unqualified attribute equality",
 			filter: eq(attr("http.status_code"), &AnyValue{Value: "500"}),
+		},
+		{
+			name:   "text ordered against text",
+			filter: &Call{Op: OpGt, Args: []Expression{&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "m"}}},
+		},
+		{
+			name:   "an attribute ordered against a number, since storage decides its type",
+			filter: &Call{Op: OpGt, Args: []Expression{attr("size"), &IntValue{Value: 500}}},
+		},
+		{
+			name:   "a timestamp field against an instant",
+			filter: &Call{Op: OpLt, Args: []Expression{&FieldRef{Name: SpanFieldStartTime, Level: LevelSpan}, &TimestampValue{Value: time.Unix(0, 0).UTC()}}},
 		},
 		{
 			name:   "level-qualified attribute",
@@ -134,20 +147,6 @@ func TestValidateFilter_Accepts(t *testing.T) {
 					&NestedRef{Level: LevelEvent},
 					eq(&FieldRef{Name: EventFieldName, Level: LevelEvent}, &StringValue{Value: "retry"}),
 				}},
-			}},
-		},
-		{
-			name: "a call result as an operand",
-			filter: eq(
-				&Call{Op: OpExists, Args: []Expression{attr("a")}},
-				&BoolValue{Value: true},
-			),
-		},
-		{
-			name: "a call result as the subject of membership",
-			filter: &Call{Op: OpIn, Args: []Expression{
-				&Call{Op: OpExists, Args: []Expression{attr("a")}},
-				&List{Values: []string{"true"}, Type: ValueTypeBool},
 			}},
 		},
 	}
@@ -260,17 +259,48 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "list compared with equality",
-			expectedErr: `operator "eq" cannot compare a list`,
+			expectedErr: `operator "eq" compares a reference or a constant, got a list`,
 			filter:      eq(attr("a"), &List{Values: []string{"1"}}),
 		},
 		{
+			name:        "a call result as an operand",
+			expectedErr: `operator "eq" compares a reference or a constant, got a predicate`,
+			filter: eq(
+				&Call{Op: OpExists, Args: []Expression{attr("a")}},
+				&BoolValue{Value: true},
+			),
+		},
+		{
+			name:        "a call result as the subject of membership",
+			expectedErr: `operator "in" takes a reference, got a predicate`,
+			filter: &Call{Op: OpIn, Args: []Expression{
+				&Call{Op: OpExists, Args: []Expression{attr("a")}},
+				&List{Values: []string{"true"}, Type: ValueTypeBool},
+			}},
+		},
+		{
+			name:        "an ordered comparison of a word-valued field",
+			expectedErr: `operator "gt" has no ordering for a field reference`,
+			filter:      &Call{Op: OpGt, Args: []Expression{&FieldRef{Name: SpanFieldKind, Level: LevelSpan}, &AnyValue{Value: "server"}}},
+		},
+		{
+			name:        "an ordered comparison of a boolean",
+			expectedErr: `operator "gt" has no ordering for a boolean constant`,
+			filter:      &Call{Op: OpGt, Args: []Expression{attr("ok"), &BoolValue{Value: true}}},
+		},
+		{
+			name:        "a duration field against a number",
+			expectedErr: `have no common ordering`,
+			filter:      &Call{Op: OpGt, Args: []Expression{&FieldRef{Name: SpanFieldDuration, Level: LevelSpan}, &IntValue{Value: 42}}},
+		},
+		{
 			name:        "an argument with no term",
-			expectedErr: `operator "eq" cannot compare an empty term`,
+			expectedErr: `operator "eq" compares a reference or a constant, got an empty term`,
 			filter:      &Call{Op: OpEq, Args: []Expression{attr("a"), nil}},
 		},
 		{
 			name:        "an ordered comparison against text",
-			expectedErr: `operator "gt" reads its operands as numbers or instants, got a string constant`,
+			expectedErr: `compares a field reference against a string constant, which have no common ordering`,
 			filter: &Call{Op: OpGt, Args: []Expression{
 				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
 				&StringValue{Value: "2s"},
@@ -283,7 +313,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "an ordered comparison against a boolean",
-			expectedErr: `operator "lte" reads its operands as numbers or instants, got a boolean constant`,
+			expectedErr: `operator "lte" has no ordering for a boolean constant`,
 			filter:      &Call{Op: OpLte, Args: []Expression{attr("a"), &BoolValue{Value: true}}},
 		},
 		{
@@ -384,12 +414,12 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "invalid nested call as an operand",
-			expectedErr: `unknown filter operator "matches"`,
+			expectedErr: `operator "eq" compares a reference or a constant, got a predicate`,
 			filter:      eq(&Call{Op: "matches", Args: []Expression{attr("a")}}, &AnyValue{Value: "1"}),
 		},
 		{
 			name:        "invalid nested call as the subject of membership",
-			expectedErr: `unknown filter operator "matches"`,
+			expectedErr: `operator "in" takes a reference, got a predicate`,
 			filter: &Call{Op: OpIn, Args: []Expression{
 				&Call{Op: "matches", Args: []Expression{attr("a")}},
 				&List{Values: []string{"1"}},
@@ -561,7 +591,6 @@ func TestValidateFilter_CatchesAnInvalidNodeAtAnyDepth(t *testing.T) {
 		"as the subject of in":    {Op: OpIn, Args: []Expression{bad, &List{Values: []string{"1"}}}},
 		"as the subject of regex": {Op: OpRegex, Args: []Expression{bad, &StringValue{Value: "1"}}},
 		"under exists":            {Op: OpExists, Args: []Expression{bad}},
-		"inside a nested call":    eq(&Call{Op: OpExists, Args: []Expression{bad}}, &AnyValue{Value: "1"}),
 		"inside a some predicate": {Op: OpSome, Args: []Expression{&NestedRef{Level: LevelEvent}, eq(bad, &AnyValue{Value: "1"})}},
 		"two conjunctions deep":   {Op: OpAnd, Args: []Expression{good, &Call{Op: OpAnd, Args: []Expression{good, eq(bad, &AnyValue{Value: "1"})}}}},
 	}
