@@ -28,14 +28,20 @@ func ResolveConstants(filter *Call) (*Call, error) {
 	if filter == nil {
 		return nil, errors.New("filter is empty")
 	}
-	return resolveCall(filter)
+	return resolveCall(filter, 1)
 }
 
 // resolveCall rebuilds a call with its arguments resolved. The arguments it does not rewrite are
 // carried over as they are: a term is never modified in place, so sharing one is safe.
-func resolveCall(call *Call) (*Call, error) {
+//
+// It bounds its own recursion rather than trusting that validation ran first, since resolution
+// answers for any tree it is given (see ResolveConstants).
+func resolveCall(call *Call, depth int) (*Call, error) {
 	if call == nil {
 		return nil, nil
+	}
+	if depth > MaxNestingDepth {
+		return nil, ErrTooDeeplyNested
 	}
 	args := make([]Expression, len(call.Args))
 	for i, arg := range call.Args {
@@ -44,7 +50,7 @@ func resolveCall(call *Call) (*Call, error) {
 			args[i] = arg
 			continue
 		}
-		resolved, err := resolveCall(nested)
+		resolved, err := resolveCall(nested, depth+1)
 		if err != nil {
 			return nil, err
 		}
@@ -170,6 +176,51 @@ func readDeclaredElements(list *List) error {
 		}
 	}
 	return nil
+}
+
+// ReadElement reads one element of a list as the type the list is read at: Type where the list
+// declares one, and otherwise the type of the built-in field it is compared against, which a caller
+// passes as fieldType. It is the reading a consumer would otherwise write for itself, and the same
+// one finalizing a filter already did, so on a finalized filter it cannot fail.
+//
+// A list compared against an attribute always declares its type (see List), so a caller lowering
+// one passes an empty fieldType.
+func ReadElement(list *List, fieldType FieldType, element string) (Expression, error) {
+	if list == nil {
+		return nil, errors.New("list is empty")
+	}
+	if list.Type == "" {
+		return readConstant(fieldType, element)
+	}
+	if err := readValue(list.Type, element); err != nil {
+		return nil, fmt.Errorf("element %q of a list of %s: %w", element, list.Type, err)
+	}
+	return typedValue(list.Type, element)
+}
+
+// typedValue builds the node for an element already known to read as its declared type.
+func typedValue(t ValueType, element string) (Expression, error) {
+	switch t {
+	case ValueTypeInt:
+		value, err := strconv.ParseInt(element, 10, 64)
+		return &IntValue{Value: value}, err
+	case ValueTypeDouble:
+		value, err := strconv.ParseFloat(element, 64)
+		return &DoubleValue{Value: value}, err
+	case ValueTypeBool:
+		value, err := strconv.ParseBool(element)
+		return &BoolValue{Value: value}, err
+	default:
+		return &StringValue{Value: element}, nil
+	}
+}
+
+// ReadConstant reads text as the type a built-in field holds, which is what finalizing a filter does
+// to every constant compared against one. A consumer that needs the typed value of something the
+// wire carried as text — a list element, or a tree that reached it without being finalized — reads
+// it here rather than parsing it again itself.
+func ReadConstant(t FieldType, text string) (Expression, error) {
+	return readConstant(t, text)
 }
 
 // readValue reads an element as a declared wire type. A string needs no reading; the others each

@@ -200,6 +200,12 @@ type TimestampValue struct {
 // supplies it. Compared against an attribute, which declares nothing itself, the list has to
 // declare it — and it is worth declaring anyway, because a list matches only values of the type it
 // names.
+//
+// Unlike a constant, a list is not rewritten into typed elements when a filter is finalized. Two
+// reasons. A backend that indexes a value as text matches the text a caller wrote, and re-writing
+// "1.50" as a number and back would hand it "1.5" instead. And an element that cannot be read as the
+// list's type is refused while finalizing, so what a consumer holds is text already known to be
+// readable: ReadElement turns one into the typed node, and nothing has to parse it defensively.
 type List struct {
 	expressionTerm
 

@@ -499,6 +499,116 @@ func TestResolveConstants_LeavesItsInputAlone(t *testing.T) {
 
 // TestResolveConstants_NeverPanics pins that resolution answers for any tree, the same way
 // validation does, since a decoder can produce trees a caller could not build.
+// TestResolveConstants_BoundsNesting pins that resolution bounds its own recursion. It is
+// documented to answer for any tree, including one validation never saw, so a filter that contains
+// itself has to stop here too rather than run the stack out.
+// TestReadElement covers the one reading operation a consumer needs for a list: the type comes from
+// the list where it declares one, and from the field opposite it where it does not. On a finalized
+// filter it cannot fail, since finalizing refused every element that would not read.
+func TestReadElement(t *testing.T) {
+	tests := []struct {
+		name      string
+		list      *List
+		fieldType FieldType
+		element   string
+		expected  Expression
+		wantErr   string
+	}{
+		{
+			name:     "a declared integer",
+			list:     &List{Values: []string{"500"}, Type: ValueTypeInt},
+			element:  "500",
+			expected: &IntValue{Value: 500},
+		},
+		{
+			name:     "a declared double",
+			list:     &List{Values: []string{"1.50"}, Type: ValueTypeDouble},
+			element:  "1.50",
+			expected: &DoubleValue{Value: 1.5},
+		},
+		{
+			name:     "a declared boolean",
+			list:     &List{Values: []string{"true"}, Type: ValueTypeBool},
+			element:  "true",
+			expected: &BoolValue{Value: true},
+		},
+		{
+			name:     "a declared string",
+			list:     &List{Values: []string{"/cart"}, Type: ValueTypeString},
+			element:  "/cart",
+			expected: &StringValue{Value: "/cart"},
+		},
+		{
+			name:      "a duration, whose type the field supplies",
+			list:      &List{Values: []string{"2s"}},
+			fieldType: FieldTypeDuration,
+			element:   "2s",
+			expected:  &DurationValue{Value: 2 * time.Second},
+		},
+		{
+			name:      "a word the field's closed set holds",
+			list:      &List{Values: []string{"server"}},
+			fieldType: FieldTypeSpanKind,
+			element:   "server",
+			expected:  &StringValue{Value: "server"},
+		},
+		{
+			name:      "a word outside that set",
+			list:      &List{Values: []string{"banana"}},
+			fieldType: FieldTypeSpanKind,
+			element:   "banana",
+			wantErr:   "not one of unspecified, internal, server, client, producer, consumer",
+		},
+		{
+			name:    "an element that is not the type the list declares",
+			list:    &List{Values: []string{"banana"}, Type: ValueTypeInt},
+			element: "banana",
+			wantErr: `element "banana" of a list of int`,
+		},
+		{
+			name:    "no list at all",
+			element: "500",
+			wantErr: "list is empty",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			value, err := ReadElement(test.list, test.fieldType, test.element)
+			if test.wantErr != "" {
+				require.ErrorContains(t, err, test.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, value)
+		})
+	}
+}
+
+// TestReadConstant covers the same reading for a value the wire carried as text against a built-in
+// field, which is what finalizing does and what a consumer holding an unfinalized tree needs.
+func TestReadConstant(t *testing.T) {
+	value, err := ReadConstant(FieldTypeDuration, "50us")
+	require.NoError(t, err)
+	assert.Equal(t, &DurationValue{Value: 50 * time.Microsecond}, value)
+
+	_, err = ReadConstant(FieldTypeTimestamp, "yesterday")
+	require.Error(t, err)
+}
+
+func TestResolveConstants_BoundsNesting(t *testing.T) {
+	resolved, err := ResolveConstants(nestedTo(MaxNestingDepth))
+	require.NoError(t, err)
+	assert.NotNil(t, resolved)
+
+	_, err = ResolveConstants(nestedTo(MaxNestingDepth + 1))
+	require.ErrorIs(t, err, ErrTooDeeplyNested)
+
+	cycle := &Call{Op: OpNot}
+	cycle.Args = []Expression{cycle}
+	_, err = ResolveConstants(cycle)
+	require.ErrorIs(t, err, ErrTooDeeplyNested)
+}
+
 func TestResolveConstants_NeverPanics(t *testing.T) {
 	trees := map[string]*Call{
 		"no operator":                {},

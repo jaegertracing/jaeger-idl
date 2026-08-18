@@ -787,11 +787,6 @@ func TestValidateFilter_CatchesAnInvalidNodeAtAnyDepth(t *testing.T) {
 // a nil argument, a nil interface, a term where a predicate belongs — and asserts only that it
 // returns. A validator that panicked would take the process down on a hostile request.
 func TestValidateFilter_NeverPanics(t *testing.T) {
-	deep := eq(attr("a"), &AnyValue{Value: "1"})
-	for range 64 {
-		deep = &Call{Op: OpNot, Args: []Expression{deep}}
-	}
-
 	trees := map[string]*Call{
 		"no operator":                      {},
 		"no arguments":                     {Op: OpEq},
@@ -805,21 +800,52 @@ func TestValidateFilter_NeverPanics(t *testing.T) {
 		"a list where a predicate belongs": {Op: OpAnd, Args: []Expression{&List{}, &List{}}},
 		"a call as its own argument":       {Op: OpNot, Args: []Expression{&Call{Op: OpNot, Args: nil}}},
 		"some over nothing":                {Op: OpSome, Args: []Expression{nil, nil}},
-		"deeply nested":                    deep,
 	}
 	for name, filter := range trees {
 		t.Run(name, func(t *testing.T) {
 			var err error
 			require.NotPanics(t, func() { err = ValidateFilter(filter) })
-			if name == "deeply nested" {
-				// The one well-formed tree here: it is about recursion, not about malformedness.
-				require.NoError(t, err)
-				return
-			}
 			require.Error(t, err, "a malformed tree is refused, not merely survived")
 		})
 	}
 	assert.Error(t, ValidateFilter(nil))
+}
+
+// nestedTo builds a filter nesting calls the given number of levels deep, counting the outermost.
+func nestedTo(depth int) *Call {
+	filter := eq(attr("a"), &AnyValue{Value: "1"})
+	for range depth - 1 {
+		filter = &Call{Op: OpNot, Args: []Expression{filter}}
+	}
+	return filter
+}
+
+// TestValidateFilter_BoundsNesting pins the depth a filter may nest to. Walking the tree is
+// recursive at every layer that reads a filter, so the bound is what keeps a tree nobody could walk
+// from being accepted here.
+func TestValidateFilter_BoundsNesting(t *testing.T) {
+	require.NoError(t, ValidateFilter(nestedTo(MaxNestingDepth)))
+	require.ErrorIs(t, ValidateFilter(nestedTo(MaxNestingDepth+1)), ErrTooDeeplyNested)
+
+	// The same bound answers a quantifier's nesting, which recurses through its own predicate.
+	quantified := &Call{Op: OpSome, Args: []Expression{
+		&NestedRef{Level: LevelEvent}, nestedTo(MaxNestingDepth),
+	}}
+	require.ErrorIs(t, ValidateFilter(quantified), ErrTooDeeplyNested)
+}
+
+// TestValidateFilter_RefusesAFilterThatContainsItself is the reason the bound exists rather than a
+// cycle check: the AST is built from pointers, so a caller can hand a call itself as one of its own
+// arguments, and the walk would follow it until the stack ran out. Being too deep is the answer.
+func TestValidateFilter_RefusesAFilterThatContainsItself(t *testing.T) {
+	cycle := &Call{Op: OpNot}
+	cycle.Args = []Expression{cycle}
+	require.ErrorIs(t, ValidateFilter(cycle), ErrTooDeeplyNested)
+
+	outer := &Call{Op: OpAnd}
+	inner := &Call{Op: OpNot, Args: []Expression{outer}}
+	outer.Args = []Expression{inner, eq(attr("a"), &AnyValue{Value: "1"})}
+	require.ErrorIs(t, ValidateFilter(outer), ErrTooDeeplyNested)
 }
 
 // TestValidateFilter_RejectsATypedNilConstant walks every constant type through both positions a
