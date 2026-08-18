@@ -52,20 +52,6 @@ func TestValidateFilter_Accepts(t *testing.T) {
 			}},
 		},
 		{
-			name: "attribute against attribute",
-			filter: eq(
-				&AttributeRef{Key: "enduser.id", Level: LevelSpan},
-				&AttributeRef{Key: "enduser.id", Level: LevelResource},
-			),
-		},
-		{
-			name: "field against field",
-			filter: &Call{Op: OpLt, Args: []Expression{
-				&FieldRef{Name: SpanFieldStartTime, Level: LevelSpan},
-				&FieldRef{Name: SpanFieldEndTime, Level: LevelSpan},
-			}},
-		},
-		{
 			name: "conjunction of two predicates",
 			filter: &Call{Op: OpAnd, Args: []Expression{
 				eq(attr("a"), &AnyValue{Value: "1"}),
@@ -97,6 +83,19 @@ func TestValidateFilter_Accepts(t *testing.T) {
 			filter: &Call{Op: OpRegex, Args: []Expression{
 				&FieldRef{Name: SpanFieldName, Level: LevelSpan},
 				&AnyValue{Value: "GET .*"},
+			}},
+		},
+		{
+			name: "membership of a field holding one of a set of words in a list of strings",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				&FieldRef{Name: SpanFieldKind, Level: LevelSpan},
+				&List{Values: []string{"server", "client"}, Type: ValueTypeString},
+			}},
+		},
+		{
+			name: "a comparison written with the constant on the left",
+			filter: &Call{Op: OpGt, Args: []Expression{
+				&AnyValue{Value: "2s"}, &FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
 			}},
 		},
 		{
@@ -216,7 +215,7 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "equality of two constants",
-			expectedErr: `operator "eq" compares a reference against a constant, or two references, got two constants`,
+			expectedErr: `operator "eq" compares a reference against a constant, got two constants`,
 			filter:      eq(&AnyValue{Value: "1"}, &AnyValue{Value: "1"}),
 		},
 		{
@@ -315,13 +314,83 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "an ordered comparison of two constants",
-			expectedErr: `operator "gte" compares a reference against a constant, or two references, got two constants`,
+			expectedErr: `operator "gte" compares a reference against a constant, got two constants`,
 			filter:      &Call{Op: OpGte, Args: []Expression{&IntValue{Value: 1}, &IntValue{Value: 2}}},
 		},
 		{
 			name:        "an ordered comparison against a boolean",
 			expectedErr: `operator "lte" has no ordering for a boolean constant`,
 			filter:      &Call{Op: OpLte, Args: []Expression{attr("a"), &BoolValue{Value: true}}},
+		},
+		{
+			name:        "a comparison of two built-in fields",
+			expectedErr: `operator "eq" compares a reference against a constant, and this version does not define what comparing two references means`,
+			filter: &Call{Op: OpEq, Args: []Expression{
+				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan},
+			}},
+		},
+		{
+			name:        "an ordered comparison of two built-in fields",
+			expectedErr: `operator "gt" compares a reference against a constant, and this version does not define what comparing two references means`,
+			filter: &Call{Op: OpGt, Args: []Expression{
+				&FieldRef{Name: SpanFieldStartTime, Level: LevelSpan},
+				&FieldRef{Name: SpanFieldEndTime, Level: LevelSpan},
+			}},
+		},
+		{
+			name:        "a comparison of two attributes",
+			expectedErr: `operator "eq" compares a reference against a constant, and this version does not define what comparing two references means`,
+			filter:      &Call{Op: OpEq, Args: []Expression{attr("a"), attr("b")}},
+		},
+		{
+			name:        "a duration constant compared against an attribute",
+			expectedErr: `operator "gt" compares a duration constant against an attribute, and the wire cannot spell a duration`,
+			filter: &Call{Op: OpGt, Args: []Expression{
+				attr("latency"), &DurationValue{Value: 2 * time.Second},
+			}},
+		},
+		{
+			name:        "a timestamp constant compared against an attribute",
+			expectedErr: `operator "eq" compares a timestamp constant against an attribute, and the wire cannot spell a timestamp`,
+			filter: &Call{Op: OpEq, Args: []Expression{
+				attr("deadline"), &TimestampValue{Value: time.Unix(0, 0).UTC()},
+			}},
+		},
+		{
+			name:        "an anchored regular expression",
+			expectedErr: `operator "regex" matches anywhere in the value, so a pattern cannot anchor itself`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "^GET"},
+			}},
+		},
+		{
+			name:        "a regular expression that will not compile",
+			expectedErr: `operator "regex" takes a pattern in RE2 syntax`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "GET ("},
+			}},
+		},
+		{
+			name:        "a regular expression with a word boundary",
+			expectedErr: `operator "regex" takes a pattern without word boundaries`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: `\bGET`},
+			}},
+		},
+		{
+			name:        "a regular expression with a lazy quantifier",
+			expectedErr: `operator "regex" asks whether the value matches, so a quantifier cannot be lazy`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "GET.*?/"},
+			}},
+		},
+		{
+			name:        "a regular expression asking to fold case",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot fold case`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?i)get"},
+			}},
 		},
 		{
 			name:        "a regular expression over a duration field",
@@ -529,6 +598,14 @@ func TestValidateFilter_RejectsUnknownField(t *testing.T) {
 // these walk the vocabulary itself, so a constant added without a matching case in the
 // validator fails here rather than passing unnoticed until a caller sends it.
 
+// TestDomainOfAnUndeclaredType pins what an unnamed type says about a value: nothing. Validation
+// refuses an undefined field and an unknown value type before either domain is asked about, so
+// this is the one place the zero value of each is exercised.
+func TestDomainOfAnUndeclaredType(t *testing.T) {
+	assert.Equal(t, domainUnknown, domainOfFieldType(""))
+	assert.Equal(t, domainUnknown, domainOfValueType(""))
+}
+
 // TestValidateFilter_HandlesEveryOperator pins that each declared operator has a case in
 // validateCall. Without this, adding an operator constant and forgetting the case would report
 // it to callers as unknown — the one answer that is certainly wrong, since the API defines it.
@@ -572,15 +649,24 @@ func TestValidateFilter_AcceptsEveryValueType(t *testing.T) {
 	}
 }
 
-// TestValidateFilter_AcceptsEveryConstant pins that every constant node is comparable, since
-// each one is something a wire hint or a resolution can produce.
+// TestValidateFilter_AcceptsEveryConstant pins that every constant node is comparable against
+// something, since each one is what a wire hint or a resolution can produce. A duration and an
+// instant are comparable only against the built-in field that spells them (§5.4), which is why
+// the reference this compares against depends on the constant.
 func TestValidateFilter_AcceptsEveryConstant(t *testing.T) {
 	for _, test := range allTerms {
 		if !isConstant(test.term) {
 			continue
 		}
 		t.Run(test.name, func(t *testing.T) {
-			require.NoError(t, ValidateFilter(eq(attr("a"), test.term)))
+			var reference Expression = attr("a")
+			switch test.term.(type) {
+			case *DurationValue:
+				reference = spanField(SpanFieldDuration)
+			case *TimestampValue:
+				reference = spanField(SpanFieldStartTime)
+			}
+			require.NoError(t, ValidateFilter(eq(reference, test.term)))
 		})
 	}
 }

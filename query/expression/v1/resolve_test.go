@@ -43,11 +43,6 @@ func TestResolveConstants(t *testing.T) {
 			expected: eq(spanField(SpanFieldName), &StringValue{Value: "GET /api"}),
 		},
 		{
-			name:     "the constant on the left",
-			filter:   eq(&AnyValue{Value: "5s"}, spanField(SpanFieldDuration)),
-			expected: eq(&DurationValue{Value: 5 * time.Second}, spanField(SpanFieldDuration)),
-		},
-		{
 			name:     "an event field, which measures from its span's start",
 			filter:   &Call{Op: OpLt, Args: []Expression{&FieldRef{Name: EventFieldTimeSinceStart, Level: LevelEvent}, &AnyValue{Value: "50us"}}},
 			expected: &Call{Op: OpLt, Args: []Expression{&FieldRef{Name: EventFieldTimeSinceStart, Level: LevelEvent}, &DurationValue{Value: 50 * time.Microsecond}}},
@@ -77,9 +72,9 @@ func TestResolveConstants(t *testing.T) {
 			}},
 		},
 		{
-			name:     "two fields, with no constant between them",
-			filter:   &Call{Op: OpLt, Args: []Expression{spanField(SpanFieldStartTime), spanField(SpanFieldEndTime)}},
-			expected: &Call{Op: OpLt, Args: []Expression{spanField(SpanFieldStartTime), spanField(SpanFieldEndTime)}},
+			name:     "a comparison against an attribute, whose type only storage knows",
+			filter:   eq(attr("http.method"), &AnyValue{Value: "GET"}),
+			expected: eq(attr("http.method"), &AnyValue{Value: "GET"}),
 		},
 		{
 			name: "a predicate buried under a quantifier and a negation",
@@ -193,7 +188,7 @@ func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 	require.ErrorContains(t, err, "cannot compare span.duration against a list of string")
 
 	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
-		duration, &List{Values: []string{"banana"}, Type: ValueTypeInt},
+		duration, &List{Values: []string{"12"}, Type: ValueTypeInt},
 	}})
 	require.ErrorContains(t, err, "cannot compare span.duration against a list of int")
 
@@ -212,6 +207,46 @@ func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 		&AttributeRef{Key: "size"}, &List{Values: []string{"banana"}},
 	}})
 	require.NoError(t, err, "an attribute's values are storage's to read")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&FieldRef{Name: SpanFieldKind, Level: LevelSpan},
+		&List{Values: []string{"server", "client"}, Type: ValueTypeString},
+	}})
+	require.NoError(t, err, "a word-valued field holds text, so a list of strings suits it")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&FieldRef{Name: SpanFieldStatus, Level: LevelSpan},
+		&List{Values: []string{"banana"}, Type: ValueTypeString},
+	}})
+	require.ErrorContains(t, err, "not one of unset, ok, error")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&FieldRef{Name: SpanFieldName, Level: LevelSpan},
+		&List{Values: []string{"true"}, Type: ValueTypeBool},
+	}})
+	require.ErrorContains(t, err, "cannot compare span.name against a list of bool")
+
+	// A declared element type is authoritative wherever it appears, so the elements are read as
+	// it whether or not there is a field opposite to compare it with.
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&AttributeRef{Key: "size"}, &List{Values: []string{"banana"}, Type: ValueTypeInt},
+	}})
+	require.ErrorContains(t, err, `element "banana" of a list of int`)
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&AttributeRef{Key: "size"}, &List{Values: []string{"12", "banana"}, Type: ValueTypeDouble},
+	}})
+	require.ErrorContains(t, err, `element "banana" of a list of double`)
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&AttributeRef{Key: "cache.hit"}, &List{Values: []string{"yes"}, Type: ValueTypeBool},
+	}})
+	require.ErrorContains(t, err, `element "yes" of a list of bool`)
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&AttributeRef{Key: "size"}, &List{Values: []string{"12"}, Type: ValueTypeInt},
+	}})
+	require.NoError(t, err, "elements that read as their declared type")
 
 	// ValidateFilter refuses both of these, so resolution only has to not choke on them.
 	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
@@ -362,6 +397,76 @@ func TestResolveConstants_AcceptsCompatibleTypedConstants(t *testing.T) {
 			assert.Equal(t, test.expected, resolved.Args[1])
 		})
 	}
+}
+
+// TestResolveConstants_PutsTheReferenceFirst pins the orientation every consumer downstream
+// relies on. A caller may write the constant on the left, so resolution swaps the operands and
+// inverts an ordered operator, which leaves the query asking the same thing.
+func TestResolveConstants_PutsTheReferenceFirst(t *testing.T) {
+	duration := spanField(SpanFieldDuration)
+	name := spanField(SpanFieldName)
+
+	tests := []struct {
+		name     string
+		filter   *Call
+		expected *Call
+	}{
+		{
+			name:     "greater than becomes less than",
+			filter:   &Call{Op: OpGt, Args: []Expression{&AnyValue{Value: "2s"}, duration}},
+			expected: &Call{Op: OpLt, Args: []Expression{duration, &DurationValue{Value: 2 * time.Second}}},
+		},
+		{
+			name:     "at least becomes at most",
+			filter:   &Call{Op: OpGte, Args: []Expression{&AnyValue{Value: "2s"}, duration}},
+			expected: &Call{Op: OpLte, Args: []Expression{duration, &DurationValue{Value: 2 * time.Second}}},
+		},
+		{
+			name:     "less than becomes greater than",
+			filter:   &Call{Op: OpLt, Args: []Expression{&AnyValue{Value: "2s"}, duration}},
+			expected: &Call{Op: OpGt, Args: []Expression{duration, &DurationValue{Value: 2 * time.Second}}},
+		},
+		{
+			name:     "at most becomes at least",
+			filter:   &Call{Op: OpLte, Args: []Expression{&AnyValue{Value: "2s"}, duration}},
+			expected: &Call{Op: OpGte, Args: []Expression{duration, &DurationValue{Value: 2 * time.Second}}},
+		},
+		{
+			name:     "equality keeps its operator",
+			filter:   &Call{Op: OpEq, Args: []Expression{&AnyValue{Value: "GET /"}, name}},
+			expected: &Call{Op: OpEq, Args: []Expression{name, &StringValue{Value: "GET /"}}},
+		},
+		{
+			name:     "inequality keeps its operator",
+			filter:   &Call{Op: OpNe, Args: []Expression{&AnyValue{Value: "GET /"}, name}},
+			expected: &Call{Op: OpNe, Args: []Expression{name, &StringValue{Value: "GET /"}}},
+		},
+		{
+			name:     "a comparison already the right way round is left alone",
+			filter:   &Call{Op: OpGt, Args: []Expression{duration, &AnyValue{Value: "2s"}}},
+			expected: &Call{Op: OpGt, Args: []Expression{duration, &DurationValue{Value: 2 * time.Second}}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.NoError(t, ValidateFilter(test.filter), "the fixture is a filter validation accepts")
+			resolved, err := ResolveConstants(test.filter)
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, resolved)
+		})
+	}
+}
+
+// TestResolveConstants_LeavesTwoReferencesAlone pins that resolution answers for a tree
+// validation would have refused. There is no constant to read between two references, and
+// refusing the comparison is ValidateFilter's job rather than this stage's.
+func TestResolveConstants_LeavesTwoReferencesAlone(t *testing.T) {
+	filter := &Call{Op: OpLt, Args: []Expression{
+		spanField(SpanFieldStartTime), spanField(SpanFieldEndTime),
+	}}
+	resolved, err := ResolveConstants(filter)
+	require.NoError(t, err)
+	assert.Equal(t, filter, resolved)
 }
 
 func TestResolveConstants_LeavesItsInputAlone(t *testing.T) {

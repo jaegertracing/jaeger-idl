@@ -6,6 +6,7 @@ package expression
 import (
 	"errors"
 	"fmt"
+	"regexp/syntax"
 	"slices"
 )
 
@@ -79,10 +80,11 @@ func validateCall(call *Call, quantified []Level) error {
 		if err := validateRegexSubject(call.Args[0]); err != nil {
 			return err
 		}
-		if !isTextConstant(call.Args[1]) {
+		pattern, ok := patternText(call.Args[1])
+		if !ok {
 			return fmt.Errorf("operator %q takes a constant string as its pattern, got %s", call.Op, termName(call.Args[1]))
 		}
-		return nil
+		return validatePattern(pattern)
 	case OpEq, OpNe:
 		if err := wantArgs(call, 2); err != nil {
 			return err
@@ -146,9 +148,10 @@ func validateSome(call *Call, quantified []Level) error {
 	return validateCall(predicate, append(slices.Clone(quantified), ref.Level))
 }
 
-// validateComparison checks the two operands of an equality: each names or supplies a value,
-// and they are not both constants, since comparing one constant against another asks nothing
-// about the span.
+// validateComparison checks the two operands of a comparison: one names a value on the span and
+// the other supplies the constant to compare it against, in either order. Two constants ask
+// nothing about the span, and what comparing two references means — a duration against a name,
+// say — is a question this version does not answer, so neither is accepted.
 func validateComparison(call *Call, quantified []Level) error {
 	for _, arg := range call.Args {
 		if err := validateOperand(call.Op, arg, quantified); err != nil {
@@ -156,9 +159,38 @@ func validateComparison(call *Call, quantified []Level) error {
 		}
 	}
 	if isConstant(call.Args[0]) && isConstant(call.Args[1]) {
-		return fmt.Errorf("operator %q compares a reference against a constant, or two references, got two constants", call.Op)
+		return fmt.Errorf("operator %q compares a reference against a constant, got two constants", call.Op)
+	}
+	if !isConstant(call.Args[0]) && !isConstant(call.Args[1]) {
+		return fmt.Errorf("operator %q compares a reference against a constant, and this version does not define what comparing two references means", call.Op)
+	}
+	reference, constant := call.Args[0], call.Args[1]
+	if isConstant(reference) {
+		reference, constant = constant, reference
+	}
+	return validateTimeConstant(call.Op, reference, constant)
+}
+
+// validateTimeConstant refuses a duration or an instant compared against an attribute. The wire
+// spells neither (§5.4), so one survives only where a built-in field's declared type rebuilds it.
+// An attribute declares nothing, so the constant would come back untyped and ask the backend a
+// different question; comparing the attribute against the spelling asks that question directly.
+func validateTimeConstant(op Operator, reference, constant Expression) error {
+	if _, ok := reference.(*AttributeRef); !ok {
+		return nil
+	}
+	switch constant.(type) {
+	case *DurationValue:
+		return errNoWireSpelling(op, constant, "duration")
+	case *TimestampValue:
+		return errNoWireSpelling(op, constant, "timestamp")
 	}
 	return nil
+}
+
+func errNoWireSpelling(op Operator, constant Expression, kind string) error {
+	return fmt.Errorf("operator %q compares %s against an attribute, and the wire cannot spell a %s",
+		op, termName(constant), kind)
 }
 
 // validateOrderedComparison checks an ordered comparison. Its operands have to be comparable in
@@ -171,12 +203,12 @@ func validateOrderedComparison(call *Call, quantified []Level) error {
 		return err
 	}
 	for _, arg := range call.Args {
-		if domainOfOperand(arg) == domainNone {
+		if !orderable(arg) {
 			return fmt.Errorf("operator %q has no ordering for %s", call.Op, termName(arg))
 		}
 	}
 	left, right := domainOfOperand(call.Args[0]), domainOfOperand(call.Args[1])
-	if left != domainAny && right != domainAny && left != right {
+	if left != domainUnknown && right != domainUnknown && left != right {
 		return fmt.Errorf("operator %q compares %s against %s, which have no common ordering",
 			call.Op, termName(call.Args[0]), termName(call.Args[1]))
 	}
@@ -298,25 +330,26 @@ func validateRegexSubject(subject Expression) error {
 	return nil
 }
 
-// domain is the set a value is ordered within. Two operands of an ordered comparison have to
-// share one, and an untyped constant or an attribute shares every one because nothing has said
-// what it holds yet.
+// domain is the kind of value a term holds, which is what decides whether two operands can be
+// compared at all. Nothing has said what an untyped constant or an attribute holds, so those are
+// unknown and compare against anything.
+//
+// Whether a domain has an order is a separate question, and the answer can differ within one: the
+// two word-valued fields hold text but have no useful order (see orderable).
 type domain int
 
 const (
-	domainNone domain = iota // no ordering: a boolean
-	domainAny                // unconstrained: an untyped constant, or an attribute
+	domainUnknown domain = iota
 	domainNumber
 	domainDuration
 	domainTimestamp
 	domainText
+	domainBool
 )
 
-// domainOf reads the domain a constant is ordered within.
+// domainOf reads the kind of value a constant holds.
 func domainOf(e Expression) domain {
 	switch e.(type) {
-	case *AnyValue:
-		return domainAny
 	case *IntValue, *DoubleValue:
 		return domainNumber
 	case *DurationValue:
@@ -325,14 +358,16 @@ func domainOf(e Expression) domain {
 		return domainTimestamp
 	case *StringValue:
 		return domainText
+	case *BoolValue:
+		return domainBool
 	default:
-		return domainNone
+		return domainUnknown
 	}
 }
 
-// domainOfOperand reads the domain of either side of a comparison. A built-in field is ordered
-// within the domain of the type it holds; an attribute is unconstrained, because only storage
-// knows how it was written.
+// domainOfOperand reads the kind of value either side of a comparison holds. A built-in field
+// holds what its declared type says; an attribute holds whatever storage wrote there, which is
+// not this API's to know.
 func domainOfOperand(e Expression) domain {
 	if ref, ok := e.(*FieldRef); ok && ref != nil {
 		// A field this API does not define is refused before an ordering is asked about, so the
@@ -341,49 +376,97 @@ func domainOfOperand(e Expression) domain {
 		return domainOfFieldType(field.Type)
 	}
 	if _, ok := e.(*AttributeRef); ok {
-		return domainAny
+		return domainUnknown
 	}
 	return domainOf(e)
 }
 
-// domainOfValueType reads the domain a declared wire type is ordered within, which is what a
-// list's element type says about its elements.
+// domainOfValueType reads the kind of value a declared wire type names, which is what a list's
+// element type says about its elements.
 func domainOfValueType(t ValueType) domain {
 	switch t {
 	case ValueTypeInt, ValueTypeDouble:
 		return domainNumber
 	case ValueTypeString:
 		return domainText
+	case ValueTypeBool:
+		return domainBool
 	default:
-		return domainNone
+		return domainUnknown
 	}
 }
 
-// domainOfFieldType reads the domain a built-in field is ordered within. The two word-valued
-// fields have none: asking for the kinds after "server" is not a question about span kinds.
+// domainOfFieldType reads the kind of value a built-in field holds. A field holding one of a
+// closed set of words holds text, which is what makes a list of strings the right list for it.
 func domainOfFieldType(t FieldType) domain {
 	switch t {
 	case FieldTypeDuration:
 		return domainDuration
 	case FieldTypeTimestamp:
 		return domainTimestamp
-	case FieldTypeString:
+	case FieldTypeString, FieldTypeSpanKind, FieldTypeSpanStatus:
 		return domainText
 	default:
-		return domainNone
+		return domainUnknown
 	}
 }
 
-// isTextConstant reports whether a constant can be read as text, which is what a regular
-// expression needs of its pattern. An untyped constant counts: a pattern is written as a bare
-// string and carries no wire hint.
-func isTextConstant(e Expression) bool {
-	switch e.(type) {
-	case *AnyValue, *StringValue:
-		return true
-	default:
-		return false
+// orderable reports whether an operand has an order to be compared within. Two do not: a boolean,
+// and a field holding one of a closed set of words, because the kinds that sort after "server" is
+// not a question about span kinds.
+func orderable(e Expression) bool {
+	if ref, ok := e.(*FieldRef); ok && ref != nil {
+		field, _ := LookupField(ref.Level, ref.Name)
+		return field.Type != FieldTypeSpanKind && field.Type != FieldTypeSpanStatus
 	}
+	return domainOf(e) != domainBool
+}
+
+// validatePattern checks a regular expression. RFC 0005 §5.3 makes it RE2 syntax, matched anywhere
+// in the value and case-sensitively, so a pattern that will not parse is refused here rather than
+// by whichever backend received it.
+func validatePattern(pattern string) error {
+	parsed, err := syntax.Parse(pattern, syntax.Perl)
+	if err != nil {
+		return fmt.Errorf("operator %q takes a pattern in RE2 syntax: %w", OpRegex, err)
+	}
+	return checkPortable(parsed)
+}
+
+// checkPortable refuses the constructs the backends this lowers to do not all have. Elasticsearch,
+// for one, reads `^` as a literal caret rather than as an anchor, so a pattern using it would be
+// answered differently by each backend instead of being refused by the ones that cannot honor it.
+func checkPortable(re *syntax.Regexp) error {
+	switch re.Op {
+	case syntax.OpBeginLine, syntax.OpEndLine, syntax.OpBeginText, syntax.OpEndText:
+		return fmt.Errorf("operator %q matches anywhere in the value, so a pattern cannot anchor itself", OpRegex)
+	case syntax.OpWordBoundary, syntax.OpNoWordBoundary:
+		return fmt.Errorf("operator %q takes a pattern without word boundaries", OpRegex)
+	}
+	if re.Flags&syntax.NonGreedy != 0 {
+		return fmt.Errorf("operator %q asks whether the value matches, so a quantifier cannot be lazy", OpRegex)
+	}
+	if re.Flags&syntax.FoldCase != 0 {
+		return fmt.Errorf("operator %q matches case-sensitively, so a pattern cannot fold case", OpRegex)
+	}
+	for _, sub := range re.Sub {
+		if err := checkPortable(sub); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// patternText reads the spelling of a constant that can serve as a regular expression. An untyped
+// constant can: a pattern is written as a bare string and carries no wire hint.
+func patternText(e Expression) (string, bool) {
+	switch value := e.(type) {
+	case *AnyValue:
+		return value.Value, true
+	case *StringValue:
+		return value.Value, true
+	}
+	return "", false
 }
 
 // termName names the kind of a term for an error message.

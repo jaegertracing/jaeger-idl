@@ -65,35 +65,34 @@ func TestConstantsCarryTheirParsedValue(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 0).UTC(), (&TimestampValue{Value: time.Unix(0, 0).UTC()}).Value)
 }
 
-// TestConstantKinds pins the domain each constant is ordered within, and which ones a regular
-// expression reads as text. The untyped constant is unconstrained in both, because it is what a
-// value with no wire hint arrives as and neither operator can refuse it on its spelling alone.
-// A boolean has no ordering at all: nobody asks which spans sort after false.
+// TestConstantKinds pins the kind of value each constant holds, and which ones can serve as a
+// regular expression. An untyped constant holds nothing known, because it is what a value with no
+// wire hint arrives as and no operator can settle its type from its spelling alone.
 func TestConstantKinds(t *testing.T) {
 	domains := map[string]domain{}
-	text := map[string]bool{}
+	patterns := map[string]bool{}
 	for _, test := range allTerms {
 		if !isConstant(test.term) {
 			continue
 		}
 		domains[test.name] = domainOf(test.term)
-		if isTextConstant(test.term) {
-			text[test.name] = true
+		if _, ok := patternText(test.term); ok {
+			patterns[test.name] = true
 		}
 	}
 	assert.Equal(t, map[string]domain{
-		"an untyped constant":       domainAny,
+		"an untyped constant":       domainUnknown,
 		"a string constant":         domainText,
 		"an integer constant":       domainNumber,
 		"a floating-point constant": domainNumber,
-		"a boolean constant":        domainNone,
+		"a boolean constant":        domainBool,
 		"a duration constant":       domainDuration,
 		"a timestamp constant":      domainTimestamp,
 	}, domains)
 	assert.Equal(t, map[string]bool{
 		"an untyped constant": true,
 		"a string constant":   true,
-	}, text)
+	}, patterns)
 
 	assert.False(t, isConstant(&List{}), "a list is only ever a membership operand")
 	assert.False(t, isConstant(nil))

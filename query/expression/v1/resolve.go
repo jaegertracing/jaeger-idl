@@ -21,6 +21,9 @@ import (
 // attribute was written. Resolution rewrites the nodes it changes and returns a new tree rather
 // than annotating the one it was given, so nothing it produces can go stale when a query
 // interceptor edits a predicate afterwards.
+//
+// It also puts the reference first in every comparison, so each consumer downstream reads one
+// orientation rather than handling both.
 func ResolveConstants(filter *Call) (*Call, error) {
 	if filter == nil {
 		return nil, errors.New("filter is empty")
@@ -47,19 +50,22 @@ func resolveCall(call *Call) (*Call, error) {
 		}
 		args[i] = resolved
 	}
+	op := call.Op
 	if len(args) == 2 {
 		var err error
 		switch {
-		case isComparison(call.Op):
-			err = resolveComparison(args)
-		case call.Op == OpIn || call.Op == OpNotIn:
+		case isComparison(op):
+			if err = resolveComparison(args); err == nil {
+				op, args = referenceFirst(op, args)
+			}
+		case op == OpIn || op == OpNotIn:
 			err = checkMembership(args)
 		}
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &Call{Op: call.Op, Args: args}, nil
+	return &Call{Op: op, Args: args}, nil
 }
 
 // resolveComparison rewrites the unconstrained constant sitting opposite a built-in field. A
@@ -90,6 +96,31 @@ func resolveComparison(args []Expression) error {
 	return nil
 }
 
+// referenceFirst puts the reference on the left of a comparison. A caller may write the constant
+// there instead, and swapping the operands asks the same question as long as an ordered operator
+// turns around with them.
+func referenceFirst(op Operator, args []Expression) (Operator, []Expression) {
+	if !isConstant(args[0]) {
+		return op, args
+	}
+	return turnedAround(op), []Expression{args[1], args[0]}
+}
+
+func turnedAround(op Operator) Operator {
+	switch op {
+	case OpGt:
+		return OpLt
+	case OpLt:
+		return OpGt
+	case OpGte:
+		return OpLte
+	case OpLte:
+		return OpGte
+	default:
+		return op
+	}
+}
+
 // checkMembership reads every element of a list compared against a built-in field as that
 // field's type, so a spelling refused under `gt` is refused under `in` as well. The list is not
 // rewritten — it carries its elements as spellings and there is no typed list node — so this
@@ -98,12 +129,15 @@ func resolveComparison(args []Expression) error {
 // A declared element type does not exempt the list. It says how to read the elements, so it has
 // to be a type the field could hold, and the elements still have to be readable as it.
 func checkMembership(args []Expression) error {
-	ref, ok := args[0].(*FieldRef)
-	if !ok || ref == nil {
-		return nil
-	}
 	list, ok := args[1].(*List)
 	if !ok || list == nil {
+		return nil
+	}
+	if err := readDeclaredElements(list); err != nil {
+		return err
+	}
+	ref, ok := args[0].(*FieldRef)
+	if !ok || ref == nil {
 		return nil
 	}
 	field, ok := LookupField(ref.Level, ref.Name)
@@ -120,6 +154,36 @@ func checkMembership(args []Expression) error {
 		}
 	}
 	return nil
+}
+
+// readDeclaredElements reads a list's elements as the type the list declares. That type is what
+// the list says its elements are, so it holds wherever the list appears — including beside an
+// attribute, where there is no field to check it against.
+func readDeclaredElements(list *List) error {
+	if list.Type == "" {
+		return nil
+	}
+	for _, element := range list.Values {
+		if err := readValue(list.Type, element); err != nil {
+			return fmt.Errorf("element %q of a list of %s: %w", element, list.Type, err)
+		}
+	}
+	return nil
+}
+
+// readValue reads a spelling as a declared wire type. A string needs no reading; the others have
+// exactly one spelling each, and anything else is a value the caller cannot have meant.
+func readValue(t ValueType, raw string) error {
+	var err error
+	switch t {
+	case ValueTypeInt:
+		_, err = strconv.ParseInt(raw, 10, 64)
+	case ValueTypeDouble:
+		_, err = strconv.ParseFloat(raw, 64)
+	case ValueTypeBool:
+		_, err = strconv.ParseBool(raw)
+	}
+	return err
 }
 
 // describeOperand names an operand in an error the way a caller wrote it: the spelling it sent
