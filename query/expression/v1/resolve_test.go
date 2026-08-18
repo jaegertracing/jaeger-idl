@@ -63,9 +63,9 @@ func TestResolveConstants(t *testing.T) {
 			expected: eq(spanField(SpanFieldName), &StringValue{Value: "GET /api"}),
 		},
 		{
-			name:     "a pattern, which is a pattern whatever the field holds",
-			filter:   &Call{Op: OpRegex, Args: []Expression{spanField(SpanFieldDuration), &AnyValue{Value: ".*"}}},
-			expected: &Call{Op: OpRegex, Args: []Expression{spanField(SpanFieldDuration), &AnyValue{Value: ".*"}}},
+			name:     "a pattern, which stays a pattern rather than becoming the field's type",
+			filter:   &Call{Op: OpRegex, Args: []Expression{spanField(SpanFieldName), &AnyValue{Value: ".*"}}},
+			expected: &Call{Op: OpRegex, Args: []Expression{spanField(SpanFieldName), &AnyValue{Value: ".*"}}},
 		},
 		{
 			name: "a membership list, which carries its own spelling",

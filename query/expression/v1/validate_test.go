@@ -100,6 +100,13 @@ func TestValidateFilter_Accepts(t *testing.T) {
 			}},
 		},
 		{
+			name: "a regular expression over a field holding one of a set of words",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldKind, Level: LevelSpan},
+				&StringValue{Value: "produ.*"},
+			}},
+		},
+		{
 			name: "a regular expression with a typed pattern",
 			filter: &Call{Op: OpRegex, Args: []Expression{
 				attr("http.route"),
@@ -315,6 +322,20 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			name:        "an ordered comparison against a boolean",
 			expectedErr: `operator "lte" has no ordering for a boolean constant`,
 			filter:      &Call{Op: OpLte, Args: []Expression{attr("a"), &BoolValue{Value: true}}},
+		},
+		{
+			name:        "a regular expression over a duration field",
+			expectedErr: `operator "regex" matches text, and span.duration holds a duration`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan}, &StringValue{Value: "2s"},
+			}},
+		},
+		{
+			name:        "a regular expression over a timestamp field",
+			expectedErr: `operator "regex" matches text, and span.startTime holds a timestamp`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldStartTime, Level: LevelSpan}, &StringValue{Value: "2026-.*"},
+			}},
 		},
 		{
 			name:        "a regular expression over a numeric pattern",

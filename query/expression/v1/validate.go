@@ -76,6 +76,9 @@ func validateCall(call *Call, quantified []Level) error {
 		if err := validateSubject(call.Op, call.Args[0], quantified); err != nil {
 			return err
 		}
+		if err := validateRegexSubject(call.Args[0]); err != nil {
+			return err
+		}
 		if !isTextConstant(call.Args[1]) {
 			return fmt.Errorf("operator %q takes a constant string as its pattern, got %s", call.Op, termName(call.Args[1]))
 		}
@@ -276,6 +279,23 @@ func isConstant(e Expression) bool {
 	default:
 		return false
 	}
+}
+
+// validateRegexSubject refuses a subject a pattern has nothing to match against. A string field,
+// a word-valued field and an attribute all hold text; a duration or a timestamp does not, and
+// nothing in this API says which of its spellings a pattern would be shown.
+func validateRegexSubject(subject Expression) error {
+	ref, ok := subject.(*FieldRef)
+	if !ok || ref == nil {
+		return nil
+	}
+	field, _ := LookupField(ref.Level, ref.Name)
+	switch field.Type {
+	case FieldTypeDuration, FieldTypeTimestamp:
+		return fmt.Errorf("operator %q matches text, and %s.%s holds a %s",
+			OpRegex, ref.Level, ref.Name, field.Type)
+	}
+	return nil
 }
 
 // domain is the set a value is ordered within. Two operands of an ordered comparison have to
