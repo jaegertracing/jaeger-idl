@@ -171,8 +171,9 @@ func TestResolveConstants_RefusesAConstantThatWillNotParse(t *testing.T) {
 // rather than annotating the one it was given, which is what keeps a query interceptor's later
 // edit from leaving anything stale behind.
 // TestResolveConstants_ChecksMembershipElements pins that a spelling refused under a comparison
-// is refused under membership too. The list is not rewritten, so what this asserts is the
-// refusal; a list declaring its own element type says how to read itself and is left alone.
+// is refused under membership too, and that a declared element type does not exempt the list
+// from either half of that: the type has to be one the field could hold, and the elements have
+// to be readable as it. The list is not rewritten, so what this asserts is the refusal.
 func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 	duration := &FieldRef{Name: SpanFieldDuration, Level: LevelSpan}
 
@@ -189,7 +190,23 @@ func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
 		duration, &List{Values: []string{"banana"}, Type: ValueTypeString},
 	}})
-	require.NoError(t, err, "a declared element type says how to read the list")
+	require.ErrorContains(t, err, "cannot compare span.duration against a list of string")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		duration, &List{Values: []string{"banana"}, Type: ValueTypeInt},
+	}})
+	require.ErrorContains(t, err, "cannot compare span.duration against a list of int")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		duration, &List{Values: []string{"true"}, Type: ValueTypeBool},
+	}})
+	require.ErrorContains(t, err, "cannot compare span.duration against a list of bool")
+
+	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
+		&FieldRef{Name: SpanFieldName, Level: LevelSpan},
+		&List{Values: []string{"GET /a", "GET /b"}, Type: ValueTypeString},
+	}})
+	require.NoError(t, err, "a declared type the field can hold, with elements that read as it")
 
 	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
 		&AttributeRef{Key: "size"}, &List{Values: []string{"banana"}},
@@ -236,6 +253,115 @@ func TestResolveConstants_ChecksEnumSpellings(t *testing.T) {
 		&FieldRef{Name: SpanFieldTraceID, Level: LevelSpan}, &AnyValue{Value: "not-hex"},
 	}})
 	require.NoError(t, err)
+
+	// Declaring the constant a string does not get it past the vocabulary.
+	_, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{status, &StringValue{Value: "banana"}}})
+	require.ErrorContains(t, err, `cannot compare span.status against "banana"`)
+	require.ErrorContains(t, err, "not one of unset, ok, error")
+
+	got, err = ResolveConstants(&Call{Op: OpEq, Args: []Expression{kind, &StringValue{Value: "client"}}})
+	require.NoError(t, err)
+	assert.Equal(t, &StringValue{Value: "client"}, got.Args[1])
+}
+
+// TestResolveConstants_ChecksTypedConstants pins that declaring a constant's type does not excuse
+// it from being one the field can hold: an `int` where a duration belongs is a question the field
+// cannot answer, however it was spelled.
+func TestResolveConstants_ChecksTypedConstants(t *testing.T) {
+	tests := []struct {
+		name        string
+		filter      *Call
+		expectedErr string
+	}{
+		{
+			name: "an int against a duration field",
+			filter: &Call{Op: OpGt, Args: []Expression{
+				spanField(SpanFieldDuration), &IntValue{Value: 2},
+			}},
+			expectedErr: "cannot compare span.duration against an integer constant: the field holds duration",
+		},
+		{
+			name: "a duration against a text field",
+			filter: &Call{Op: OpEq, Args: []Expression{
+				spanField(SpanFieldName), &DurationValue{Value: time.Second},
+			}},
+			expectedErr: "cannot compare span.name against a duration constant: the field holds string",
+		},
+		{
+			name: "a number against a field that holds one of a set of words",
+			filter: &Call{Op: OpEq, Args: []Expression{
+				spanField(SpanFieldKind), &IntValue{Value: 1},
+			}},
+			expectedErr: "not one of unspecified, internal, server, client, producer, consumer",
+		},
+		{
+			name: "a boolean against a text field",
+			filter: &Call{Op: OpEq, Args: []Expression{
+				spanField(SpanFieldName), &BoolValue{Value: true},
+			}},
+			expectedErr: "cannot compare span.name against a boolean constant: the field holds string",
+		},
+		{
+			name: "a timestamp against a duration field",
+			filter: &Call{Op: OpGt, Args: []Expression{
+				spanField(SpanFieldDuration), &TimestampValue{Value: time.Unix(0, 0)},
+			}},
+			expectedErr: "cannot compare span.duration against a timestamp constant: the field holds duration",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			resolved, err := ResolveConstants(test.filter)
+			require.ErrorContains(t, err, test.expectedErr)
+			assert.Nil(t, resolved)
+		})
+	}
+}
+
+// TestResolveConstants_AcceptsCompatibleTypedConstants is the other half: a constant whose
+// declared type the field holds needs no rewriting and is passed through as it stands.
+func TestResolveConstants_AcceptsCompatibleTypedConstants(t *testing.T) {
+	tests := []struct {
+		name     string
+		filter   *Call
+		expected Expression
+	}{
+		{
+			name: "a duration against a duration field",
+			filter: &Call{Op: OpGt, Args: []Expression{
+				spanField(SpanFieldDuration), &DurationValue{Value: 2 * time.Second},
+			}},
+			expected: &DurationValue{Value: 2 * time.Second},
+		},
+		{
+			name: "a string against a text field",
+			filter: &Call{Op: OpEq, Args: []Expression{
+				spanField(SpanFieldName), &StringValue{Value: "GET /"},
+			}},
+			expected: &StringValue{Value: "GET /"},
+		},
+		{
+			name: "a boolean against a field that holds one, which no built-in field does",
+			filter: &Call{Op: OpEq, Args: []Expression{
+				&AttributeRef{Key: "cache.hit"}, &BoolValue{Value: true},
+			}},
+			expected: &BoolValue{Value: true},
+		},
+		{
+			name: "an integer against an attribute, whose type only storage knows",
+			filter: &Call{Op: OpGt, Args: []Expression{
+				&AttributeRef{Key: "http.status_code"}, &IntValue{Value: 500},
+			}},
+			expected: &IntValue{Value: 500},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			resolved, err := ResolveConstants(test.filter)
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, resolved.Args[1])
+		})
+	}
 }
 
 func TestResolveConstants_LeavesItsInputAlone(t *testing.T) {

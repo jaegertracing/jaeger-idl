@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -71,21 +72,20 @@ func resolveComparison(args []Expression) error {
 			continue
 		}
 		other := 1 - i
-		raw, ok := args[other].(*AnyValue)
-		if !ok {
-			continue
-		}
 		field, ok := LookupField(ref.Level, ref.Name)
 		if !ok {
 			// ValidateFilter refuses a field this API does not define, so there is nothing to
 			// resolve against and nothing useful to say about it here.
 			continue
 		}
-		value, err := readConstant(field.Type, raw.Value)
+		value, err := readOperand(field.Type, args[other])
 		if err != nil {
-			return fmt.Errorf("cannot compare %s.%s against %q: %w", ref.Level, ref.Name, raw.Value, err)
+			return fmt.Errorf("cannot compare %s.%s against %s: %w",
+				ref.Level, ref.Name, describeOperand(args[other]), err)
 		}
-		args[other] = value
+		if value != nil {
+			args[other] = value
+		}
 	}
 	return nil
 }
@@ -94,19 +94,25 @@ func resolveComparison(args []Expression) error {
 // field's type, so a spelling refused under `gt` is refused under `in` as well. The list is not
 // rewritten — it carries its elements as spellings and there is no typed list node — so this
 // only refuses what cannot be read.
+//
+// A declared element type does not exempt the list. It says how to read the elements, so it has
+// to be a type the field could hold, and the elements still have to be readable as it.
 func checkMembership(args []Expression) error {
 	ref, ok := args[0].(*FieldRef)
 	if !ok || ref == nil {
 		return nil
 	}
 	list, ok := args[1].(*List)
-	if !ok || list == nil || list.Type != "" {
-		// A list that declares its own element type says how to read itself.
+	if !ok || list == nil {
 		return nil
 	}
 	field, ok := LookupField(ref.Level, ref.Name)
 	if !ok {
 		return nil
+	}
+	if list.Type != "" && domainOfValueType(list.Type) != domainOfFieldType(field.Type) {
+		return fmt.Errorf("cannot compare %s.%s against a list of %s: the field holds %s",
+			ref.Level, ref.Name, list.Type, field.Type)
 	}
 	for _, element := range list.Values {
 		if _, err := readConstant(field.Type, element); err != nil {
@@ -114,6 +120,46 @@ func checkMembership(args []Expression) error {
 		}
 	}
 	return nil
+}
+
+// describeOperand names an operand in an error the way a caller wrote it: the spelling it sent
+// when there is one, since that is what they have to change, and the term's name otherwise.
+func describeOperand(e Expression) string {
+	switch value := e.(type) {
+	case *AnyValue:
+		return strconv.Quote(value.Value)
+	case *StringValue:
+		return strconv.Quote(value.Value)
+	}
+	return termName(e)
+}
+
+// readOperand reads the constant a field is compared against. An untyped one is rewritten as the
+// field's type. One that arrives already typed is checked against the field instead of trusted:
+// a caller who says `int` where the field holds a duration has asked something the field cannot
+// answer, and a word-valued field takes one of its words however the word was spelled.
+//
+// It returns nil when there is nothing to rewrite, which covers the operands that are not
+// constants at all — the other reference in a field-to-field comparison, say.
+func readOperand(t FieldType, operand Expression) (Expression, error) {
+	if raw, ok := operand.(*AnyValue); ok {
+		return readConstant(t, raw.Value)
+	}
+	if !isConstant(operand) {
+		return nil, nil
+	}
+	if t == FieldTypeSpanKind || t == FieldTypeSpanStatus {
+		// A constant of any other type is already outside the set of words.
+		text, ok := operand.(*StringValue)
+		if !ok {
+			return nil, fmt.Errorf("not one of %s", strings.Join(wordsOf(t), ", "))
+		}
+		return readWord(text.Value, wordsOf(t))
+	}
+	if domainOf(operand) != domainOfFieldType(t) {
+		return nil, fmt.Errorf("the field holds %s", t)
+	}
+	return nil, nil
 }
 
 // readConstant reads a constant's spelling as the type a field holds. The two that measure time
@@ -134,13 +180,19 @@ func readConstant(t FieldType, raw string) (Expression, error) {
 			return nil, err
 		}
 		return &TimestampValue{Value: value}, nil
-	case FieldTypeSpanKind:
-		return readWord(raw, SpanKinds)
-	case FieldTypeSpanStatus:
-		return readWord(raw, SpanStatuses)
+	case FieldTypeSpanKind, FieldTypeSpanStatus:
+		return readWord(raw, wordsOf(t))
 	default:
 		return nil, fmt.Errorf("no rule for reading a constant as %q", t)
 	}
+}
+
+// wordsOf names the closed set a word-valued field holds.
+func wordsOf(t FieldType) []string {
+	if t == FieldTypeSpanKind {
+		return SpanKinds
+	}
+	return SpanStatuses
 }
 
 // readWord reads a constant that has to be one of a closed set of words. The set is small

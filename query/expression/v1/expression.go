@@ -173,6 +173,10 @@ type BoolValue struct {
 // The wire has no type spelling for it. It travels as an unhinted constant in Go duration
 // syntax, "2s" or "50us", so this node is reached by resolving that constant against the field
 // it is compared to (see ResolveConstants).
+//
+// Beside an attribute reference there is no field to resolve against, so a round trip through
+// the wire hands the receiver an AnyValue holding the same spelling. Nothing is lost that an
+// attribute had to begin with: only storage knows what type it was written as.
 type DurationValue struct {
 	expressionTerm
 
@@ -181,8 +185,8 @@ type DurationValue struct {
 
 // TimestampValue is an instant, which is what a timestamp field is compared against.
 //
-// Like DurationValue it has no wire spelling of its own, and arrives as an unhinted RFC 3339
-// constant.
+// Like DurationValue it has no wire spelling of its own, arrives as an unhinted RFC 3339
+// constant, and comes back as an AnyValue when it travels beside an attribute.
 type TimestampValue struct {
 	expressionTerm
 

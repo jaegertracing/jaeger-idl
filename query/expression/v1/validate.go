@@ -326,6 +326,19 @@ func domainOfOperand(e Expression) domain {
 	return domainOf(e)
 }
 
+// domainOfValueType reads the domain a declared wire type is ordered within, which is what a
+// list's element type says about its elements.
+func domainOfValueType(t ValueType) domain {
+	switch t {
+	case ValueTypeInt, ValueTypeDouble:
+		return domainNumber
+	case ValueTypeString:
+		return domainText
+	default:
+		return domainNone
+	}
+}
+
 // domainOfFieldType reads the domain a built-in field is ordered within. The two word-valued
 // fields have none: asking for the kinds after "server" is not a question about span kinds.
 func domainOfFieldType(t FieldType) domain {
