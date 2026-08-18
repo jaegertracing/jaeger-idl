@@ -176,7 +176,7 @@ paths:
                   description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
                   schema:
                     type: string
-                    example: '{"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}'
+                    example: '{"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}'
             responses:
                 "200":
                     description: OK
@@ -306,7 +306,7 @@ paths:
                   description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
                   schema:
                     type: string
-                    example: '{"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}'
+                    example: '{"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}'
             responses:
                 "200":
                     description: OK
@@ -603,8 +603,8 @@ components:
 
                          Experimental. In Jaeger, the query service admits this field only when the
                          `jaeger.query.structuredFilters` feature gate is enabled (Alpha, off by default);
-                         with the gate off the field is ignored and the request behaves as it did before the
-                         filter existed.
+                         with the gate off a request carrying it is refused. The field is never ignored,
+                         because dropping a predicate would answer with more traces than were asked for.
 
                          Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
                          it is the structured Call. For example, the filter http.status_code == 500 is
@@ -778,6 +778,7 @@ components:
             type: object
             properties:
                 values:
+                    minItems: 1
                     type: array
                     items:
                         type: string
@@ -789,8 +790,15 @@ components:
                         - double
                         - bool
                     type: string
-                    description: type is an OPTIONAL hint applied to every element (see Scalar.type).
-            description: List is a homogeneous list constant, the right arg of in/not_in.
+                    description: |-
+                        type is the type every element is read as, and a list matches only values of that type. It
+                         is OPTIONAL only where the field opposite it declares one (see Scalar.type).
+            description: |-
+                List is a homogeneous list constant, the right arg of in/not_in. Every element is read as
+                 one type, and that type is always known: either type declares it, or the built-in field the
+                 list is compared against supplies it. A list compared against an attribute must declare it,
+                 since an attribute declares nothing itself. A list is not a legacy predicate — the legacy
+                 fields have no form for membership — so nothing has to accept an element type nobody stated.
         jaeger.expression.v1.NestedReference:
             required:
                 - level
@@ -812,7 +820,7 @@ components:
                 value:
                     type: string
                     description: |-
-                        value is the constant's spelling, so a duration or a timestamp travels with the
+                        value is the constant as text, so a duration or a timestamp travels with the
                          unit it is written in (§5.4).
                 type:
                     enum:
@@ -825,7 +833,7 @@ components:
             description: |-
                 Scalar is a single constant value with an optional type hint.
 
-                 A duration ("2s") and a timestamp (RFC 3339) have no `type` spelling of their
+                 A duration ("2s") and a timestamp (RFC 3339) have no `type` of their
                  own: they travel as an unhinted constant, and the receiving side resolves them
                  from the built-in field they are compared against (§5.4).
         opentelemetry.proto.common.v1.AnyValue:

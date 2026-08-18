@@ -371,6 +371,14 @@ func TestValidateFilter_Rejects(t *testing.T) {
 			}},
 		},
 		{
+			name:        "a timestamp against a duration field",
+			expectedErr: `operator "gt" compares span.duration against a timestamp constant, which hold different kinds of value`,
+			filter: &Call{Op: OpGt, Args: []Expression{
+				&FieldRef{Name: SpanFieldDuration, Level: LevelSpan},
+				&TimestampValue{Value: time.Unix(0, 0).UTC()},
+			}},
+		},
+		{
 			name:        "a duration against a text field",
 			expectedErr: `operator "eq" compares span.name against a duration constant, which hold different kinds of value`,
 			filter: &Call{Op: OpEq, Args: []Expression{
@@ -393,14 +401,14 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "a duration constant compared against an attribute",
-			expectedErr: `operator "gt" compares a duration constant against an attribute, and the wire cannot spell a duration`,
+			expectedErr: `operator "gt" compares a duration constant against an attribute, and the wire has no duration type`,
 			filter: &Call{Op: OpGt, Args: []Expression{
 				attr("latency"), &DurationValue{Value: 2 * time.Second},
 			}},
 		},
 		{
 			name:        "a timestamp constant compared against an attribute",
-			expectedErr: `operator "eq" compares a timestamp constant against an attribute, and the wire cannot spell a timestamp`,
+			expectedErr: `operator "eq" compares a timestamp constant against an attribute, and the wire has no timestamp type`,
 			filter: &Call{Op: OpEq, Args: []Expression{
 				attr("deadline"), &TimestampValue{Value: time.Unix(0, 0).UTC()},
 			}},
@@ -630,9 +638,9 @@ func TestValidateFilter_RejectsANestedSomeOverTheSameLevel(t *testing.T) {
 func TestValidateFilter_RejectsUnknownField(t *testing.T) {
 	err := ValidateFilter(eq(&FieldRef{Level: LevelSpan, Name: "durtion"}, &AnyValue{Value: "2s"}))
 	require.ErrorContains(t, err, `unknown built-in field "durtion" at the "span" level`)
-	require.ErrorContains(t, err, "name an attribute to match a tag spelled that way instead")
+	require.ErrorContains(t, err, "name an attribute to match a tag of that name instead")
 
-	// The same spelling as an attribute is fine, because an attribute key is arbitrary.
+	// The same name as an attribute is fine, because an attribute key is arbitrary.
 	require.NoError(t, ValidateFilter(
 		eq(&AttributeRef{Level: LevelSpan, Key: "durtion"}, &AnyValue{Value: "2s"})))
 
@@ -683,10 +691,11 @@ func TestValidateFilter_AcceptsEveryLevel(t *testing.T) {
 		"an empty level is the unqualified attribute and is always allowed")
 }
 
-// TestValidateFilter_AcceptsEveryValueType pins that a list may declare any declared type, and
-// that declaring none is allowed because it means "any type" rather than a type.
+// TestValidateFilter_AcceptsEveryValueType pins that a list may declare any of the defined types.
+// Declaring none is accepted only where the field opposite the list declares one instead, which is
+// what the two subjects here distinguish.
 func TestValidateFilter_AcceptsEveryValueType(t *testing.T) {
-	for _, vt := range append([]ValueType{""}, valueTypes...) {
+	for _, vt := range valueTypes {
 		t.Run(string(vt), func(t *testing.T) {
 			in := &Call{Op: OpIn, Args: []Expression{
 				attr("a"),
@@ -695,11 +704,28 @@ func TestValidateFilter_AcceptsEveryValueType(t *testing.T) {
 			require.NoError(t, ValidateFilter(in))
 		})
 	}
+
+	t.Run("no type, against a built-in field", func(t *testing.T) {
+		in := &Call{Op: OpIn, Args: []Expression{
+			spanField(SpanFieldDuration),
+			&List{Values: []string{"2s"}},
+		}}
+		require.NoError(t, ValidateFilter(in))
+	})
+
+	t.Run("no type, against an attribute", func(t *testing.T) {
+		in := &Call{Op: OpIn, Args: []Expression{
+			attr("a"),
+			&List{Values: []string{"1"}},
+		}}
+		require.ErrorContains(t, ValidateFilter(in),
+			`operator "in" takes a list that declares its element type when it is compared against an attribute`)
+	})
 }
 
 // TestValidateFilter_AcceptsEveryConstant pins that every constant node is comparable against
 // something, since each one is what a wire hint or a resolution can produce. A duration and an
-// instant are comparable only against the built-in field that spells them (§5.4), which is why
+// instant are comparable only against a built-in field that declares that type (§5.4), which is why
 // the reference this compares against depends on the constant.
 func TestValidateFilter_AcceptsEveryConstant(t *testing.T) {
 	for _, test := range allTerms {

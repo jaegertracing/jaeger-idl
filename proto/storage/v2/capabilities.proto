@@ -42,6 +42,14 @@ message SearchCapabilities {
 // SearchCapabilities.filter) — a backend opts in only by naming what it serves. When the lists are non-empty they are refusal
 // gates: the query service rejects a predicate that names a level or an operator not
 // listed here.
+//
+// These two lists are coarse admission gates rather than a guarantee of evaluation. They are
+// deliberately narrower than the AST: a backend that lists `span` and `eq` says nothing about
+// which built-in fields it holds, which type hints it honors, which list element types it can
+// match, or which regular expressions its engine can evaluate faithfully. So a reader may still
+// refuse a filter this gate admitted, and it owes a refusal rather than the results of the part
+// it could evaluate. Reliable preflight — a UI graying out what a backend cannot serve — needs a
+// capability surface of its own rather than more meaning read into these two lists.
 message FilterCapabilities {
   // levels lists the attribute levels the backend can filter on
   // (span|resource|scope|event|link). Empty means it cannot serve a

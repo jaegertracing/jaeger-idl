@@ -3,6 +3,8 @@
 
 package expression
 
+import "slices"
+
 // Built-in fields are the values a span carries directly, rather than entries in one of its
 // attribute maps. A FieldRef names one by giving its level and its name.
 //
@@ -19,12 +21,12 @@ package expression
 //
 // Field names are camelCase — `startTime`, `traceID`, not the proto's `start_time_unix_nano`
 // and `trace_id` — because that is how proto3 JSON renders a message field, and how this API's
-// own query parameters are already spelled, so a field reads like the rest of the JSON surface.
+// own query parameters are already named, so a field reads like the rest of the JSON surface.
 // The operators are snake_case (`not_in`) without contradicting that: those are values, not
 // field names.
 //
 // A constant compared against a field is written the way that field's values are written, and
-// for the two that measure time that means two different spellings, neither of them a bare
+// for the two that measure time that means two different formats, neither of them a bare
 // number in an assumed unit:
 //
 //   - A duration — `duration`, `timeSinceStart` — carries its unit, in Go duration syntax:
@@ -37,7 +39,7 @@ package expression
 //
 // Each level has its own vocabulary, so the constants are named for the level they belong to:
 // a span's startTime and an event's time are different fields, and the three levels that each
-// have a `name` have three different fields that spell it the same way.
+// have a `name` have three different fields under that one name.
 const (
 	SpanFieldTraceID       = "traceID"
 	SpanFieldSpanID        = "spanID"
@@ -72,7 +74,7 @@ const (
 // and what makes `span.duration > "banana"` refusable at the query boundary.
 //
 // It is a smaller vocabulary than it might be, because the fields below are the only ones that
-// exist: IDs, a status, a span kind and a trace state are all validated spellings, and a
+// exist: IDs, a status, a span kind and a trace state are all text this API checks, and a
 // distinct type only pays once something wants the parsed form (RFC 0005 §5.4). A level gains
 // numeric fields the day one is defined, and the type for it is added here with the rule that
 // parses it.
@@ -84,7 +86,7 @@ const (
 	FieldTypeTimestamp FieldType = "timestamp"
 	// FieldTypeSpanKind and FieldTypeSpanStatus hold one of a closed set of words, so a
 	// constant compared against one is refused unless it is a member. An ID is a string
-	// rather than a type of its own: a misspelled span kind can never match any span,
+	// rather than a type of its own: a span kind outside the set can never match any span,
 	// while an ID nobody recorded is indistinguishable from one the caller is looking for.
 	FieldTypeSpanKind   FieldType = "spanKind"
 	FieldTypeSpanStatus FieldType = "spanStatus"
@@ -97,14 +99,26 @@ var fieldTypes = []FieldType{
 	FieldTypeSpanKind, FieldTypeSpanStatus,
 }
 
-// SpanKinds and SpanStatuses are the words those two fields hold. They are lower case, like
-// the operators and levels and unlike OTLP's own SPAN_KIND_SERVER, because this API spells a
-// value the way the rest of its vocabulary is spelled (RFC 0005 §6.2). A backend maps them to
-// whatever it stored.
+// The words span.kind and span.status hold. They are lower case, like the operators and levels
+// and unlike OTLP's own SPAN_KIND_SERVER, so that one vocabulary reads as one vocabulary
+// (RFC 0005 §6.2). A backend maps them to whatever it stored.
 var (
-	SpanKinds    = []string{"unspecified", "internal", "server", "client", "producer", "consumer"}
-	SpanStatuses = []string{"unset", "ok", "error"}
+	spanKinds    = []string{"unspecified", "internal", "server", "client", "producer", "consumer"}
+	spanStatuses = []string{"unset", "ok", "error"}
 )
+
+// SpanKinds returns the words span.kind holds, in the order OTLP declares them. It returns a copy,
+// like Fields, because the validator reads the same words: a caller that could append one would
+// change what every filter after it means.
+func SpanKinds() []string {
+	return slices.Clone(spanKinds)
+}
+
+// SpanStatuses returns the words span.status holds. It returns a copy, for the reason SpanKinds
+// does.
+func SpanStatuses() []string {
+	return slices.Clone(spanStatuses)
+}
 
 // Field is a built-in field: its name paired with the level it belongs to, and the type it
 // holds. The name and level travel together because neither identifies a field on its own —
@@ -130,7 +144,7 @@ type Field struct {
 // listed: an attribute is named by an AttributeRef, not as a field.
 var fields = []Field{
 	// Span — opentelemetry.proto.trace.v1.Span. The IDs are hex, the kind and the status are
-	// their OTLP spellings ("client", "error"), and all of them are compared as text.
+	// their OTLP names ("client", "error"), and all of them are compared as text.
 	{Level: LevelSpan, Name: SpanFieldTraceID, Type: FieldTypeString},
 	{Level: LevelSpan, Name: SpanFieldSpanID, Type: FieldTypeString},
 	{Level: LevelSpan, Name: SpanFieldParentSpanID, Type: FieldTypeString},

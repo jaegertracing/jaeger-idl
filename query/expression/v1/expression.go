@@ -10,7 +10,7 @@
 // travels over the wire in. The AST is the contract, and it is one contract: the same types
 // describe a filter arriving on the public query API, reaching a storage backend, and
 // being gated by a query interceptor, so nothing in that path has to translate between two
-// spellings of the same tree. Converting to and from the wire is the business of whoever
+// representations of the same tree. Converting to and from the wire is the business of whoever
 // owns a wire.
 package expression
 
@@ -170,12 +170,12 @@ type BoolValue struct {
 
 // DurationValue is a length of time, which is what a duration field is compared against.
 //
-// The wire has no type spelling for it. It travels as an unhinted constant in Go duration
+// The wire has no duration type. One travels as an unhinted constant written in Go duration
 // syntax, "2s" or "50us", so this node is reached by resolving that constant against the field
 // it is compared to (see ResolveConstants).
 //
 // Beside an attribute reference there is no field to resolve against, so a round trip through
-// the wire hands the receiver an AnyValue holding the same spelling. Nothing is lost that an
+// the wire hands the receiver an AnyValue holding the same text. Nothing is lost that an
 // attribute had to begin with: only storage knows what type it was written as.
 type DurationValue struct {
 	expressionTerm
@@ -185,16 +185,21 @@ type DurationValue struct {
 
 // TimestampValue is an instant, which is what a timestamp field is compared against.
 //
-// Like DurationValue it has no wire spelling of its own, arrives as an unhinted RFC 3339
-// constant, and comes back as an AnyValue when it travels beside an attribute.
+// Like DurationValue it has no wire type of its own, arrives as an unhinted RFC 3339 constant,
+// and comes back as an AnyValue when it travels beside an attribute.
 type TimestampValue struct {
 	expressionTerm
 
 	Value time.Time
 }
 
-// List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn. Its
-// elements stay in the spelling they were written in, and Type says how to read all of them.
+// List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn. Its elements
+// stay as the caller wrote them, and every one of them is read as a single type.
+//
+// That type is always known: Type declares it, or the built-in field the list is compared against
+// supplies it. Compared against an attribute, which declares nothing itself, the list has to
+// declare it — and it is worth declaring anyway, because a list matches only values of the type it
+// names.
 type List struct {
 	expressionTerm
 
@@ -204,8 +209,9 @@ type List struct {
 
 // Call applies Op to Args. The arity follows the operator: OpNot and OpExists are
 // unary, the comparisons and OpIn/OpNotIn are binary, and OpAnd/OpOr take two or
-// more. Because an argument is itself an Expression, a predicate can compare two
-// references as readily as a reference against a constant.
+// more. Because an argument is itself an Expression, a comparison reads two
+// references as readily as a reference and a constant — what it requires is that
+// both operands hold the same kind of value (see ValidateFilter).
 type Call struct {
 	expressionTerm
 

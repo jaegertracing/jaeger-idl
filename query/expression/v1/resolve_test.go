@@ -63,7 +63,7 @@ func TestResolveConstants(t *testing.T) {
 			expected: &Call{Op: OpRegex, Args: []Expression{spanField(SpanFieldName), &AnyValue{Value: ".*"}}},
 		},
 		{
-			name: "a membership list, which carries its own spelling",
+			name: "a membership list, which carries its elements as text",
 			filter: &Call{Op: OpIn, Args: []Expression{
 				spanField(SpanFieldDuration), &List{Values: []string{"2s", "3s"}},
 			}},
@@ -165,7 +165,7 @@ func TestResolveConstants_RefusesAConstantThatWillNotParse(t *testing.T) {
 // TestResolveConstants_LeavesItsInputAlone pins that resolution rewrites nodes into a new tree
 // rather than annotating the one it was given, which is what keeps a query interceptor's later
 // edit from leaving anything stale behind.
-// TestResolveConstants_ChecksMembershipElements pins that a spelling refused under a comparison
+// TestResolveConstants_ChecksMembershipElements pins that a value refused under a comparison
 // is refused under membership too, and that a declared element type does not exempt the list
 // from either half of that: the type has to be one the field could hold, and the elements have
 // to be readable as it. The list is not rewritten, so what this asserts is the refusal.
@@ -261,7 +261,7 @@ func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 }
 
 // TestResolveConstants_ChecksEnumSpellings pins the two fields that hold one of a closed set of
-// words. A misspelling can never match any span, so it is answered here with the set named,
+// words. A word outside the set can never match any span, so it is answered here with the set,
 // rather than passed to a backend that would return nothing and say why.
 func TestResolveConstants_ChecksEnumSpellings(t *testing.T) {
 	kind := &FieldRef{Name: SpanFieldKind, Level: LevelSpan}
@@ -407,6 +407,75 @@ func TestResolveConstants_PutsTheReferenceFirst(t *testing.T) {
 // TestResolveConstants_LeavesTwoReferencesAlone pins that resolution answers for a tree
 // validation would have refused. There is no constant to read between two references, and
 // refusing the comparison is ValidateFilter's job rather than this stage's.
+// TestResolveConstants_ReadsEveryListElement walks the list forms a filter can carry, since the
+// element type comes from two different places and an element that cannot be read as it is the
+// one thing membership refuses.
+func TestResolveConstants_ReadsEveryListElement(t *testing.T) {
+	tests := []struct {
+		name        string
+		filter      *Call
+		expectedErr string
+	}{
+		{
+			name: "a declared type its elements read as",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				attr("size"), &List{Values: []string{"1", "2"}, Type: ValueTypeInt},
+			}},
+		},
+		{
+			name: "durations, whose type the field supplies",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				spanField(SpanFieldDuration), &List{Values: []string{"2s", "50us"}},
+			}},
+		},
+		{
+			name: "instants, whose type the field supplies",
+			filter: &Call{Op: OpNotIn, Args: []Expression{
+				spanField(SpanFieldStartTime), &List{Values: []string{"2026-08-18T00:00:00Z"}},
+			}},
+		},
+		{
+			name: "words a closed set holds",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				spanField(SpanFieldKind), &List{Values: []string{"server", "client"}, Type: ValueTypeString},
+			}},
+		},
+		{
+			name: "elements of mixed types under one declared type",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				attr("size"), &List{Values: []string{"1", "true"}, Type: ValueTypeInt},
+			}},
+			expectedErr: `element "true" of a list of int`,
+		},
+		{
+			name: "a duration among instants",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				spanField(SpanFieldStartTime), &List{Values: []string{"2026-08-18T00:00:00Z", "2s"}},
+			}},
+			expectedErr: `cannot compare span.startTime against "2s"`,
+		},
+		{
+			name: "a word outside the set the field holds",
+			filter: &Call{Op: OpIn, Args: []Expression{
+				spanField(SpanFieldKind), &List{Values: []string{"server", "banana"}, Type: ValueTypeString},
+			}},
+			expectedErr: "not one of unspecified, internal, server, client, producer, consumer",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.NoError(t, ValidateFilter(test.filter), "the fixture is a filter validation accepts")
+			resolved, err := ResolveConstants(test.filter)
+			if test.expectedErr != "" {
+				require.ErrorContains(t, err, test.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, test.filter.Args[1], resolved.Args[1], "a list is carried over as it stands")
+		})
+	}
+}
+
 func TestResolveConstants_LeavesTwoReferencesAlone(t *testing.T) {
 	filter := &Call{Op: OpLt, Args: []Expression{
 		spanField(SpanFieldStartTime), spanField(SpanFieldEndTime),

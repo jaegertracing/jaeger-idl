@@ -225,7 +225,7 @@ func filterQueryParam() *yaml.Node {
 		scalarNode("description", 0), scalarNode("Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.", 0),
 		scalarNode("schema", 0), mappingNode(
 			scalarNode("type", 0), scalarNode("string", 0),
-			scalarNode("example", 0), scalarNode(`{"op":"eq","args":[{"ref":{"name":"http.status_code"}},{"scalar":{"value":"500"}}]}`, yaml.SingleQuotedStyle),
+			scalarNode("example", 0), scalarNode(`{"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}`, yaml.SingleQuotedStyle),
 		),
 	)
 }

@@ -95,13 +95,13 @@ message NestedReference {
 
 // Scalar is a single constant value with an optional type hint.
 //
-// A duration ("2s") and a timestamp (RFC 3339) have no `type` spelling of their
+// A duration ("2s") and a timestamp (RFC 3339) have no `type` of their
 // own: they travel as an unhinted constant, and the receiving side resolves them
 // from the built-in field they are compared against (§5.4).
 message Scalar {
   option (openapi.v3.schema) = {required: ["value"]};
 
-  // value is the constant's spelling, so a duration or a timestamp travels with the
+  // value is the constant as text, so a duration or a timestamp travels with the
   // unit it is written in (§5.4).
   string value = 1;
 
@@ -114,14 +114,19 @@ message Scalar {
   ];
 }
 
-// List is a homogeneous list constant, the right arg of in/not_in.
+// List is a homogeneous list constant, the right arg of in/not_in. Every element is read as
+// one type, and that type is always known: either type declares it, or the built-in field the
+// list is compared against supplies it. A list compared against an attribute must declare it,
+// since an attribute declares nothing itself. A list is not a legacy predicate — the legacy
+// fields have no form for membership — so nothing has to accept an element type nobody stated.
 message List {
   option (openapi.v3.schema) = {required: ["values"]};
 
   // values must have at least one element: membership in nothing matches nothing.
-  repeated string values = 1;
+  repeated string values = 1 [(openapi.v3.property) = {min_items: 1}];
 
-  // type is an OPTIONAL hint applied to every element (see Scalar.type).
+  // type is the type every element is read as, and a list matches only values of that type. It
+  // is OPTIONAL only where the field opposite it declares one (see Scalar.type).
   string type = 2 [
     (openapi.v3.property) = {
       type: "string",

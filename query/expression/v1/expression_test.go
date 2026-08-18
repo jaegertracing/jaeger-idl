@@ -67,7 +67,7 @@ func TestConstantsCarryTheirParsedValue(t *testing.T) {
 
 // TestConstantKinds pins the kind of value each constant holds, and which ones can serve as a
 // regular expression. An untyped constant holds nothing known, because it is what a value with no
-// wire hint arrives as and no operator can settle its type from its spelling alone.
+// wire hint arrives as and no operator can settle its type from its text alone.
 func TestConstantKinds(t *testing.T) {
 	domains := map[string]domain{}
 	patterns := map[string]bool{}

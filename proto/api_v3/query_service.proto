@@ -118,8 +118,8 @@ message TraceQueryParameters {
   //
   // Experimental. In Jaeger, the query service admits this field only when the
   // `jaeger.query.structuredFilters` feature gate is enabled (Alpha, off by default);
-  // with the gate off the field is ignored and the request behaves as it did before the
-  // filter existed.
+  // with the gate off a request carrying it is refused. The field is never ignored,
+  // because dropping a predicate would answer with more traces than were asked for.
   //
   // Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
   // it is the structured Call. For example, the filter http.status_code == 500 is

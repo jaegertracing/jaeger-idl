@@ -35,9 +35,28 @@ func TestFields(t *testing.T) {
 	}, derived, "the fields computed rather than read")
 }
 
+// TestVocabulariesAreCopies pins that the exported vocabularies cannot be edited into something
+// the validator would then honor. Validation reads the same words, so a caller able to append one
+// would change what every filter after it means.
+func TestVocabulariesAreCopies(t *testing.T) {
+	kinds := SpanKinds()
+	kinds[0] = "banana"
+	assert.Equal(t, "unspecified", SpanKinds()[0])
+
+	statuses := SpanStatuses()
+	statuses[0] = "banana"
+	assert.Equal(t, "unset", SpanStatuses()[0])
+
+	filter := &Call{Op: OpEq, Args: []Expression{
+		&FieldRef{Name: SpanFieldKind, Level: LevelSpan}, &AnyValue{Value: "banana"},
+	}}
+	_, err := Finalize(filter)
+	require.ErrorContains(t, err, "not one of unspecified, internal, server, client, producer, consumer")
+}
+
 // TestFields_DeclaredTypes pins the fields that are not text, since those are the ones whose
 // constants are parsed and can be refused (see ResolveConstants). Everything else is a string,
-// including the IDs, the status and the span kind, which are validated spellings rather than
+// including the IDs, the status and the span kind, which are text this API checks rather than
 // types of their own.
 func TestFields_DeclaredTypes(t *testing.T) {
 	byType := map[FieldType][]string{}
@@ -82,24 +101,24 @@ func TestFieldTypes_AreAllReadable(t *testing.T) {
 	require.NotEmpty(t, fieldTypes)
 	for _, ft := range fieldTypes {
 		t.Run(string(ft), func(t *testing.T) {
-			_, err := readConstant(ft, spellingFor(ft))
+			_, err := readConstant(ft, textFor(ft))
 			require.NoError(t, err)
 		})
 	}
 }
 
-// spellingFor is a value the given field type can be read from, so that walking the vocabulary
-// does not turn into a test of each type's parser.
-func spellingFor(t FieldType) string {
+// textFor is a value the given field type can be read from, so that walking the vocabulary does
+// not turn into a test of each type's parser.
+func textFor(t FieldType) string {
 	switch t {
 	case FieldTypeDuration:
 		return "2s"
 	case FieldTypeTimestamp:
 		return "2026-08-16T18:56:20.123456789Z"
 	case FieldTypeSpanKind:
-		return SpanKinds[0]
+		return SpanKinds()[0]
 	case FieldTypeSpanStatus:
-		return SpanStatuses[0]
+		return SpanStatuses()[0]
 	default:
 		return "anything"
 	}

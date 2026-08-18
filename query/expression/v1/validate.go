@@ -15,7 +15,7 @@ import (
 // defined one, every reference names something, a reference to a built-in field names one this
 // API defines (see Field), and the quantifier's binding rules hold (RFC 0005 §5.5).
 //
-// What it deliberately leaves alone is a constant's spelling — whether "banana" is a duration
+// What it deliberately leaves alone is a constant's text — whether "banana" is a duration
 // is answered by ResolveConstants, which knows the field it is compared against — and which of
 // the valid things a given backend can serve, which is what a backend's declared capabilities
 // are for.
@@ -69,7 +69,10 @@ func validateCall(call *Call, quantified []Level) error {
 			// way that reads like an oversight. Refusing says so.
 			return fmt.Errorf("operator %q takes a list with at least one element", call.Op)
 		}
-		return validateValueType(list.Type)
+		if err := validateValueType(list.Type); err != nil {
+			return err
+		}
+		return validateElementType(call.Op, call.Args[0], list)
 	case OpRegex:
 		if err := wantArgs(call, 2); err != nil {
 			return err
@@ -171,9 +174,10 @@ func validateComparison(call *Call, quantified []Level) error {
 }
 
 // validateTimeConstant refuses a duration or an instant compared against an attribute. The wire
-// spells neither (§5.4), so one survives only where a built-in field's declared type rebuilds it.
+// carries neither type (§5.4), so one survives only where a built-in field's declared type
+// rebuilds it.
 // An attribute declares nothing, so the constant would come back untyped and ask the backend a
-// different question; comparing the attribute against the spelling asks that question directly.
+// different question; comparing the attribute against the plain string asks that one directly.
 func validateTimeConstant(op Operator, args []Expression) error {
 	for i, arg := range args {
 		if _, ok := arg.(*AttributeRef); !ok {
@@ -190,7 +194,7 @@ func validateTimeConstant(op Operator, args []Expression) error {
 }
 
 func errNoWireSpelling(op Operator, constant Expression, kind string) error {
-	return fmt.Errorf("operator %q compares %s against an attribute, and the wire cannot spell a %s",
+	return fmt.Errorf("operator %q compares %s against an attribute, and the wire has no %s type",
 		op, termName(constant), kind)
 }
 
@@ -226,6 +230,21 @@ func validateOperand(op Operator, arg Expression, _ []Level) error {
 		return nil
 	}
 	return fmt.Errorf("operator %q compares a reference or a constant, got %s", op, termName(arg))
+}
+
+// validateElementType checks that something says what type a list's elements are. A built-in field
+// declares one, so a list compared against it needs no type of its own — which is also how a list
+// of durations is written, since the wire has no duration type. An attribute declares nothing, so
+// there the list has to. Membership is a new operator with no legacy form, so nothing forces this
+// API to accept a list whose element type nobody stated (RFC 0005 §5.4).
+func validateElementType(op Operator, subject Expression, list *List) error {
+	if list.Type != "" {
+		return nil
+	}
+	if _, ok := subject.(*FieldRef); ok {
+		return nil
+	}
+	return fmt.Errorf("operator %q takes a list that declares its element type when it is compared against an attribute", op)
 }
 
 // validateSubject checks the operand an operator reads a value from rather than supplies one
@@ -277,7 +296,7 @@ func validateFieldRef(ref *FieldRef) error {
 		return errors.New("field reference has no name")
 	}
 	if _, ok := LookupField(ref.Level, ref.Name); !ok {
-		return fmt.Errorf("unknown built-in field %q at the %q level; name an attribute to match a tag spelled that way instead",
+		return fmt.Errorf("unknown built-in field %q at the %q level; name an attribute to match a tag of that name instead",
 			ref.Name, ref.Level)
 	}
 	return nil
@@ -309,7 +328,7 @@ func isConstant(e Expression) bool {
 
 // validateRegexSubject refuses a subject a pattern has nothing to match against. A string field,
 // a word-valued field and an attribute all hold text; a duration or a timestamp does not, and
-// nothing in this API says which of its spellings a pattern would be shown.
+// nothing in this API says what text a pattern would be matched against.
 func validateRegexSubject(subject Expression) error {
 	ref, ok := subject.(*FieldRef)
 	if !ok || ref == nil {
@@ -451,7 +470,7 @@ func checkPortable(re *syntax.Regexp) error {
 	return nil
 }
 
-// patternText reads the spelling of a constant that can serve as a regular expression. An untyped
+// patternText returns the text of a constant that can serve as a regular expression. An untyped
 // constant can: a pattern is written as a bare string and carries no wire hint.
 func patternText(e Expression) (string, bool) {
 	switch value := e.(type) {

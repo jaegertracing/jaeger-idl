@@ -13,7 +13,7 @@ import (
 )
 
 // ResolveConstants reads every unconstrained constant that is compared against a built-in
-// field as that field's declared type, and refuses one whose spelling will not parse — a
+// field as that field's declared type, and refuses one whose text will not parse — a
 // duration of "banana" is answered at the query boundary rather than passed to a backend to
 // interpret. It is stage 3 of RFC 0005 §7 and expects a filter ValidateFilter has accepted.
 //
@@ -84,13 +84,13 @@ func resolveComparison(args []Expression) error {
 			// resolve against and nothing useful to say about it here.
 			continue
 		}
-		spelling, ok := spellingToRead(field.Type, args[other])
+		text, ok := textToRead(field.Type, args[other])
 		if !ok {
 			continue
 		}
-		value, err := readConstant(field.Type, spelling)
+		value, err := readConstant(field.Type, text)
 		if err != nil {
-			return fmt.Errorf("cannot compare %s.%s against %q: %w", ref.Level, ref.Name, spelling, err)
+			return fmt.Errorf("cannot compare %s.%s against %q: %w", ref.Level, ref.Name, text, err)
 		}
 		args[other] = value
 	}
@@ -123,8 +123,8 @@ func turnedAround(op Operator) Operator {
 }
 
 // checkMembership reads every element of a list compared against a built-in field as that
-// field's type, so a spelling refused under `gt` is refused under `in` as well. The list is not
-// rewritten — it carries its elements as spellings and there is no typed list node — so this
+// field's type, so a value refused under `gt` is refused under `in` as well. The list is not
+// rewritten — it carries its elements as text and there is no typed list node — so this
 // only refuses what cannot be read.
 //
 // A declared element type does not exempt the list. It says how to read the elements, so it has
@@ -172,8 +172,8 @@ func readDeclaredElements(list *List) error {
 	return nil
 }
 
-// readValue reads a spelling as a declared wire type. A string needs no reading; the others have
-// exactly one spelling each, and anything else is a value the caller cannot have meant.
+// readValue reads an element as a declared wire type. A string needs no reading; the others each
+// have one form, and anything else is a value the caller cannot have meant.
 func readValue(t ValueType, raw string) error {
 	var err error
 	switch t {
@@ -187,11 +187,11 @@ func readValue(t ValueType, raw string) error {
 	return err
 }
 
-// spellingToRead reads the spelling of a constant that still has to be read as a field's type: an
-// untyped one always, and a string beside a field holding one of a closed set of words, since it
-// has to be one of those words however it was spelled. Every other constant already carries its
-// value, and validation has refused the ones the field cannot hold.
-func spellingToRead(t FieldType, operand Expression) (string, bool) {
+// textToRead returns the text of a constant that still has to be read as a field's type: an
+// untyped constant always, and a string beside a field holding one of a closed set of words, since
+// it has to be one of those words. Every other constant already carries its value, and validation
+// has refused the ones the field cannot hold.
+func textToRead(t FieldType, operand Expression) (string, bool) {
 	switch value := operand.(type) {
 	case *AnyValue:
 		return value.Value, true
@@ -203,7 +203,7 @@ func spellingToRead(t FieldType, operand Expression) (string, bool) {
 	return "", false
 }
 
-// readConstant reads a constant's spelling as the type a field holds. The two that measure time
+// readConstant reads a constant's text as the type a field holds. The two that measure time
 // have no wire type of their own, which is why this is the only place they are produced.
 func readConstant(t FieldType, raw string) (Expression, error) {
 	switch t {
@@ -231,9 +231,9 @@ func readConstant(t FieldType, raw string) (Expression, error) {
 // wordsOf names the closed set a word-valued field holds.
 func wordsOf(t FieldType) []string {
 	if t == FieldTypeSpanKind {
-		return SpanKinds
+		return spanKinds
 	}
-	return SpanStatuses
+	return spanStatuses
 }
 
 // readWord reads a constant that has to be one of a closed set of words. The set is small
