@@ -111,6 +111,24 @@ message TraceQueryParameters {
   // has the `jaeger.query.structuredFilters` feature gate enabled (Alpha, off by
   // default) and the backend declares support via SearchCapabilities.filter.
   jaeger.expression.v1.Call filter = 9;
+
+  // pagination requests a paginated search. When this field is absent the search
+  // behaves exactly as today: one page bounded by search_depth, no continuation.
+  Pagination pagination = 10;
+}
+
+// Pagination asks for one page of results and, on continuation, says where the
+// previous page stopped. Same shape as jaeger.api_v3.Pagination; duplicated here
+// because jaeger.storage.v2 does not import jaeger.api_v3.
+message Pagination {
+  // page_size bounds the number of results in one page. When zero it falls back to
+  // search_depth (and search_depth's own default).
+  int32 page_size = 1;
+
+  // page_token continues a previous search. Empty starts a new one. The value is
+  // opaque: clients MUST treat it as a blob and echo back exactly what the server
+  // returned. A token is only valid for the same query that produced it.
+  string page_token = 2;
 }
 
 // FindTracesRequest represents a request to find traces.
@@ -139,6 +157,10 @@ message FoundTraceID {
 // FindTraceIDsResponse represents the response for FindTraceIDsRequest.
 message FindTraceIDsResponse {
   repeated FoundTraceID trace_ids = 1;
+
+  // next_page_token continues the search past this page. Empty means there are no
+  // more pages. See TraceQueryParameters.pagination.
+  string next_page_token = 2;
 }
 
 // ServiceSummary contains per-service statistics for a trace.
@@ -173,6 +195,11 @@ message FindTraceSummariesRequest {
 // Mirrors the chunked streaming contract of GetTraces / FindTraces.
 message FindTraceSummariesResponse {
   repeated TraceSummary summaries = 1;
+
+  // next_page_token continues the search past this page. Set only on the final
+  // chunk of the stream; empty means there are no more pages. See
+  // TraceQueryParameters.pagination.
+  string next_page_token = 2;
 }
 
 // TraceReader is a service that allows reading traces from storage.
