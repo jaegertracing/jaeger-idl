@@ -468,7 +468,67 @@ func validatePattern(pattern string) error {
 	if err != nil {
 		return fmt.Errorf("operator %q takes a pattern in RE2 syntax: %w", OpRegex, err)
 	}
+	if hasInlineCaseFolding(pattern) {
+		return fmt.Errorf("operator %q matches case-sensitively, so a pattern cannot use an inline case-folding flag", OpRegex)
+	}
 	return checkPortable(parsed)
+}
+
+// hasInlineCaseFolding reports whether a pattern contains an unescaped inline
+// case-folding flag, e.g. (?i) or (?i:...).
+//
+// The check is lexical because Go's regexp parser folds two-element case
+// classes like [aA] or (a|A) into a FoldCase AST node, destroying the
+// distinction between a case class (which is portable and supported by
+// storage engines) and an inline flag group (which backends like Elasticsearch
+// cannot honor).
+func hasInlineCaseFolding(pattern string) bool {
+	inClass := false
+	for i := 0; i < len(pattern); i++ {
+		switch pattern[i] {
+		case '\\':
+			if i+1 < len(pattern) {
+				if pattern[i+1] == 'Q' {
+					// \Q...\E quotes literal text until \E or end of string.
+					i += 2
+					for i < len(pattern) {
+						if pattern[i] == '\\' && i+1 < len(pattern) && pattern[i+1] == 'E' {
+							i++
+							break
+						}
+						i++
+					}
+					continue
+				}
+				i++
+			}
+		case '[':
+			if !inClass {
+				inClass = true
+			}
+		case ']':
+			if inClass {
+				inClass = false
+			}
+		case '(':
+			if !inClass && i+1 < len(pattern) && pattern[i+1] == '?' {
+				i += 2
+				if i < len(pattern) && pattern[i] == 'P' {
+					continue
+				}
+				sawMinus := false
+				for i < len(pattern) && pattern[i] != ':' && pattern[i] != ')' {
+					if pattern[i] == '-' {
+						sawMinus = true
+					} else if (pattern[i] == 'i' || pattern[i] == 'I') && !sawMinus {
+						return true
+					}
+					i++
+				}
+			}
+		}
+	}
+	return false
 }
 
 // checkPortable refuses the constructs the backends this lowers to do not all have. Elasticsearch,
@@ -483,9 +543,6 @@ func checkPortable(re *syntax.Regexp) error {
 	}
 	if re.Flags&syntax.NonGreedy != 0 {
 		return fmt.Errorf("operator %q asks whether the value matches, so a quantifier cannot be lazy", OpRegex)
-	}
-	if re.Flags&syntax.FoldCase != 0 {
-		return fmt.Errorf("operator %q matches case-sensitively, so a pattern cannot fold case", OpRegex)
 	}
 	for _, sub := range re.Sub {
 		if err := checkPortable(sub); err != nil {
