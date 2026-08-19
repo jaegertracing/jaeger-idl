@@ -138,6 +138,90 @@ func TestValidateFilter_Accepts(t *testing.T) {
 			}},
 		},
 		{
+			name: "a regular expression with case classes",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "[aA]bc"},
+			}},
+		},
+		{
+			name: "a regular expression with k/s case classes",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "[kK]ilo[sS]pan"},
+			}},
+		},
+		{
+			name: "a regular expression with alternation case pair",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "(a|A)bc"},
+			}},
+		},
+		{
+			name: "a regular expression with disabled case folding",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "(?-i)abc"},
+			}},
+		},
+		{
+			name: "a regular expression with flag turned off after dot-all",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "(?s-i)a"},
+			}},
+		},
+		{
+			name: "a regular expression with non-capturing group",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "(?:ab)"},
+			}},
+		},
+		{
+			name: "a regular expression with named capture group",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "(?P<name>a)"},
+			}},
+		},
+		{
+			name: "a regular expression with literal quote span",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: `\Q(?i)\E`},
+			}},
+		},
+		{
+			name: "a regular expression with unterminated literal quote span",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: `\Q(?i)`},
+			}},
+		},
+		{
+			name: "a regular expression with escaped flag sequence",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: `\(\?i\)`},
+			}},
+		},
+		{
+			name: "a regular expression with flag sequence inside character class",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "[(?i)]"},
+			}},
+		},
+		{
+			name: "a regular expression with bracket class containing flag chars",
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				attr("http.route"),
+				&StringValue{Value: "[?i(]"},
+			}},
+		},
+		{
 			name: "an ordered comparison of typed constants",
 			filter: &Call{Op: OpGte, Args: []Expression{
 				attr("http.response.size"),
@@ -443,9 +527,86 @@ func TestValidateFilter_Rejects(t *testing.T) {
 		},
 		{
 			name:        "a regular expression asking to fold case",
-			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot fold case`,
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
 			filter: &Call{Op: OpRegex, Args: []Expression{
 				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?i)get"},
+			}},
+		},
+		{
+			name:        "a regular expression with inline flag group",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?i:abc)"},
+			}},
+		},
+		{
+			name:        "a regular expression with combined inline flags",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?is)abc"},
+			}},
+		},
+		{
+			name:        "a regular expression with inline flags in other order",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?si)a"},
+			}},
+		},
+		{
+			name:        "a regular expression turning flag on then other off",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?i-s)a"},
+			}},
+		},
+		{
+			name:        "a regular expression with mid-pattern inline flag",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "a(?i)b"},
+			}},
+		},
+		{
+			name:        "a regular expression with mid-pattern inline flag group",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "x(?i:y)z"},
+			}},
+		},
+		{
+			name:        "a regular expression with nested inline flag group",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "((?i))"},
+			}},
+		},
+		{
+			name:        "a regular expression with bare inline flag",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "(?i)"},
+			}},
+		},
+		{
+			name:        "a regular expression with closed class followed by inline flag",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "[a-z](?i)"},
+			}},
+		},
+		{
+			name:        "a regular expression with POSIX class followed by inline flag",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: "[[:alpha:]](?i)x"},
+			}},
+		},
+		{
+			name:        "a regular expression with escaped bracket class followed by inline flag",
+			expectedErr: `operator "regex" matches case-sensitively, so a pattern cannot use an inline case-folding flag`,
+			filter: &Call{Op: OpRegex, Args: []Expression{
+				&FieldRef{Name: SpanFieldName, Level: LevelSpan}, &StringValue{Value: `[\]](?i)x`},
 			}},
 		},
 		{
