@@ -168,7 +168,10 @@ message FindTraceIDsResponse {
   repeated FoundTraceID trace_ids = 1;
 
   // next_page_token continues the search past this page. Empty means there are no
-  // more pages. See TraceQueryParameters.pagination.
+  // more pages, but only when the backend actually supports pagination; a backend
+  // that does not (SearchCapabilities.paginated false) always returns an empty token
+  // here, even when matches remain, and serves a single page capped at page_size or
+  // search_depth. See TraceQueryParameters.pagination.
   string next_page_token = 2;
 }
 
@@ -206,7 +209,10 @@ message FindTraceSummariesResponse {
   repeated TraceSummary summaries = 1;
 
   // next_page_token continues the search past this page. Set only on the final
-  // chunk of the stream; empty means there are no more pages. See
+  // chunk of the stream. Empty means there are no more pages, but only when the
+  // backend actually supports pagination; a backend that does not (SearchCapabilities
+  // .paginated false) always returns an empty token here, even when matches remain,
+  // and serves a single page capped at page_size or search_depth. See
   // TraceQueryParameters.pagination.
   string next_page_token = 2;
 }
