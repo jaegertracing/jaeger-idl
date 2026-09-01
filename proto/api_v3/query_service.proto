@@ -140,8 +140,10 @@ message TraceQueryParameters {
 // previous page stopped.
 message Pagination {
   // page_size bounds the number of results in one page. When zero it falls back to
-  // search_depth (and search_depth's own default).
-  uint32 page_size = 1;
+  // search_depth (and search_depth's own default). Required whenever Pagination is
+  // sent at all: a Pagination with no page_size is meaningless, so the caller must
+  // send it explicitly, even as zero, rather than omit it.
+  uint32 page_size = 1 [(google.api.field_behavior) = REQUIRED];
 
   // page_token continues a previous search. Empty starts a new one. The value is
   // opaque: clients MUST treat it as an uninterpreted cursor and echo back exactly
@@ -149,7 +151,7 @@ message Pagination {
   // is a protobuf string, the server MUST encode the token as valid UTF-8 text (for
   // example, unpadded base64url of the underlying cursor bytes). A token is only
   // valid for the same query that produced it.
-  string page_token = 2;
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Request object to search traces.

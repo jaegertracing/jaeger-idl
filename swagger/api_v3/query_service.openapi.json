@@ -79,6 +79,10 @@
       "jaeger.api_v3.FindTraceSummariesResponse": {
         "description": "Response chunk for FindTraceSummaries. A single RPC call may yield multiple\n chunks, each carrying one or more summaries, mirroring the chunked streaming\n used by FindTraces / GetTrace.",
         "properties": {
+          "nextPageToken": {
+            "description": "next_page_token continues the search past this page. Set only on the final\n chunk of the stream; empty means there are no more pages. See\n TraceQueryParameters.pagination.",
+            "type": "string"
+          },
           "summaries": {
             "items": {
               "$ref": "#/components/schemas/jaeger.api_v3.TraceSummary"
@@ -143,6 +147,24 @@
         ],
         "type": "object"
       },
+      "jaeger.api_v3.Pagination": {
+        "description": "Pagination asks for one page of results and, on continuation, says where the\n previous page stopped.",
+        "properties": {
+          "pageSize": {
+            "description": "page_size bounds the number of results in one page. When zero it falls back to\n search_depth (and search_depth's own default). Required whenever Pagination is\n sent at all: a Pagination with no page_size is meaningless, so the caller must\n send it explicitly, even as zero, rather than omit it.",
+            "format": "uint32",
+            "type": "integer"
+          },
+          "pageToken": {
+            "description": "page_token continues a previous search. Empty starts a new one. The value is\n opaque: clients MUST treat it as an uninterpreted cursor and echo back exactly\n what the server returned, without inspecting or modifying it. Because this field\n is a protobuf string, the server MUST encode the token as valid UTF-8 text (for\n example, unpadded base64url of the underlying cursor bytes). A token is only\n valid for the same query that produced it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "type": "object"
+      },
       "jaeger.api_v3.ServiceSummary": {
         "description": "ServiceSummary contains per-service statistics for a trace, matching\n what the UI renders as a coloured tag in the search results row.",
         "properties": {
@@ -198,6 +220,14 @@
           "operationName": {
             "description": "operation_name filters spans by a specific operation / span name.",
             "type": "string"
+          },
+          "pagination": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/jaeger.api_v3.Pagination"
+              }
+            ],
+            "description": "pagination requests a paginated search. When this field is absent the search\n behaves exactly as today: one page bounded by search_depth, no continuation.\n\n Only FindTraceSummaries returns a continuation token (FindTraceSummariesResponse.\n next_page_token); FindTraces streams opentelemetry.proto.trace.v1.TracesData, which has\n no room for one, so page_size still bounds a FindTraces call but the call itself cannot\n be resumed through this field."
           },
           "rawTraces": {
             "description": "If set to true, the response will exclude any enrichments to the trace, such as clock skew adjustments.\n The trace will be returned exactly as stored.\n\n This field is optional.",
@@ -1040,6 +1070,23 @@
             }
           },
           {
+            "description": "page_size bounds the number of results in one page. When zero it falls back to\n search_depth (and search_depth's own default). Required whenever Pagination is\n sent at all: a Pagination with no page_size is meaningless, so the caller must\n send it explicitly, even as zero, rather than omit it.",
+            "in": "query",
+            "name": "query.pagination.pageSize",
+            "schema": {
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "page_token continues a previous search. Empty starts a new one. The value is\n opaque: clients MUST treat it as an uninterpreted cursor and echo back exactly\n what the server returned, without inspecting or modifying it. Because this field\n is a protobuf string, the server MUST encode the token as valid UTF-8 text (for\n example, unpadded base64url of the underlying cursor bytes). A token is only\n valid for the same query that produced it.",
+            "in": "query",
+            "name": "query.pagination.pageToken",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.",
             "in": "query",
             "name": "query.filter",
@@ -1189,6 +1236,23 @@
             "name": "query.rawTraces",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "description": "page_size bounds the number of results in one page. When zero it falls back to\n search_depth (and search_depth's own default). Required whenever Pagination is\n sent at all: a Pagination with no page_size is meaningless, so the caller must\n send it explicitly, even as zero, rather than omit it.",
+            "in": "query",
+            "name": "query.pagination.pageSize",
+            "schema": {
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "page_token continues a previous search. Empty starts a new one. The value is\n opaque: clients MUST treat it as an uninterpreted cursor and echo back exactly\n what the server returned, without inspecting or modifying it. Because this field\n is a protobuf string, the server MUST encode the token as valid UTF-8 text (for\n example, unpadded base64url of the underlying cursor bytes). A token is only\n valid for the same query that produced it.",
+            "in": "query",
+            "name": "query.pagination.pageToken",
+            "schema": {
+              "type": "string"
             }
           },
           {
