@@ -128,6 +128,11 @@ message TraceQueryParameters {
 
   // pagination requests a paginated search. When this field is absent the search
   // behaves exactly as today: one page bounded by search_depth, no continuation.
+  //
+  // Only FindTraceSummaries returns a continuation token (FindTraceSummariesResponse.
+  // next_page_token); FindTraces streams opentelemetry.proto.trace.v1.TracesData, which has
+  // no room for one, so page_size still bounds a FindTraces call but the call itself cannot
+  // be resumed through this field.
   Pagination pagination = 11;
 }
 
