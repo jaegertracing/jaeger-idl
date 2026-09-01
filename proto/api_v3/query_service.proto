@@ -136,11 +136,14 @@ message TraceQueryParameters {
 message Pagination {
   // page_size bounds the number of results in one page. When zero it falls back to
   // search_depth (and search_depth's own default).
-  int32 page_size = 1;
+  uint32 page_size = 1;
 
   // page_token continues a previous search. Empty starts a new one. The value is
-  // opaque: clients MUST treat it as a blob and echo back exactly what the server
-  // returned. A token is only valid for the same query that produced it.
+  // opaque: clients MUST treat it as an uninterpreted cursor and echo back exactly
+  // what the server returned, without inspecting or modifying it. Because this field
+  // is a protobuf string, the server MUST encode the token as valid UTF-8 text (for
+  // example, unpadded base64url of the underlying cursor bytes). A token is only
+  // valid for the same query that produced it.
   string page_token = 2;
 }
 
