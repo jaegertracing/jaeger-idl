@@ -15,6 +15,7 @@
 package expression
 
 import (
+	"fmt"
 	"slices"
 	"time"
 )
@@ -122,6 +123,21 @@ func (t ValueType) Valid() bool {
 	return slices.Contains(valueTypes, t)
 }
 
+// MaxNestingDepth is how deeply calls may nest, counting the filter itself as the first level. A
+// filter is a tree a person or a query builder wrote, and twenty levels of nesting is far past
+// anything either produces.
+//
+// The bound is what makes walking a filter safe rather than merely usual. The AST is built from
+// pointers, so a caller can hand a call itself as one of its own arguments, and nothing about the
+// types prevents it; a walk without a bound would follow that cycle until the stack ran out. A
+// consumer that walks a filter it did not build enforces the bound, refusing a cycle for being too
+// deep along with an honest tree that no consumer downstream could walk either.
+const MaxNestingDepth = 20
+
+// ErrTooDeeplyNested is returned for a filter that nests calls beyond MaxNestingDepth, which is
+// also how a filter that contains itself is answered.
+var ErrTooDeeplyNested = fmt.Errorf("filter nests calls more than %d deep", MaxNestingDepth)
+
 // Expression is a node in a structured filter: an atom — a reference to a value on the
 // span, or a constant — or a Call applying an operator to argument expressions. Only the
 // types in this package implement it, so a backend can switch on the concrete type and
@@ -171,8 +187,8 @@ type NestedRef struct {
 
 // AnyValue is a constant under no type constraint: the caller wrote a value and said nothing
 // about how to read it, so a backend matches it at whatever type the value was stored. It is
-// also what an unhinted duration or timestamp arrives as, until it is resolved against the
-// field it is compared with (see ResolveConstants).
+// also what an unhinted duration or timestamp arrives as, until a consumer resolves it against
+// the field it is compared with.
 type AnyValue struct {
 	expressionTerm
 
@@ -211,7 +227,7 @@ type BoolValue struct {
 //
 // The wire has no duration type. One travels as an unhinted constant written in Go duration
 // syntax, "2s" or "50us", so this node is reached by resolving that constant against the field
-// it is compared to (see ResolveConstants).
+// it is compared to.
 //
 // Beside an attribute reference there is no field to resolve against, so a round trip through
 // the wire hands the receiver an AnyValue holding the same text. Nothing is lost that an
@@ -241,11 +257,11 @@ type TimestampValue struct {
 // beside an attribute is matched. Declaring a type is still worth doing where a caller knows it,
 // because a list matches only values of the type it names.
 //
-// Unlike a constant, a list is not rewritten into typed elements when a filter is finalized. There
-// are two reasons. A backend that indexes a value as text matches the text a caller wrote, and rewriting
-// "1.50" as a number and back would hand it "1.5" instead. And an element that cannot be read as the
-// list's type is refused while finalizing, so what a consumer holds is text already known to be
-// readable: ReadElement turns one into the typed node, and nothing has to parse it defensively.
+// Unlike a constant, a list is not rewritten into typed elements. There are two reasons. A backend
+// that indexes a value as text matches the text a caller wrote, and rewriting "1.50" as a number
+// and back would hand it "1.5" instead. And an element that cannot be read as the list's type is
+// refused at the query boundary, so what a consumer holds is text already known to be readable
+// and nothing has to parse it defensively.
 type List struct {
 	expressionTerm
 
@@ -257,7 +273,8 @@ type List struct {
 // unary, the comparisons and OpIn/OpNotIn are binary, and OpAnd/OpOr take two or
 // more. Because an argument is itself an Expression, a comparison reads two
 // references as readily as a reference and a constant — what it requires is that
-// both operands hold the same kind of value (see ValidateFilter).
+// both operands hold the same kind of value, which the query boundary checks before
+// a backend sees the filter.
 type Call struct {
 	expressionTerm
 

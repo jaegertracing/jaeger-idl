@@ -70,8 +70,8 @@ const (
 )
 
 // FieldType is the type a built-in field holds, and so the type a constant compared against
-// that field is read as. It is what ResolveConstants rewrites an unconstrained constant into,
-// and what makes `span.duration > "banana"` refusable at the query boundary.
+// that field is read as. It is the type an unconstrained constant is resolved into, and what
+// makes `span.duration > "banana"` refusable at the query boundary.
 //
 // It is a smaller vocabulary than it might be, because the fields below are the only ones that
 // exist: IDs, a status, a span kind and a trace state are all text this API checks, and a
@@ -92,8 +92,8 @@ const (
 	FieldTypeSpanStatus FieldType = "spanStatus"
 )
 
-// fieldTypes is every declared field type, walked by a test so that a type added without a
-// rule to parse its constants fails there rather than when a caller sends one.
+// fieldTypes is every declared field type, walked by a test so that a field declaring a type
+// this vocabulary does not list fails there rather than reaching a consumer.
 var fieldTypes = []FieldType{
 	FieldTypeString, FieldTypeDuration, FieldTypeTimestamp,
 	FieldTypeSpanKind, FieldTypeSpanStatus,
@@ -193,7 +193,7 @@ func Fields() []Field {
 }
 
 // LookupField returns the built-in field of that level and name. Its second result is false
-// when no such field is defined, which is what ValidateFilter refuses.
+// when no such field is defined, which is what the query boundary refuses a filter for.
 func LookupField(level Level, name string) (Field, bool) {
 	for _, f := range fields {
 		if f.Level == level && f.Name == name {
