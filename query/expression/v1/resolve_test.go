@@ -566,6 +566,14 @@ func TestReadElement(t *testing.T) {
 			wantErr: `element "banana" of a list of int`,
 		},
 		{
+			// Beside an attribute nothing declares a type, and the element is under no type
+			// constraint rather than unreadable.
+			name:     "no type declared and no field to supply one",
+			list:     &List{Values: []string{"GET"}},
+			element:  "GET",
+			expected: &AnyValue{Value: "GET"},
+		},
+		{
 			name:    "no list at all",
 			element: "500",
 			wantErr: "list is empty",

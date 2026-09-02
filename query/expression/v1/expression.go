@@ -196,10 +196,10 @@ type TimestampValue struct {
 // List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn. Its elements
 // stay as the caller wrote them, and every one of them is read as a single type.
 //
-// That type is always known: Type declares it, or the built-in field the list is compared against
-// supplies it. Compared against an attribute, which declares nothing itself, the list has to
-// declare it — and it is worth declaring anyway, because a list matches only values of the type it
-// names.
+// Type declares that type, or the built-in field the list is compared against supplies it.
+// Compared against an attribute there is neither, and the elements are then matched at whatever
+// type they were stored, as an untyped scalar beside an attribute is. Declaring a type is still
+// worth doing where a caller knows it, because a list matches only values of the type it names.
 //
 // Unlike a constant, a list is not rewritten into typed elements when a filter is finalized. Two
 // reasons. A backend that indexes a value as text matches the text a caller wrote, and re-writing
