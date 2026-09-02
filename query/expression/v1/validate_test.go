@@ -692,7 +692,7 @@ func TestValidateFilter_AcceptsEveryLevel(t *testing.T) {
 }
 
 // TestValidateFilter_AcceptsEveryValueType pins that a list may declare any of the defined types.
-// Declaring none is accepted only where the field opposite the list declares one instead, which is
+// Declaring none is accepted only where the field the list is compared against declares one, which is
 // what the two subjects here distinguish.
 func TestValidateFilter_AcceptsEveryValueType(t *testing.T) {
 	for _, vt := range valueTypes {

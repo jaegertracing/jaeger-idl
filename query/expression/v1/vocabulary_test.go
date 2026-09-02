@@ -91,8 +91,8 @@ func TestPublishedOperatorsMatchTheDomain(t *testing.T) {
 }
 
 // TestPublishedValueTypesMatchTheDomain covers both places a type is declared. Each also accepts
-// the empty value, which means something in both: any type for a constant, and "the field opposite
-// the list declares it" for a list.
+// the empty value, which means something in both: any type for a constant, and "the field the list
+// is compared against declares it" for a list.
 func TestPublishedValueTypesMatchTheDomain(t *testing.T) {
 	declared := []string{""}
 	for _, valueType := range valueTypes {

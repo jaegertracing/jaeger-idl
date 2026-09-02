@@ -74,7 +74,7 @@ func resolveCall(call *Call, depth int) (*Call, error) {
 	return &Call{Op: op, Args: args}, nil
 }
 
-// resolveComparison rewrites the unconstrained constant sitting opposite a built-in field. A
+// resolveComparison rewrites the unconstrained constant compared against a built-in field. A
 // regular expression is not one of the comparisons this runs for, because its pattern stays a
 // pattern whatever the field holds, and nor is membership, whose List carries its own elements.
 func resolveComparison(args []Expression) error {
