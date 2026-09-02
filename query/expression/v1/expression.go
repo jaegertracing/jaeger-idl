@@ -36,10 +36,17 @@ const (
 // switch, so the vocabulary has one definition and a test can enumerate what is accepted.
 var levels = []Level{LevelSpan, LevelResource, LevelScope, LevelEvent, LevelLink}
 
-// Valid reports whether l is one of the five defined levels. The empty level is not one of
-// them, because it means the unqualified span-or-resource attribute search rather than a
-// level; a caller that accepts it tests for the empty string itself, as AttributeRef does
-// and FieldRef does not.
+// Levels returns the five defined levels. It does not include the empty level, which means the
+// unqualified span-or-resource attribute search rather than a level. A consumer that must cover
+// every level walks this rather than listing them again, so a level added in a later release
+// shows up as a gap in its own tests instead of passing unnoticed.
+func Levels() []Level {
+	return slices.Clone(levels)
+}
+
+// Valid reports whether l is one of the levels Levels returns. The empty level is not one of
+// them, for the reason Levels does not include it; a caller that accepts it tests for the empty
+// string itself, as AttributeRef does and FieldRef does not.
 func (l Level) Valid() bool {
 	return slices.Contains(levels, l)
 }
@@ -75,6 +82,13 @@ var operators = []Operator{
 	OpSome,
 }
 
+// Operators returns every operator a Call may apply. A consumer that switches on the operator
+// walks this in its own tests, so an operator added in a later release surfaces as a missing
+// case rather than being reported to a caller as unknown.
+func Operators() []Operator {
+	return slices.Clone(operators)
+}
+
 // ValueType is the type a constant declares on the wire. It is optional there: empty means
 // the backend matches the value at whatever type it was stored, and a type that is set is
 // authoritative, so the backend matches only values of that type. In this AST a constant is a
@@ -94,9 +108,16 @@ const (
 // listed, because it means "any type" rather than a type.
 var valueTypes = []ValueType{ValueTypeString, ValueTypeInt, ValueTypeDouble, ValueTypeBool}
 
-// Valid reports whether t is one of the defined value types. The empty type is not one of
-// them, for the reason valueTypes does not list it: it means "any type" rather than a type,
-// so a caller that accepts it tests for the empty string itself.
+// ValueTypes returns the types a constant may declare. It does not include the empty type,
+// which means "any type" rather than a type. A consumer that must cover every type walks this
+// rather than listing them again.
+func ValueTypes() []ValueType {
+	return slices.Clone(valueTypes)
+}
+
+// Valid reports whether t is one of the types ValueTypes returns. The empty type is not one of
+// them, for the reason ValueTypes does not include it, so a caller that accepts it tests for the
+// empty string itself.
 func (t ValueType) Valid() bool {
 	return slices.Contains(valueTypes, t)
 }
