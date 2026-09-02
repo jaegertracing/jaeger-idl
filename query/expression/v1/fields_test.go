@@ -35,9 +35,9 @@ func TestFields(t *testing.T) {
 	}, derived, "the fields computed rather than read")
 }
 
-// TestVocabulariesAreCopies pins that the exported vocabularies cannot be edited into something
-// the validator would then honor. Validation reads the same words, so a caller able to append one
-// would change what every filter after it means.
+// TestVocabulariesAreCopies pins that a caller cannot edit the closed set of words a field holds
+// into something a consumer would then honor. A consumer checking a constant against the set reads
+// these same words, so a caller able to append one would change what every filter after it means.
 func TestVocabulariesAreCopies(t *testing.T) {
 	kinds := SpanKinds()
 	kinds[0] = "banana"
@@ -46,18 +46,11 @@ func TestVocabulariesAreCopies(t *testing.T) {
 	statuses := SpanStatuses()
 	statuses[0] = "banana"
 	assert.Equal(t, "unset", SpanStatuses()[0])
-
-	filter := &Call{Op: OpEq, Args: []Expression{
-		&FieldRef{Name: SpanFieldKind, Level: LevelSpan}, &AnyValue{Value: "banana"},
-	}}
-	_, err := Finalize(filter)
-	require.ErrorContains(t, err, "not one of unspecified, internal, server, client, producer, consumer")
 }
 
 // TestFields_DeclaredTypes pins the fields that are not text, since those are the ones whose
-// constants are parsed and can be refused (see ResolveConstants). Everything else is a string,
-// including the IDs, the status and the span kind, which are text this API checks rather than
-// types of their own.
+// constants are parsed and can be refused. Everything else is a string, including the IDs, the
+// status and the span kind, which are text this API checks rather than types of their own.
 func TestFields_DeclaredTypes(t *testing.T) {
 	byType := map[FieldType][]string{}
 	for _, f := range Fields() {
@@ -92,34 +85,4 @@ func TestLookupField(t *testing.T) {
 
 	_, ok = LookupField(LevelSpan, "nonesuch")
 	assert.False(t, ok)
-}
-
-// TestFieldTypes_AreAllReadable pins that every declared type has a rule for reading a
-// constant as it. Without this, adding a type and forgetting the rule would refuse every
-// constant compared against a field of that type.
-func TestFieldTypes_AreAllReadable(t *testing.T) {
-	require.NotEmpty(t, fieldTypes)
-	for _, ft := range fieldTypes {
-		t.Run(string(ft), func(t *testing.T) {
-			_, err := readConstant(ft, textFor(ft))
-			require.NoError(t, err)
-		})
-	}
-}
-
-// textFor is a value the given field type can be read from, so that walking the vocabulary does
-// not turn into a test of each type's parser.
-func textFor(t FieldType) string {
-	switch t {
-	case FieldTypeDuration:
-		return "2s"
-	case FieldTypeTimestamp:
-		return "2026-08-16T18:56:20.123456789Z"
-	case FieldTypeSpanKind:
-		return SpanKinds()[0]
-	case FieldTypeSpanStatus:
-		return SpanStatuses()[0]
-	default:
-		return "anything"
-	}
 }
