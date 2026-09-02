@@ -33,10 +33,22 @@ var allTerms = []struct {
 	{&Call{}, "a predicate"},
 }
 
+// TestLevelsAndValueTypesAreCopies pins that a caller cannot reach the vocabulary through what
+// the accessors hand back, since a consumer walking it must not be able to edit it.
+func TestLevelsAndValueTypesAreCopies(t *testing.T) {
+	Levels()[0] = Level("edited")
+	ValueTypes()[0] = ValueType("edited")
+	Operators()[0] = Operator("edited")
+	assert.Equal(t, LevelSpan, levels[0])
+	assert.Equal(t, ValueTypeString, valueTypes[0])
+	assert.Equal(t, OpAnd, operators[0])
+}
+
 // TestLevelValid walks the vocabulary rather than listing the levels a second time, so a level
 // added to levels is covered here without editing this test.
 func TestLevelValid(t *testing.T) {
-	for _, level := range levels {
+	assert.Equal(t, levels, Levels())
+	for _, level := range Levels() {
 		assert.True(t, level.Valid(), "%q is one of the defined levels", level)
 	}
 	assert.False(t, Level("").Valid(), "the empty level is the unqualified search, not a level")
@@ -44,9 +56,18 @@ func TestLevelValid(t *testing.T) {
 	assert.False(t, Level("nowhere").Valid())
 }
 
+// TestOperators pins that the accessor reports every declared operator, so a consumer walking it
+// to cover each case sees an operator added in a later release.
+func TestOperators(t *testing.T) {
+	assert.Equal(t, operators, Operators())
+	assert.Contains(t, Operators(), OpSome, "the quantifier is an operator like any other")
+	assert.NotContains(t, Operators(), Operator(""))
+}
+
 // TestValueTypeValid does the same for the constant value types.
 func TestValueTypeValid(t *testing.T) {
-	for _, valueType := range valueTypes {
+	assert.Equal(t, valueTypes, ValueTypes())
+	for _, valueType := range ValueTypes() {
 		assert.True(t, valueType.Valid(), "%q is one of the defined value types", valueType)
 	}
 	assert.False(t, ValueType("").Valid(), `the empty type means "any type", not a type`)
