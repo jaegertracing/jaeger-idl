@@ -33,6 +33,28 @@ var allTerms = []struct {
 	{&Call{}, "a predicate"},
 }
 
+// TestLevelValid walks the vocabulary rather than listing the levels a second time, so a level
+// added to levels is covered here without editing this test.
+func TestLevelValid(t *testing.T) {
+	for _, level := range levels {
+		assert.True(t, level.Valid(), "%q is one of the defined levels", level)
+	}
+	assert.False(t, Level("").Valid(), "the empty level is the unqualified search, not a level")
+	assert.False(t, Level("Span").Valid(), "the vocabulary is lower case")
+	assert.False(t, Level("nowhere").Valid())
+}
+
+// TestValueTypeValid does the same for the constant value types.
+func TestValueTypeValid(t *testing.T) {
+	for _, valueType := range valueTypes {
+		assert.True(t, valueType.Valid(), "%q is one of the defined value types", valueType)
+	}
+	assert.False(t, ValueType("").Valid(), `the empty type means "any type", not a type`)
+	assert.False(t, ValueType("String").Valid(), "the vocabulary is lower case")
+	assert.False(t, ValueType("duration").Valid(),
+		"duration is a field type, not something a constant declares")
+}
+
 // TestExpressionTerms_ArePointersOnly pins that a term is a pointer. The embedded marker takes
 // a pointer receiver so that a term value does not also satisfy Expression: a tree is built from
 // pointers, and a value slipping in would pass every type switch written for one.

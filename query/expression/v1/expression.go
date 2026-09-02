@@ -14,7 +14,10 @@
 // owns a wire.
 package expression
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // Level is the scope a referenced value lives in. The five levels are the OTLP attribute
 // maps; an attribute reference may also leave it empty, which searches the span and
@@ -32,6 +35,14 @@ const (
 // levels is every explicit level. Validation walks it rather than repeating the constants in a
 // switch, so the vocabulary has one definition and a test can enumerate what is accepted.
 var levels = []Level{LevelSpan, LevelResource, LevelScope, LevelEvent, LevelLink}
+
+// Valid reports whether l is one of the five defined levels. The empty level is not one of
+// them, because it means the unqualified span-or-resource attribute search rather than a
+// level; a caller that accepts it tests for the empty string itself, as AttributeRef does
+// and FieldRef does not.
+func (l Level) Valid() bool {
+	return slices.Contains(levels, l)
+}
 
 // Operator is what a Call applies to its arguments: a boolean combinator, a
 // comparison, a set-membership test, or the existential quantifier over a span's
@@ -82,6 +93,13 @@ const (
 // valueTypes is every type a constant may declare. An empty type is always allowed and is not
 // listed, because it means "any type" rather than a type.
 var valueTypes = []ValueType{ValueTypeString, ValueTypeInt, ValueTypeDouble, ValueTypeBool}
+
+// Valid reports whether t is one of the defined value types. The empty type is not one of
+// them, for the reason valueTypes does not list it: it means "any type" rather than a type,
+// so a caller that accepts it tests for the empty string itself.
+func (t ValueType) Valid() bool {
+	return slices.Contains(valueTypes, t)
+}
 
 // Expression is a node in a structured filter: an atom — a reference to a value on the
 // span, or a constant — or a Call applying an operator to argument expressions. Only the
