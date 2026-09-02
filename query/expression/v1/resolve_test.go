@@ -227,7 +227,7 @@ func TestResolveConstants_ChecksMembershipElements(t *testing.T) {
 	require.ErrorContains(t, err, "cannot compare span.name against a list of bool")
 
 	// A declared element type is authoritative wherever it appears, so the elements are read as
-	// it whether or not there is a field opposite to compare it with.
+	// it whether or not there is a field to compare the list against.
 	_, err = ResolveConstants(&Call{Op: OpIn, Args: []Expression{
 		&AttributeRef{Key: "size"}, &List{Values: []string{"banana"}, Type: ValueTypeInt},
 	}})
@@ -503,7 +503,7 @@ func TestResolveConstants_LeavesItsInputAlone(t *testing.T) {
 // documented to answer for any tree, including one validation never saw, so a filter that contains
 // itself has to stop here too rather than run the stack out.
 // TestReadElement covers the one reading operation a consumer needs for a list: the type comes from
-// the list where it declares one, and from the field opposite it where it does not. On a finalized
+// the list where it declares one, and from the field the list is compared against where it does not. On a finalized
 // filter it cannot fail, since finalizing refused every element that would not read.
 func TestReadElement(t *testing.T) {
 	tests := []struct {
