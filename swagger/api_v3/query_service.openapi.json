@@ -79,6 +79,10 @@
       "jaeger.api_v3.FindTraceSummariesResponse": {
         "description": "Response chunk for FindTraceSummaries. A single RPC call may yield multiple\n chunks, each carrying one or more summaries, mirroring the chunked streaming\n used by FindTraces / GetTrace.",
         "properties": {
+          "nextPageToken": {
+            "description": "next_page_token is the cursor the caller can send back as Pagination.page_token\n to fetch the page after this one, see comments for Pagination. The server sets\n it only on the final chunk of the stream, and leaves it empty there when\n this is the last page.",
+            "type": "string"
+          },
           "summaries": {
             "items": {
               "$ref": "#/components/schemas/jaeger.api_v3.TraceSummary"
@@ -143,6 +147,24 @@
         ],
         "type": "object"
       },
+      "jaeger.api_v3.Pagination": {
+        "description": "Pagination asks for one page of results and, on continuation, says where the\n previous page stopped.\n\n A paginated search returns at most page_size results, and when more matches\n remain the response also carries a next_page_token. Sending that value back as\n page_token in an otherwise identical request returns the page that follows, so\n that a client walking the token chain sees every matching trace exactly once. An\n empty next_page_token means the search is exhausted.\n\n Pagination replaces search_depth rather than refining it: the two are mutually\n exclusive, and the query service rejects a request that sets both with\n InvalidArgument.\n\n Only FindTraceSummaries paginates, returning the token on\n FindTraceSummariesResponse. That is enough for a search screen, which walks the\n summaries and fetches whole traces only for the rows a user opens. FindTraces\n streams opentelemetry.proto.trace.v1.TracesData, an OTLP type with no field to\n carry a token, so FindTraces is not paginated at all: the query service rejects\n a FindTraces request that sets pagination with InvalidArgument, and search_depth\n bounds such a call instead.\n\n Pagination needs backend support. A backend that cannot paginate, meaning\n jaeger.storage.v2.SearchCapabilities.paginated is false, serves a single page\n capped at page_size and returns an empty next_page_token even when matches\n remain, and the query service rejects a request carrying a page_token with\n InvalidArgument, since such a backend cannot have minted a valid token.",
+        "properties": {
+          "pageSize": {
+            "description": "page_size bounds the number of results in one page. A Pagination that leaves it\n zero does not describe a page, and the query service rejects such a request\n with InvalidArgument.",
+            "format": "uint32",
+            "type": "integer"
+          },
+          "pageToken": {
+            "description": "page_token is the next_page_token the server returned for the preceding page;\n empty starts a new search. The value is opaque, and a client MUST echo back\n exactly what the server returned without inspecting or modifying it. A token is\n only valid for the query that produced it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pageSize"
+        ],
+        "type": "object"
+      },
       "jaeger.api_v3.ServiceSummary": {
         "description": "ServiceSummary contains per-service statistics for a trace, matching\n what the UI renders as a coloured tag in the search results row.",
         "properties": {
@@ -198,6 +220,14 @@
           "operationName": {
             "description": "operation_name filters spans by a specific operation / span name.",
             "type": "string"
+          },
+          "pagination": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/jaeger.api_v3.Pagination"
+              }
+            ],
+            "description": "pagination requests a paginated search, see comments for Pagination.\n Mutually exclusive with search_depth. When this field is absent the search\n returns a single page bounded by search_depth and no continuation token."
           },
           "rawTraces": {
             "description": "If set to true, the response will exclude any enrichments to the trace, such as clock skew adjustments.\n The trace will be returned exactly as stored.\n\n This field is optional.",
@@ -1040,6 +1070,23 @@
             }
           },
           {
+            "description": "page_size bounds the number of results in one page. A Pagination that leaves it\n zero does not describe a page, and the query service rejects such a request\n with InvalidArgument.",
+            "in": "query",
+            "name": "query.pagination.pageSize",
+            "schema": {
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "page_token is the next_page_token the server returned for the preceding page;\n empty starts a new search. The value is opaque, and a client MUST echo back\n exactly what the server returned without inspecting or modifying it. A token is\n only valid for the query that produced it.",
+            "in": "query",
+            "name": "query.pagination.pageToken",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.",
             "in": "query",
             "name": "query.filter",
@@ -1189,6 +1236,23 @@
             "name": "query.rawTraces",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "description": "page_size bounds the number of results in one page. A Pagination that leaves it\n zero does not describe a page, and the query service rejects such a request\n with InvalidArgument.",
+            "in": "query",
+            "name": "query.pagination.pageSize",
+            "schema": {
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "page_token is the next_page_token the server returned for the preceding page;\n empty starts a new search. The value is opaque, and a client MUST echo back\n exactly what the server returned without inspecting or modifying it. A token is\n only valid for the query that produced it.",
+            "in": "query",
+            "name": "query.pagination.pageToken",
+            "schema": {
+              "type": "string"
             }
           },
           {

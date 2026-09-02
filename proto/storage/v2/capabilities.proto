@@ -33,6 +33,13 @@ message SearchCapabilities {
   // only by populating the lists below, and there is no distinct "present but empty"
   // state to get wrong.
   FilterCapabilities filter = 3;
+
+  // paginated is true when FindTraceIDs and FindTraceSummaries honor a request's
+  // Pagination and return a next_page_token that resumes the search exactly where
+  // the previous page stopped, visiting every matching trace once under a stable
+  // total ordering. Its zero value means the backend cannot paginate. See comments
+  // for Pagination in trace_storage.proto.
+  bool paginated = 4;
 }
 
 // FilterCapabilities declares how much of the structured trace-query filter a backend
