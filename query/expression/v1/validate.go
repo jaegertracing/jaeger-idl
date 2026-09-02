@@ -273,7 +273,7 @@ func validateAttributeRef(ref *AttributeRef) error {
 	if ref == nil {
 		return errors.New("filter has a missing reference")
 	}
-	if ref.Level != "" && !slices.Contains(levels, ref.Level) {
+	if ref.Level != "" && !ref.Level.Valid() {
 		return fmt.Errorf("unknown filter level %q", ref.Level)
 	}
 	if ref.Key == "" {
@@ -291,7 +291,7 @@ func validateFieldRef(ref *FieldRef) error {
 	if ref.Level == "" {
 		return errors.New("field reference has no level, and a built-in field belongs to one")
 	}
-	if !slices.Contains(levels, ref.Level) {
+	if !ref.Level.Valid() {
 		return fmt.Errorf("unknown filter level %q", ref.Level)
 	}
 	if ref.Name == "" {
@@ -311,7 +311,7 @@ func errCollectionOutOfPlace() error {
 }
 
 func validateValueType(t ValueType) error {
-	if t != "" && !slices.Contains(valueTypes, t) {
+	if t != "" && !t.Valid() {
 		return fmt.Errorf("unknown filter value type %q", t)
 	}
 	return nil
