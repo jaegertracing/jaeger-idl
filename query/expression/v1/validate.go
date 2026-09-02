@@ -89,10 +89,7 @@ func validateCall(call *Call, quantified []Level, depth int) error {
 			// way that reads like an oversight. Refusing says so.
 			return fmt.Errorf("operator %q takes a list with at least one element", call.Op)
 		}
-		if err := validateValueType(list.Type); err != nil {
-			return err
-		}
-		return validateElementType(call.Op, call.Args[0], list)
+		return validateValueType(list.Type)
 	case OpRegex:
 		if err := wantArgs(call, 2); err != nil {
 			return err
@@ -250,21 +247,6 @@ func validateOperand(op Operator, arg Expression, _ []Level) error {
 		return nil
 	}
 	return fmt.Errorf("operator %q compares a reference or a constant, got %s", op, termName(arg))
-}
-
-// validateElementType checks that something says what type a list's elements are. A built-in field
-// declares one, so a list compared against it needs no type of its own — which is also how a list
-// of durations is written, since the wire has no duration type. An attribute declares nothing, so
-// there the list has to. Membership is a new operator with no legacy form, so nothing forces this
-// API to accept a list whose element type nobody stated (RFC 0005 §5.4).
-func validateElementType(op Operator, subject Expression, list *List) error {
-	if list.Type != "" {
-		return nil
-	}
-	if _, ok := subject.(*FieldRef); ok {
-		return nil
-	}
-	return fmt.Errorf("operator %q takes a list that declares its element type when it is compared against an attribute", op)
 }
 
 // validateSubject checks the operand an operator reads a value from rather than supplies one

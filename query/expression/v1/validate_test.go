@@ -713,13 +713,14 @@ func TestValidateFilter_AcceptsEveryValueType(t *testing.T) {
 		require.NoError(t, ValidateFilter(in))
 	})
 
+	// An attribute is under no type constraint, so a list beside one needs no declared type
+	// either — the same concession `eq` against an attribute has always made for a scalar.
 	t.Run("no type, against an attribute", func(t *testing.T) {
 		in := &Call{Op: OpIn, Args: []Expression{
 			attr("a"),
 			&List{Values: []string{"1"}},
 		}}
-		require.ErrorContains(t, ValidateFilter(in),
-			`operator "in" takes a list that declares its element type when it is compared against an attribute`)
+		require.NoError(t, ValidateFilter(in))
 	})
 }
 

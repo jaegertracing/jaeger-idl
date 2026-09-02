@@ -183,13 +183,18 @@ func readDeclaredElements(list *List) error {
 // passes as fieldType. It is the reading a consumer would otherwise write for itself, and the same
 // one finalizing a filter already did, so on a finalized filter it cannot fail.
 //
-// A list compared against an attribute always declares its type (see List), so a caller lowering
-// one passes an empty fieldType.
+// Beside an attribute there is no field to supply a type, so a caller lowering that comparison
+// passes an empty fieldType. An element of a list that declares no type either is under no type
+// constraint at all, exactly as an untyped scalar beside an attribute is, and comes back as an
+// AnyValue for a backend to match at whatever type the value was stored.
 func ReadElement(list *List, fieldType FieldType, element string) (Expression, error) {
 	if list == nil {
 		return nil, errors.New("list is empty")
 	}
 	if list.Type == "" {
+		if fieldType == "" {
+			return &AnyValue{Value: element}, nil
+		}
 		return readConstant(fieldType, element)
 	}
 	if err := readValue(list.Type, element); err != nil {

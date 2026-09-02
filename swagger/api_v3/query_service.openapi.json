@@ -447,10 +447,10 @@
         "type": "object"
       },
       "jaeger.expression.v1.List": {
-        "description": "List is a homogeneous list constant, the right arg of in/not_in. Every element is read as\n one type, and that type is always known: either type declares it, or the built-in field the\n list is compared against supplies it. A list compared against an attribute must declare it,\n since an attribute declares nothing itself. A list is not a legacy predicate — the legacy\n fields have no form for membership — so nothing has to accept an element type nobody stated.",
+        "description": "List is a homogeneous list constant, the right arg of in/not_in. Every element is read as one\n type: either type declares it, or the built-in field the list is compared against supplies it.\n Compared against an attribute there is neither, and the elements are matched at whatever type\n they were stored, exactly as an untyped scalar beside an attribute is (§5.4).",
         "properties": {
           "type": {
-            "description": "type is the type every element is read as, and a list matches only values of that type. It is\n OPTIONAL only where the field opposite it declares one (see Scalar.type) — a condition on the\n enclosing call that this schema cannot state, which is why the empty value is listed here and\n the validator checks the rest.",
+            "description": "type is the type every element is read as, and a list matches only values of that type. It is\n OPTIONAL: empty means the built-in field opposite the list supplies the type, or, beside an\n attribute, that the elements are under no type constraint at all (see Scalar.type).",
             "enum": [
               "",
               "string",
