@@ -34,12 +34,19 @@ message SearchCapabilities {
   // state to get wrong.
   FilterCapabilities filter = 3;
 
-  // paginated is true when FindTraceIDs and FindTraceSummaries honor a request's
+  // paginated is true when FindSpans, FindTraceIDs, and FindTraceSummaries honor a request's
   // Pagination and return a next_page_token that resumes the search exactly where
   // the previous page stopped, visiting every matching trace once under a stable
   // total ordering. Its zero value means the backend cannot paginate. See comments
   // for Pagination in trace_storage.proto.
   bool paginated = 4;
+
+  // span_search is true when FindSpans returns spans rather than gRPC status
+  // UNIMPLEMENTED (RFC 0016). false is also what a backend predating this field
+  // reports, since ADR-013's client maps an absent Capabilities service, and any
+  // field it does not recognize, to the least-capable answer.
+  bool span_search = 5;
+
 }
 
 // FilterCapabilities declares how much of the structured trace-query filter a backend

@@ -86,6 +86,85 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/google.rpc.Status'
+    /api/v3/spans:
+        get:
+            tags:
+                - QueryService
+            description: FindSpans searches for spans matching the given query
+            operationId: QueryService_FindSpans
+            parameters:
+                - name: query.startTimeMin
+                  in: query
+                  description: The time range, as on TraceQueryParameters. Required — see below.
+                  schema:
+                    type: string
+                    format: date-time
+                - name: query.startTimeMax
+                  in: query
+                  schema:
+                    type: string
+                    format: date-time
+                - name: query.pagination.pageSize
+                  in: query
+                  description: |-
+                    page_size bounds the number of results in one page. A Pagination that leaves it
+                     zero does not describe a page, and the query service rejects such a request
+                     with InvalidArgument.
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: query.pagination.pageToken
+                  in: query
+                  description: |-
+                    page_token is the next_page_token the server returned for the preceding page;
+                     empty starts a new search. The value is opaque, and a client MUST echo back
+                     exactly what the server returned without inspecting or modifying it. A token is
+                     only valid for the query that produced it.
+                  schema:
+                    type: string
+                - name: query.filter
+                  in: query
+                  description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
+                  schema:
+                    type: string
+                    example: '{"op":"eq","args":[{"attr":{"key":"http.status_code"}},{"scalar":{"value":"500"}}]}'
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/jaeger.api_v3.FindSpansResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/google.rpc.Status'
+        post:
+            tags:
+                - QueryService
+            description: FindSpans searches for spans matching the given query
+            operationId: QueryService_FindSpans
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/jaeger.api_v3.FindSpansRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/jaeger.api_v3.FindSpansResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/google.rpc.Status'
     /api/v3/trace-summaries:
         get:
             tags:
@@ -481,6 +560,33 @@ components:
                     type: string
                 callCount:
                     type: string
+        jaeger.api_v3.FindSpansRequest:
+            type: object
+            properties:
+                query:
+                    $ref: '#/components/schemas/jaeger.api_v3.SpanQueryParameters'
+            description: Request object to search spans.
+        jaeger.api_v3.FindSpansResponse:
+            type: object
+            properties:
+                spans:
+                    allOf:
+                        - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
+                    description: |-
+                        The matching spans. A query that groups or computes does not return spans,
+                         so it belongs on a second RPC that shares SpanQueryParameters (RFC 0016 §5).
+                nextPageToken:
+                    type: string
+                    description: |-
+                        The cursor to send as the next request's page_token, or empty when this
+                         page is the last one (RFC 0014 §4). It is meaningful only on the page's final
+                         chunk: a client reads it from the last chunk of the stream and ignores the
+                         field on the earlier chunks, which leave it unset.
+            description: |-
+                Response chunk for FindSpans. A single RPC call may yield multiple chunks,
+                 mirroring the chunked streaming used by FindTraces / GetTrace; next_page_token
+                 is meaningful only on the last chunk of the page, where an empty value means
+                 the page is the last one (RFC 0014 §4). Earlier chunks leave it unset.
         jaeger.api_v3.FindTraceSummariesRequest:
             type: object
             properties:
@@ -611,6 +717,33 @@ components:
             description: |-
                 ServiceSummary contains per-service statistics for a trace, matching
                  what the UI renders as a coloured tag in the search results row.
+        jaeger.api_v3.SpanQueryParameters:
+            type: object
+            properties:
+                startTimeMin:
+                    type: string
+                    description: The time range, as on TraceQueryParameters. Required — see below.
+                    format: date-time
+                startTimeMax:
+                    type: string
+                    format: date-time
+                filter:
+                    allOf:
+                        - $ref: '#/components/schemas/jaeger.expression.v1.Call'
+                    description: 'The predicates (RFC 0005): a single boolean-valued Call.'
+                pagination:
+                    allOf:
+                        - $ref: '#/components/schemas/jaeger.api_v3.Pagination'
+                    description: |-
+                        The page size and cursor (RFC 0014). There is no search_depth: a span search
+                         is bounded by its page size, and the server caps that.
+            description: |-
+                Query parameters to find spans.
+
+                 Predicates are matched against individual spans. The spans that match are then
+                 returned as the result.
+
+                 This differs from the trace search, which returns whole traces that contain at least one matching span.
         jaeger.api_v3.TraceQueryParameters:
             type: object
             properties:
