@@ -44,6 +44,28 @@ message GetTraceRequest {
   bool raw_traces = 4;
 }
 
+// Query parameters to find spans.
+//
+// Predicates are matched against individual spans. The spans that match are then
+// returned as the result.
+//
+// This differs from the trace search, which returns whole traces that contain at least one matching span.
+message SpanQueryParameters {
+  // The time range, as on TraceQueryParameters. Required — see below.
+  google.protobuf.Timestamp start_time_min = 1;
+  google.protobuf.Timestamp start_time_max = 2;
+
+  // The predicates (RFC 0005): a single boolean-valued Call.
+  jaeger.expression.v1.Call filter = 3;
+
+  // The page size and cursor (RFC 0014). There is no search_depth: a span search
+  // is bounded by its page size, and the server caps that.
+  Pagination pagination = 4;
+
+  // 5 to 15 are reserved for the result-shaping and aggregation clauses of
+  // RFC 0016 §5: projection, group_by, having, order_by.
+}
+
 // Query parameters to find traces.
 //
 // All fields form a conjunction (e.g., "service_name='X' AND operation_name='Y' AND ..."),
@@ -169,6 +191,30 @@ message Pagination {
   // exactly what the server returned without inspecting or modifying it. A token is
   // only valid for the query that produced it.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request object to search spans.
+message FindSpansRequest {
+  SpanQueryParameters query = 1;
+}
+
+// Response chunk for FindSpans. A single RPC call may yield multiple chunks,
+// mirroring the chunked streaming used by FindTraces / GetTrace; next_page_token
+// is meaningful only on the last chunk of the page, where an empty value means
+// the page is the last one (RFC 0014 §4). Earlier chunks leave it unset.
+message FindSpansResponse {
+  // The matching spans. A query that groups or computes does not return spans,
+  // so it belongs on a second RPC that shares SpanQueryParameters (RFC 0016 §5).
+  opentelemetry.proto.trace.v1.TracesData spans = 1;
+
+  // 2 is reserved for response-level warnings, which today are written onto a
+  // span for want of anywhere else (RFC 0016 §4.4).
+
+  // The cursor to send as the next request's page_token, or empty when this
+  // page is the last one (RFC 0014 §4). It is meaningful only on the page's final
+  // chunk: a client reads it from the last chunk of the stream and ignores the
+  // field on the earlier chunks, which leave it unset.
+  string next_page_token = 3;
 }
 
 // Request object to search traces.
@@ -303,6 +349,17 @@ service QueryService {
   rpc GetTrace(GetTraceRequest) returns (stream opentelemetry.proto.trace.v1.TracesData) {
     option (google.api.http) = {
       get: "/api/v3/traces/{trace_id}"
+    };
+  }
+
+  // FindSpans searches for spans matching the given query
+  rpc FindSpans(FindSpansRequest) returns (stream FindSpansResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/spans"
+      additional_bindings {
+        post: "/api/v3/spans"
+        body: "*"
+      }
     };
   }
 

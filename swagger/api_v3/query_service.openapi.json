@@ -67,6 +67,33 @@
         ],
         "type": "object"
       },
+      "jaeger.api_v3.FindSpansRequest": {
+        "description": "Request object to search spans.",
+        "properties": {
+          "query": {
+            "$ref": "#/components/schemas/jaeger.api_v3.SpanQueryParameters"
+          }
+        },
+        "type": "object"
+      },
+      "jaeger.api_v3.FindSpansResponse": {
+        "description": "Response chunk for FindSpans. A single RPC call may yield multiple chunks,\n mirroring the chunked streaming used by FindTraces / GetTrace; next_page_token\n is meaningful only on the last chunk of the page, where an empty value means\n the page is the last one (RFC 0014 §4). Earlier chunks leave it unset.",
+        "properties": {
+          "nextPageToken": {
+            "description": "The cursor to send as the next request's page_token, or empty when this\n page is the last one (RFC 0014 §4). It is meaningful only on the page's final\n chunk: a client reads it from the last chunk of the stream and ignores the\n field on the earlier chunks, which leave it unset.",
+            "type": "string"
+          },
+          "spans": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+              }
+            ],
+            "description": "The matching spans. A query that groups or computes does not return spans,\n so it belongs on a second RPC that shares SpanQueryParameters (RFC 0016 §5)."
+          }
+        },
+        "type": "object"
+      },
       "jaeger.api_v3.FindTraceSummariesRequest": {
         "description": "Request object for FindTraceSummaries.",
         "properties": {
@@ -186,6 +213,37 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "jaeger.api_v3.SpanQueryParameters": {
+        "description": "Query parameters to find spans.\n\n Predicates are matched against individual spans. The spans that match are then\n returned as the result.\n\n This differs from the trace search, which returns whole traces that contain at least one matching span.",
+        "properties": {
+          "filter": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/jaeger.expression.v1.Call"
+              }
+            ],
+            "description": "The predicates (RFC 0005): a single boolean-valued Call."
+          },
+          "pagination": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/jaeger.api_v3.Pagination"
+              }
+            ],
+            "description": "The page size and cursor (RFC 0014). There is no search_depth: a span search\n is bounded by its page size, and the server caps that."
+          },
+          "startTimeMax": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "startTimeMin": {
+            "description": "The time range, as on TraceQueryParameters. Required — see below.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "jaeger.api_v3.TraceQueryParameters": {
@@ -972,6 +1030,121 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/jaeger.api_v3.GetServicesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/google.rpc.Status"
+                }
+              }
+            },
+            "description": "Default error response"
+          }
+        },
+        "tags": [
+          "QueryService"
+        ]
+      }
+    },
+    "/api/v3/spans": {
+      "get": {
+        "description": "FindSpans searches for spans matching the given query",
+        "operationId": "QueryService_FindSpans",
+        "parameters": [
+          {
+            "description": "The time range, as on TraceQueryParameters. Required — see below.",
+            "in": "query",
+            "name": "query.startTimeMin",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "query.startTimeMax",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "page_size bounds the number of results in one page. A Pagination that leaves it\n zero does not describe a page, and the query service rejects such a request\n with InvalidArgument.",
+            "in": "query",
+            "name": "query.pagination.pageSize",
+            "schema": {
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "page_token is the next_page_token the server returned for the preceding page;\n empty starts a new search. The value is opaque, and a client MUST echo back\n exactly what the server returned without inspecting or modifying it. A token is\n only valid for the query that produced it.",
+            "in": "query",
+            "name": "query.pagination.pageToken",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.",
+            "in": "query",
+            "name": "query.filter",
+            "schema": {
+              "example": "{\"op\":\"eq\",\"args\":[{\"attr\":{\"key\":\"http.status_code\"}},{\"scalar\":{\"value\":\"500\"}}]}",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/jaeger.api_v3.FindSpansResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/google.rpc.Status"
+                }
+              }
+            },
+            "description": "Default error response"
+          }
+        },
+        "tags": [
+          "QueryService"
+        ]
+      },
+      "post": {
+        "description": "FindSpans searches for spans matching the given query",
+        "operationId": "QueryService_FindSpans",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/jaeger.api_v3.FindSpansRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/jaeger.api_v3.FindSpansResponse"
                 }
               }
             },
