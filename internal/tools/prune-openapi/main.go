@@ -79,6 +79,26 @@ func main() {
 		}
 	}
 
+	// 1.7 Point the GetTrace 200 response at the `{"result": ...}` envelope the HTTP
+	// gateway actually sends. The operation description has always said the body is
+	// wrapped while the $ref named a bare TracesData, so every generated client
+	// unmarshals one level too shallow. GRPCGatewayWrapper is declared in the proto for
+	// exactly this shape, but gnostic only emits schemas that something already
+	// references, so the schema has to be supplied here alongside the rewritten ref.
+	if envelopeGetTraceResponse(pathsNode) {
+		insertSchema(schemasNode, envelopeSchemaName, envelopeSchema())
+	}
+
+	// 1.8 Declare the OTLP ID fields required. Their own descriptions say "This field is
+	// required", but they are declared in the external opentelemetry-proto submodule, so
+	// neither (google.api.field_behavior) nor (openapi.v3.schema) can reach them.
+	markRequiredFields(schemasNode)
+
+	// 1.9 Replace `format: bytes` on the ID fields with a hex pattern. `bytes` is the
+	// protobuf type name emitted verbatim, not a registered OpenAPI format, and it points
+	// readers and code generators at base64 while the gateway sends hex strings.
+	fixIDFormats(schemasNode)
+
 	// 2. Identify all reachable schemas starting from "paths"
 	reachable := make(map[string]bool)
 
@@ -283,4 +303,169 @@ func findNode(root *yaml.Node, key string) *yaml.Node {
 		}
 	}
 	return nil
+}
+
+// Names of the nodes patched by hand below. GRPCGatewayWrapper is declared in
+// proto/api_v3/query_service.proto for the {"result": ...} document the gateway sends.
+const (
+	schemaRefPrefix    = "#/components/schemas/"
+	getTracePath       = "/api/v3/traces/{traceId}"
+	tracesDataSchema   = "opentelemetry.proto.trace.v1.TracesData"
+	envelopeSchemaName = "jaeger.api_v3.GRPCGatewayWrapper"
+)
+
+// requiredFields lists the fields whose own description in the generated document already
+// states they are required. Only fields that exist under `properties` are declared, so a
+// rename upstream drops the name instead of publishing a required field that is not there.
+var requiredFields = []struct {
+	schema string
+	fields []string
+}{
+	{"opentelemetry.proto.trace.v1.Span", []string{"traceId", "spanId"}},
+}
+
+// idFields lists the ID fields that carry `format: bytes`, with the hex shape the gateway
+// actually sends. parentSpanId is empty on a root span, so its pattern admits the empty
+// string. opentelemetry.proto.common.v1.AnyValue.bytesValue is deliberately absent: it is a
+// genuine bytes field and base64 is the correct reading of it.
+var idFields = []struct {
+	schema  string
+	field   string
+	pattern string
+}{
+	{"opentelemetry.proto.trace.v1.Span", "traceId", "^[0-9a-f]{32}$"},
+	{"opentelemetry.proto.trace.v1.Span", "spanId", "^[0-9a-f]{16}$"},
+	{"opentelemetry.proto.trace.v1.Span", "parentSpanId", "^([0-9a-f]{16})?$"},
+	{"opentelemetry.proto.trace.v1.Span_Link", "traceId", "^[0-9a-f]{32}$"},
+	{"opentelemetry.proto.trace.v1.Span_Link", "spanId", "^[0-9a-f]{16}$"},
+}
+
+// descend walks a chain of mapping keys, returning nil as soon as one is missing.
+func descend(node *yaml.Node, keys ...string) *yaml.Node {
+	for _, key := range keys {
+		if node == nil {
+			return nil
+		}
+		node = findNode(node, key)
+	}
+	return node
+}
+
+func seqNode(items ...*yaml.Node) *yaml.Node {
+	return &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq", Content: items}
+}
+
+// setPair sets key to val in a mapping, replacing an existing entry in place so the
+// surrounding key order is preserved, and otherwise appending.
+func setPair(mapping *yaml.Node, key string, val *yaml.Node) {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			mapping.Content[i+1] = val
+			return
+		}
+	}
+	mapping.Content = append(mapping.Content, scalarNode(key, 0), val)
+}
+
+// envelopeGetTraceResponse repoints the GetTrace 200 response at the envelope schema. It
+// changes nothing and reports false unless the ref is the bare TracesData, so neither a
+// missing path nor an already enveloped ref can cause a second copy of the schema to be
+// injected.
+func envelopeGetTraceResponse(pathsNode *yaml.Node) bool {
+	schema := descend(pathsNode, getTracePath, "get", "responses", "200", "content", "application/json", "schema")
+	ref := descend(schema, "$ref")
+	if ref == nil || ref.Value != schemaRefPrefix+tracesDataSchema {
+		return false
+	}
+	ref.Value = schemaRefPrefix + envelopeSchemaName
+	return true
+}
+
+// envelopeSchema is what gnostic would have emitted for GRPCGatewayWrapper had anything
+// referenced it. The description paraphrases that message's own comment, naming
+// google.rpc.Status for the error case because that is the schema this document's default
+// response refs, and leaving out the note about a possible future chunked multi-response,
+// which describes where the server may go rather than the body this schema describes.
+func envelopeSchema() *yaml.Node {
+	description := "GRPCGatewayWrapper wraps streaming responses from GetTrace for HTTP.\n" +
+		"Today there is always only one response because internally the HTTP server gets\n" +
+		"data from QueryService that does not support multiple responses. In case of errors,\n" +
+		"google.rpc.Status is returned instead.\n\n" +
+		"See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189"
+	return mappingNode(
+		scalarNode("required", 0), seqNode(scalarNode("result", 0)),
+		scalarNode("type", 0), scalarNode("object", 0),
+		scalarNode("properties", 0), mappingNode(
+			scalarNode("result", 0), mappingNode(
+				scalarNode("allOf", 0), seqNode(mappingNode(
+					scalarNode("$ref", 0), scalarNode(schemaRefPrefix+tracesDataSchema, yaml.SingleQuotedStyle),
+				)),
+				scalarNode("description", 0), scalarNode("The trace data, always present on a 200 response.", 0),
+			),
+		),
+		scalarNode("description", 0), scalarNode(description, yaml.LiteralStyle),
+	)
+}
+
+// insertSchema adds a schema to components/schemas, or replaces one already there under the
+// same name, keeping the byte order the generator emits so the document reads as though it
+// had been generated with the schema in place.
+func insertSchema(schemasNode *yaml.Node, name string, schema *yaml.Node) {
+	for i := 0; i+1 < len(schemasNode.Content); i += 2 {
+		if schemasNode.Content[i].Value == name {
+			schemasNode.Content[i+1] = schema
+			return
+		}
+		if schemasNode.Content[i].Value > name {
+			tail := append([]*yaml.Node{scalarNode(name, 0), schema}, schemasNode.Content[i:]...)
+			schemasNode.Content = append(schemasNode.Content[:i:i], tail...)
+			return
+		}
+	}
+	schemasNode.Content = append(schemasNode.Content, scalarNode(name, 0), schema)
+}
+
+// markRequiredFields declares the fields listed in requiredFields on their own schema. The
+// list is prepended, where the generator puts it on the schemas that have one, or replaces
+// an existing list in its current slot.
+func markRequiredFields(schemasNode *yaml.Node) {
+	for _, want := range requiredFields {
+		schema := findNode(schemasNode, want.schema)
+		properties := descend(schema, "properties")
+		if properties == nil {
+			continue
+		}
+		names := seqNode()
+		for _, field := range want.fields {
+			if findNode(properties, field) != nil {
+				names.Content = append(names.Content, scalarNode(field, 0))
+			}
+		}
+		if len(names.Content) == 0 {
+			continue
+		}
+		if findNode(schema, "required") != nil {
+			setPair(schema, "required", names)
+			continue
+		}
+		schema.Content = append([]*yaml.Node{scalarNode("required", 0), names}, schema.Content...)
+	}
+}
+
+// fixIDFormats swaps `format: bytes` for a hex `pattern` on the ID fields, in place, so the
+// surrounding keys keep the order the generator emitted.
+func fixIDFormats(schemasNode *yaml.Node) {
+	for _, id := range idFields {
+		field := descend(schemasNode, id.schema, "properties", id.field)
+		if field == nil {
+			continue
+		}
+		for i := 0; i+1 < len(field.Content); i += 2 {
+			if field.Content[i].Value == "format" && field.Content[i+1].Value == "bytes" {
+				field.Content[i] = scalarNode("pattern", 0)
+				field.Content[i+1] = scalarNode(id.pattern, yaml.SingleQuotedStyle)
+				break
+			}
+		}
+	}
 }
