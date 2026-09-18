@@ -412,15 +412,20 @@ func envelopeResponse(pathsNode *yaml.Node, path, method string) bool {
 }
 
 // envelopeSchema is what gnostic would have emitted for GRPCGatewayWrapper had anything
-// referenced it. The description paraphrases that message's own comment, naming
-// google.rpc.Status for the error case because that is the schema this document's default
-// response refs, and leaving out the note about a possible future chunked multi-response,
-// which describes where the server may go rather than the body this schema describes.
+// referenced it. The description paraphrases that message's own comment, keeping its error
+// contract: the gateway serializes GRPCGatewayError, which is what an empty search returns
+// with its 404. The note about a possible future chunked multi-response is left out, since
+// it describes where the server may go rather than the body this schema describes.
+//
+// The document's `default` responses still ref google.rpc.Status, which is not what the
+// gateway sends. That is a separate defect in the generated paths, not one this schema
+// should propagate.
 func envelopeSchema() *yaml.Node {
 	description := "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\n" +
 		"Today there is always only one response because internally the HTTP server gets\n" +
 		"data from QueryService that does not support multiple responses. In case of errors,\n" +
-		"google.rpc.Status is returned instead.\n\n" +
+		"GRPCGatewayError is returned instead:\n" +
+		"{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\n" +
 		"See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189"
 	return mappingNode(
 		scalarNode("required", 0), seqNode(scalarNode("result", 0)),

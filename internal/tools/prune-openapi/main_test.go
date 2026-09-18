@@ -211,6 +211,19 @@ func TestEnvelopeSchemaShape(t *testing.T) {
 		t.Errorf("required is %v, want [result]", got)
 	}
 
+	// The gateway serializes GRPCGatewayError, not google.rpc.Status. The document's default
+	// responses say otherwise, so the description must not be inferred from them.
+	description := findNode(schema, "description")
+	if description == nil {
+		t.Fatal("the envelope publishes no description")
+	}
+	if !strings.Contains(description.Value, "GRPCGatewayError") {
+		t.Errorf("the description does not name the error type the gateway sends: %s", description.Value)
+	}
+	if strings.Contains(description.Value, "google.rpc.Status") {
+		t.Errorf("the description names google.rpc.Status, which the gateway does not send: %s", description.Value)
+	}
+
 	result := descend(schema, "properties", "result")
 	if result == nil {
 		t.Fatal("the envelope has no result property")

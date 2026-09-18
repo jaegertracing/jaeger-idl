@@ -129,7 +129,7 @@
         "type": "object"
       },
       "jaeger.api_v3.GRPCGatewayWrapper": {
-        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\ngoogle.rpc.Status is returned instead.\n\nSee https://github.com/grpc-ecosystem/grpc-gateway/issues/2189",
+        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\nGRPCGatewayError is returned instead:\n{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\nSee https://github.com/grpc-ecosystem/grpc-gateway/issues/2189",
         "properties": {
           "result": {
             "allOf": [

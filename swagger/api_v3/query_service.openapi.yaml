@@ -630,7 +630,8 @@ components:
                 GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.
                 Today there is always only one response because internally the HTTP server gets
                 data from QueryService that does not support multiple responses. In case of errors,
-                google.rpc.Status is returned instead.
+                GRPCGatewayError is returned instead:
+                {"error": {"grpcCode": ..., "httpCode": ..., "message": ..., "httpStatus": ...}}
 
                 See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189
         jaeger.api_v3.GetOperationsResponse:
