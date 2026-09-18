@@ -624,7 +624,7 @@ components:
             properties:
                 result:
                     allOf:
-                        - $ref: '#/components/schemas/jaeger.api_v3.TraceResponseTracesData'
+                        - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
                     description: The trace data, always present on a 200 response.
             description: |-
                 GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.
@@ -633,8 +633,7 @@ components:
                 GRPCGatewayError is returned instead:
                 {"error": {"grpcCode": ..., "httpCode": ..., "message": ..., "httpStatus": ...}}
 
-                See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189
-                for where that shape originates.
+                See grpc-ecosystem/grpc-gateway#2189 for where that shape originates.
         jaeger.api_v3.GetOperationsResponse:
             required:
                 - operations
@@ -866,34 +865,6 @@ components:
                  traces with at least one matching span.
 
                  The results have no guaranteed ordering.
-        jaeger.api_v3.TraceResponseResourceSpans:
-            allOf:
-                - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.ResourceSpans'
-                - required:
-                    - scopeSpans
-                  properties:
-                    scopeSpans:
-                        type: array
-                        items:
-                            $ref: '#/components/schemas/jaeger.api_v3.TraceResponseScopeSpans'
-            description: ResourceSpans as the trace endpoints return it, with scopeSpans always present.
-        jaeger.api_v3.TraceResponseScopeSpans:
-            allOf:
-                - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.ScopeSpans'
-                - required:
-                    - spans
-            description: ScopeSpans as the trace endpoints return it, with spans always present.
-        jaeger.api_v3.TraceResponseTracesData:
-            allOf:
-                - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
-                - required:
-                    - resourceSpans
-                  properties:
-                    resourceSpans:
-                        type: array
-                        items:
-                            $ref: '#/components/schemas/jaeger.api_v3.TraceResponseResourceSpans'
-            description: TracesData as the trace endpoints return it, with resourceSpans always present.
         jaeger.api_v3.TraceSummary:
             required:
                 - traceId
@@ -1267,9 +1238,6 @@ components:
                          This schema_url applies to all spans and span events in the "spans" field.
             description: A collection of Spans produced by an InstrumentationScope.
         opentelemetry.proto.trace.v1.Span:
-            required:
-                - traceId
-                - spanId
             type: object
             properties:
                 traceId:
@@ -1281,7 +1249,7 @@ components:
                          is zero-length and thus is also invalid).
 
                          This field is required.
-                    pattern: '^[0-9a-f]{32}$'
+                    format: bytes
                 spanId:
                     type: string
                     description: |-
@@ -1291,7 +1259,7 @@ components:
                          is zero-length and thus is also invalid).
 
                          This field is required.
-                    pattern: '^[0-9a-f]{16}$'
+                    format: bytes
                 traceState:
                     type: string
                     description: |-
@@ -1303,7 +1271,7 @@ components:
                     description: |-
                         The `span_id` of this span's parent span. If this is a root span, then this
                          field must be empty. The ID is an 8-byte array.
-                    pattern: '^([0-9a-f]{16})?$'
+                    format: bytes
                 flags:
                     type: integer
                     description: |-
@@ -1455,11 +1423,11 @@ components:
                     description: |-
                         A unique identifier of a trace that this linked span is part of. The ID is a
                          16-byte array.
-                    pattern: '^[0-9a-f]{32}$'
+                    format: bytes
                 spanId:
                     type: string
                     description: A unique identifier for the linked span. The ID is an 8-byte array.
-                    pattern: '^[0-9a-f]{16}$'
+                    format: bytes
                 traceState:
                     type: string
                     description: The trace_state associated with the link.

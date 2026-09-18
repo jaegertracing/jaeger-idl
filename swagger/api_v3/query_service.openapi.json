@@ -129,12 +129,12 @@
         "type": "object"
       },
       "jaeger.api_v3.GRPCGatewayWrapper": {
-        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\nGRPCGatewayError is returned instead:\n{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\nSee https://github.com/grpc-ecosystem/grpc-gateway/issues/2189",
+        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\nGRPCGatewayError is returned instead:\n{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\nSee grpc-ecosystem/grpc-gateway#2189 for where that shape originates.",
         "properties": {
           "result": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/jaeger.api_v3.TraceResponseTracesData"
+                "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
               }
             ],
             "description": "The trace data, always present on a 200 response."
@@ -329,61 +329,6 @@
           }
         },
         "type": "object"
-      },
-      "jaeger.api_v3.TraceResponseResourceSpans": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.ResourceSpans"
-          },
-          {
-            "properties": {
-              "scopeSpans": {
-                "items": {
-                  "$ref": "#/components/schemas/jaeger.api_v3.TraceResponseScopeSpans"
-                },
-                "type": "array"
-              }
-            },
-            "required": [
-              "scopeSpans"
-            ]
-          }
-        ],
-        "description": "ResourceSpans as the trace endpoints return it, with scopeSpans always present."
-      },
-      "jaeger.api_v3.TraceResponseScopeSpans": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.ScopeSpans"
-          },
-          {
-            "required": [
-              "spans"
-            ]
-          }
-        ],
-        "description": "ScopeSpans as the trace endpoints return it, with spans always present."
-      },
-      "jaeger.api_v3.TraceResponseTracesData": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
-          },
-          {
-            "properties": {
-              "resourceSpans": {
-                "items": {
-                  "$ref": "#/components/schemas/jaeger.api_v3.TraceResponseResourceSpans"
-                },
-                "type": "array"
-              }
-            },
-            "required": [
-              "resourceSpans"
-            ]
-          }
-        ],
-        "description": "TracesData as the trace endpoints return it, with resourceSpans always present."
       },
       "jaeger.api_v3.TraceSummary": {
         "description": "TraceSummary contains lightweight summary information about a trace,\n suitable for display in search result lists.",
@@ -862,12 +807,12 @@
           },
           "parentSpanId": {
             "description": "The `span_id` of this span's parent span. If this is a root span, then this\n field must be empty. The ID is an 8-byte array.",
-            "pattern": "^([0-9a-f]{16})?$",
+            "format": "bytes",
             "type": "string"
           },
           "spanId": {
             "description": "A unique identifier for a span within a trace, assigned when the span\n is created. The ID is an 8-byte array. An ID with all zeroes OR of length\n other than 8 bytes is considered invalid (empty string in OTLP/JSON\n is zero-length and thus is also invalid).\n\n This field is required.",
-            "pattern": "^[0-9a-f]{16}$",
+            "format": "bytes",
             "type": "string"
           },
           "startTimeUnixNano": {
@@ -884,7 +829,7 @@
           },
           "traceId": {
             "description": "A unique identifier for a trace. All spans from the same trace share\n the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes OR\n of length other than 16 bytes is considered invalid (empty string in OTLP/JSON\n is zero-length and thus is also invalid).\n\n This field is required.",
-            "pattern": "^[0-9a-f]{32}$",
+            "format": "bytes",
             "type": "string"
           },
           "traceState": {
@@ -892,10 +837,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "traceId",
-          "spanId"
-        ],
         "type": "object"
       },
       "opentelemetry.proto.trace.v1.Span_Event": {
@@ -946,12 +887,12 @@
           },
           "spanId": {
             "description": "A unique identifier for the linked span. The ID is an 8-byte array.",
-            "pattern": "^[0-9a-f]{16}$",
+            "format": "bytes",
             "type": "string"
           },
           "traceId": {
             "description": "A unique identifier of a trace that this linked span is part of. The ID is a\n 16-byte array.",
-            "pattern": "^[0-9a-f]{32}$",
+            "format": "bytes",
             "type": "string"
           },
           "traceState": {

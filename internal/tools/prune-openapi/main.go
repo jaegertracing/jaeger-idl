@@ -83,7 +83,7 @@ func main() {
 	// gateway actually sends. The operation descriptions have always said the body is
 	// wrapped while the $ref named a bare TracesData, so every generated client unmarshals
 	// one level too shallow. GRPCGatewayWrapper is declared in the proto for this shape,
-	// but gnostic only emits schemas that something already references, so the schemas are
+	// but gnostic only emits schemas that something already references, so the schema is
 	// supplied here alongside the rewritten refs.
 	wrapped := false
 	for _, binding := range envelopeBindings {
@@ -93,20 +93,7 @@ func main() {
 	}
 	if wrapped {
 		insertSchema(schemasNode, envelopeSchemaName, envelopeSchema())
-		insertSchema(schemasNode, responseTracesDataName, responseTracesData())
-		insertSchema(schemasNode, responseResourceSpansName, responseResourceSpans())
-		insertSchema(schemasNode, responseScopeSpansName, responseScopeSpans())
 	}
-
-	// 1.8 Declare the OTLP ID fields required. Their own descriptions say "This field is
-	// required", but they are declared in the external opentelemetry-proto submodule, so
-	// neither (google.api.field_behavior) nor (openapi.v3.schema) can reach them.
-	markRequiredFields(schemasNode)
-
-	// 1.9 Replace `format: bytes` on the ID fields with a hex pattern. `bytes` is the
-	// protobuf type name emitted verbatim, not a registered OpenAPI format, and it points
-	// readers and code generators at base64 while the gateway sends hex strings.
-	fixIDFormats(schemasNode)
 
 	// 2. Identify all reachable schemas starting from "paths"
 	reachable := make(map[string]bool)
@@ -315,56 +302,24 @@ func findNode(root *yaml.Node, key string) *yaml.Node {
 }
 
 // Names of the nodes patched by hand below. GRPCGatewayWrapper is declared in
-// proto/api_v3/query_service.proto for the {"result": ...} document the gateway sends. The
-// three TraceResponse names have no proto message behind them. They are views of the OTLP
-// schemas scoped to these responses, so the reusable OTLP schemas stay as OTLP defines them.
+// proto/api_v3/query_service.proto for the {"result": ...} document the gateway sends,
+// but nothing references it, so gnostic never emits it.
 const (
-	schemaRefPrefix           = "#/components/schemas/"
-	getTracePath              = "/api/v3/traces/{traceId}"
-	findTracesPath            = "/api/v3/traces"
-	tracesDataSchema          = "opentelemetry.proto.trace.v1.TracesData"
-	resourceSpansSchema       = "opentelemetry.proto.trace.v1.ResourceSpans"
-	scopeSpansSchema          = "opentelemetry.proto.trace.v1.ScopeSpans"
-	envelopeSchemaName        = "jaeger.api_v3.GRPCGatewayWrapper"
-	responseTracesDataName    = "jaeger.api_v3.TraceResponseTracesData"
-	responseResourceSpansName = "jaeger.api_v3.TraceResponseResourceSpans"
-	responseScopeSpansName    = "jaeger.api_v3.TraceResponseScopeSpans"
+	schemaRefPrefix    = "#/components/schemas/"
+	getTracePath       = "/api/v3/traces/{traceId}"
+	findTracesPath     = "/api/v3/traces"
+	tracesDataSchema   = "opentelemetry.proto.trace.v1.TracesData"
+	envelopeSchemaName = "jaeger.api_v3.GRPCGatewayWrapper"
 )
 
 // envelopeBindings are the operations whose 200 body the gateway wraps. In the backend's
 // apiv3 http_gateway, getTrace and findTraces both reach returnTraces, which answers 404
 // when it has no traces and otherwise merges what it has and calls returnTrace, so all
-// three bindings publish the same wrapped document with the same guarantees.
+// three bindings publish the same wrapped document.
 var envelopeBindings = []struct{ path, method string }{
 	{getTracePath, "get"},
 	{findTracesPath, "get"},
 	{findTracesPath, "post"},
-}
-
-// requiredFields lists the fields whose own description in the generated document already
-// states they are required. Only fields that exist under `properties` are declared, so a
-// rename upstream drops the name instead of publishing a required field that is not there.
-var requiredFields = []struct {
-	schema string
-	fields []string
-}{
-	{"opentelemetry.proto.trace.v1.Span", []string{"traceId", "spanId"}},
-}
-
-// idFields lists the ID fields that carry `format: bytes`, with the hex shape the gateway
-// actually sends. parentSpanId is empty on a root span, so its pattern admits the empty
-// string. opentelemetry.proto.common.v1.AnyValue.bytesValue is deliberately absent: it is a
-// genuine bytes field and base64 is the correct reading of it.
-var idFields = []struct {
-	schema  string
-	field   string
-	pattern string
-}{
-	{"opentelemetry.proto.trace.v1.Span", "traceId", "^[0-9a-f]{32}$"},
-	{"opentelemetry.proto.trace.v1.Span", "spanId", "^[0-9a-f]{16}$"},
-	{"opentelemetry.proto.trace.v1.Span", "parentSpanId", "^([0-9a-f]{16})?$"},
-	{"opentelemetry.proto.trace.v1.Span_Link", "traceId", "^[0-9a-f]{32}$"},
-	{"opentelemetry.proto.trace.v1.Span_Link", "spanId", "^[0-9a-f]{16}$"},
 }
 
 // descend walks a chain of mapping keys, returning nil as soon as one is missing.
@@ -384,18 +339,6 @@ func seqNode(items ...*yaml.Node) *yaml.Node {
 
 func refNode(schema string) *yaml.Node {
 	return mappingNode(scalarNode("$ref", 0), scalarNode(schemaRefPrefix+schema, yaml.SingleQuotedStyle))
-}
-
-// setPair sets key to val in a mapping, replacing an existing entry in place so the
-// surrounding key order is preserved, and otherwise appending.
-func setPair(mapping *yaml.Node, key string, val *yaml.Node) {
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			mapping.Content[i+1] = val
-			return
-		}
-	}
-	mapping.Content = append(mapping.Content, scalarNode(key, 0), val)
 }
 
 // envelopeResponse repoints one operation's 200 response at the envelope schema. It changes
@@ -426,58 +369,18 @@ func envelopeSchema() *yaml.Node {
 		"data from QueryService that does not support multiple responses. In case of errors,\n" +
 		"GRPCGatewayError is returned instead:\n" +
 		"{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\n" +
-		"See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189"
+		"See grpc-ecosystem/grpc-gateway#2189 for where that shape originates."
 	return mappingNode(
 		scalarNode("required", 0), seqNode(scalarNode("result", 0)),
 		scalarNode("type", 0), scalarNode("object", 0),
 		scalarNode("properties", 0), mappingNode(
 			scalarNode("result", 0), mappingNode(
-				scalarNode("allOf", 0), seqNode(refNode(responseTracesDataName)),
+				scalarNode("allOf", 0), seqNode(refNode(tracesDataSchema)),
 				scalarNode("description", 0), scalarNode("The trace data, always present on a 200 response.", 0),
 			),
 		),
 		scalarNode("description", 0), scalarNode(description, yaml.LiteralStyle),
 	)
-}
-
-// responseView builds a view of an OTLP schema for these responses: the schema itself, and a
-// second allOf member requiring one array field and, where the elements carry a requirement
-// of their own, narrowing the element type to the next view. Composing rather than copying
-// keeps the view from drifting when the OTLP schema gains a field, and leaves the OTLP
-// schema itself untouched for every other reader.
-func responseView(base, field, itemSchema, description string) *yaml.Node {
-	overlay := mappingNode(scalarNode("required", 0), seqNode(scalarNode(field, 0)))
-	if itemSchema != "" {
-		overlay.Content = append(overlay.Content,
-			scalarNode("properties", 0), mappingNode(
-				scalarNode(field, 0), mappingNode(
-					scalarNode("type", 0), scalarNode("array", 0),
-					scalarNode("items", 0), refNode(itemSchema),
-				),
-			),
-		)
-	}
-	return mappingNode(
-		scalarNode("allOf", 0), seqNode(refNode(base), overlay),
-		scalarNode("description", 0), scalarNode(description, 0),
-	)
-}
-
-func responseTracesData() *yaml.Node {
-	return responseView(tracesDataSchema, "resourceSpans", responseResourceSpansName,
-		"TracesData as the trace endpoints return it, with resourceSpans always present.")
-}
-
-func responseResourceSpans() *yaml.Node {
-	return responseView(resourceSpansSchema, "scopeSpans", responseScopeSpansName,
-		"ResourceSpans as the trace endpoints return it, with scopeSpans always present.")
-}
-
-// responseScopeSpans passes no item schema: Span already carries its own required list, so
-// the elements need no narrowing.
-func responseScopeSpans() *yaml.Node {
-	return responseView(scopeSpansSchema, "spans", "",
-		"ScopeSpans as the trace endpoints return it, with spans always present.")
 }
 
 // insertSchema adds a schema to components/schemas, or replaces one already there under the
@@ -496,49 +399,4 @@ func insertSchema(schemasNode *yaml.Node, name string, schema *yaml.Node) {
 		}
 	}
 	schemasNode.Content = append(schemasNode.Content, scalarNode(name, 0), schema)
-}
-
-// markRequiredFields declares the fields listed in requiredFields on their own schema. The
-// list is prepended, where the generator puts it on the schemas that have one, or replaces
-// an existing list in its current slot.
-func markRequiredFields(schemasNode *yaml.Node) {
-	for _, want := range requiredFields {
-		schema := findNode(schemasNode, want.schema)
-		properties := descend(schema, "properties")
-		if properties == nil {
-			continue
-		}
-		names := seqNode()
-		for _, field := range want.fields {
-			if findNode(properties, field) != nil {
-				names.Content = append(names.Content, scalarNode(field, 0))
-			}
-		}
-		if len(names.Content) == 0 {
-			continue
-		}
-		if findNode(schema, "required") != nil {
-			setPair(schema, "required", names)
-			continue
-		}
-		schema.Content = append([]*yaml.Node{scalarNode("required", 0), names}, schema.Content...)
-	}
-}
-
-// fixIDFormats swaps `format: bytes` for a hex `pattern` on the ID fields, in place, so the
-// surrounding keys keep the order the generator emitted.
-func fixIDFormats(schemasNode *yaml.Node) {
-	for _, id := range idFields {
-		field := descend(schemasNode, id.schema, "properties", id.field)
-		if field == nil {
-			continue
-		}
-		for i := 0; i+1 < len(field.Content); i += 2 {
-			if field.Content[i].Value == "format" && field.Content[i+1].Value == "bytes" {
-				field.Content[i] = scalarNode("pattern", 0)
-				field.Content[i+1] = scalarNode(id.pattern, yaml.SingleQuotedStyle)
-				break
-			}
-		}
-	}
 }
