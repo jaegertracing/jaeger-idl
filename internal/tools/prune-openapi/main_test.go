@@ -106,12 +106,12 @@ func TestFilterQueryParamExample(t *testing.T) {
 	}
 }
 
-// mkGetTracePaths builds the nesting the GetTrace 200 response actually sits in, so the
-// walk down to the schema is exercised rather than stubbed.
-func mkGetTracePaths(ref string) *yaml.Node {
+// mkPaths builds the nesting a 200 response actually sits in, so the walk down to the
+// schema is exercised rather than stubbed.
+func mkPaths(path, method, ref string) *yaml.Node {
 	return mappingNode(
-		scalarNode(getTracePath, 0), mappingNode(
-			scalarNode("get", 0), mappingNode(
+		scalarNode(path, 0), mappingNode(
+			scalarNode(method, 0), mappingNode(
 				scalarNode("responses", 0), mappingNode(
 					scalarNode("200", 0), mappingNode(
 						scalarNode("content", 0), mappingNode(
@@ -144,54 +144,61 @@ func seqValues(seq *yaml.Node) []string {
 	return out
 }
 
-// TestEnvelopeGetTraceResponse covers the rewrite and, just as importantly, the two cases
-// where it must decline: the return value gates schema injection, so a false positive would
+// TestEnvelopeResponse covers every binding the gateway wraps, and the two cases where the
+// rewrite must decline: the return value gates schema injection, so a false positive would
 // publish a second copy of the envelope schema.
-func TestEnvelopeGetTraceResponse(t *testing.T) {
-	tests := []struct {
-		name    string
-		paths   *yaml.Node
-		want    bool
-		wantRef string
-	}{
-		{
-			name:    "rewrites the bare TracesData ref",
-			paths:   mkGetTracePaths(schemaRefPrefix + tracesDataSchema),
-			want:    true,
-			wantRef: schemaRefPrefix + envelopeSchemaName,
-		},
-		{
-			// If a future generator emits the envelope itself, the rewrite is already done
-			// and injecting the schema again would duplicate the key.
-			name:    "leaves an already enveloped ref alone",
-			paths:   mkGetTracePaths(schemaRefPrefix + envelopeSchemaName),
-			want:    false,
-			wantRef: schemaRefPrefix + envelopeSchemaName,
-		},
-		{
-			name:  "no GetTrace path: nothing to rewrite",
-			paths: mappingNode(scalarNode("/api/v3/services", 0), mappingNode()),
-			want:  false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := envelopeGetTraceResponse(tt.paths); got != tt.want {
-				t.Fatalf("got %v, want %v", got, tt.want)
+func TestEnvelopeResponse(t *testing.T) {
+	bare := schemaRefPrefix + tracesDataSchema
+	enveloped := schemaRefPrefix + envelopeSchemaName
+
+	t.Run("every wrapped binding is rewritten", func(t *testing.T) {
+		if len(envelopeBindings) == 0 {
+			t.Fatal("no bindings are declared as wrapped")
+		}
+		for _, binding := range envelopeBindings {
+			paths := mkPaths(binding.path, binding.method, bare)
+			if !envelopeResponse(paths, binding.path, binding.method) {
+				t.Errorf("%s %s was not rewritten", binding.method, binding.path)
+				continue
 			}
-			if tt.wantRef == "" {
-				return
+			schema := descend(paths, binding.path, binding.method, "responses", "200", "content", "application/json", "schema")
+			if got := descend(schema, "$ref").Value; got != enveloped {
+				t.Errorf("%s %s refs %q, want %q", binding.method, binding.path, got, enveloped)
 			}
-			schema := descend(tt.paths, getTracePath, "get", "responses", "200", "content", "application/json", "schema")
-			if got := descend(schema, "$ref").Value; got != tt.wantRef {
-				t.Errorf("ref is %q, want %q", got, tt.wantRef)
+		}
+	})
+
+	t.Run("both FindTraces bindings are covered", func(t *testing.T) {
+		var methods []string
+		for _, binding := range envelopeBindings {
+			if binding.path == findTracesPath {
+				methods = append(methods, binding.method)
 			}
-		})
-	}
+		}
+		if !reflect.DeepEqual(methods, []string{"get", "post"}) {
+			t.Errorf("FindTraces bindings are %v, want both get and post", methods)
+		}
+	})
+
+	// If a future generator emits the envelope itself, the rewrite is already done and
+	// injecting the schema again would duplicate the key.
+	t.Run("leaves an already enveloped ref alone", func(t *testing.T) {
+		paths := mkPaths(getTracePath, "get", enveloped)
+		if envelopeResponse(paths, getTracePath, "get") {
+			t.Error("rewrote a ref that was already the envelope")
+		}
+	})
+
+	t.Run("a missing binding is left alone", func(t *testing.T) {
+		paths := mkPaths(getTracePath, "get", bare)
+		if envelopeResponse(paths, findTracesPath, "post") {
+			t.Error("rewrote a binding that is not in the document")
+		}
+	})
 }
 
 // TestEnvelopeSchemaShape pins the published envelope against the contract the operation
-// description states: a `result` object that is always present and holds a TracesData.
+// description states. The `result` object is always present and holds the trace data.
 // Nothing else would catch the schema drifting away from the ref the rewrite installs.
 func TestEnvelopeSchemaShape(t *testing.T) {
 	schema := envelopeSchema()
@@ -216,8 +223,65 @@ func TestEnvelopeSchemaShape(t *testing.T) {
 			}
 		}
 	})
-	if !reflect.DeepEqual(refs, []string{schemaRefPrefix + tracesDataSchema}) {
-		t.Errorf("result refs %v, want the bare TracesData", refs)
+	if !reflect.DeepEqual(refs, []string{schemaRefPrefix + responseTracesDataName}) {
+		t.Errorf("result refs %v, want the TracesData response view", refs)
+	}
+}
+
+// TestResponseViews checks the chain that carries the nested guarantees. Each view composes
+// its OTLP schema by reference and adds one required array, so a view that stopped pointing
+// at the next one would silently drop the guarantee below it.
+func TestResponseViews(t *testing.T) {
+	tests := []struct {
+		name     string
+		view     *yaml.Node
+		base     string
+		required string
+		items    string
+	}{
+		{"traces data", responseTracesData(), tracesDataSchema, "resourceSpans", responseResourceSpansName},
+		{"resource spans", responseResourceSpans(), resourceSpansSchema, "scopeSpans", responseScopeSpansName},
+		// Span carries its own required list, so the elements need no narrowing.
+		{"scope spans", responseScopeSpans(), scopeSpansSchema, "spans", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			allOf := findNode(tt.view, "allOf")
+			if allOf == nil || len(allOf.Content) != 2 {
+				t.Fatalf("the view is not a two-member allOf: %v", allOf)
+			}
+			if got := descend(allOf.Content[0], "$ref").Value; got != schemaRefPrefix+tt.base {
+				t.Errorf("composes %q, want the OTLP schema %q", got, tt.base)
+			}
+			overlay := allOf.Content[1]
+			if got := seqValues(findNode(overlay, "required")); !reflect.DeepEqual(got, []string{tt.required}) {
+				t.Errorf("requires %v, want [%s]", got, tt.required)
+			}
+			items := descend(overlay, "properties", tt.required, "items", "$ref")
+			if tt.items == "" {
+				if items != nil {
+					t.Errorf("narrows its elements to %q, want the shared schema", items.Value)
+				}
+				return
+			}
+			if items == nil {
+				t.Fatal("the view does not narrow its elements, so the nested guarantee is lost")
+			}
+			if items.Value != schemaRefPrefix+tt.items {
+				t.Errorf("elements are %q, want %q", items.Value, tt.items)
+			}
+		})
+	}
+}
+
+// TestResponseViewsLeaveOTLPAlone is the constraint the maintainers asked for: the
+// guarantees live on the views, never on the reusable OTLP schemas, which other readers of
+// this document share.
+func TestResponseViewsLeaveOTLPAlone(t *testing.T) {
+	for _, want := range requiredFields {
+		if want.schema == resourceSpansSchema || want.schema == scopeSpansSchema {
+			t.Errorf("%s is tightened globally; the guarantee belongs on the response view", want.schema)
+		}
 	}
 }
 

@@ -129,12 +129,12 @@
         "type": "object"
       },
       "jaeger.api_v3.GRPCGatewayWrapper": {
-        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\ngoogle.rpc.Status is returned instead.\n\nSee https://github.com/grpc-ecosystem/grpc-gateway/issues/2189",
+        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\ngoogle.rpc.Status is returned instead.\n\nSee https://github.com/grpc-ecosystem/grpc-gateway/issues/2189",
         "properties": {
           "result": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+                "$ref": "#/components/schemas/jaeger.api_v3.TraceResponseTracesData"
               }
             ],
             "description": "The trace data, always present on a 200 response."
@@ -329,6 +329,61 @@
           }
         },
         "type": "object"
+      },
+      "jaeger.api_v3.TraceResponseResourceSpans": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.ResourceSpans"
+          },
+          {
+            "properties": {
+              "scopeSpans": {
+                "items": {
+                  "$ref": "#/components/schemas/jaeger.api_v3.TraceResponseScopeSpans"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "scopeSpans"
+            ]
+          }
+        ],
+        "description": "ResourceSpans as the trace endpoints return it, with scopeSpans always present."
+      },
+      "jaeger.api_v3.TraceResponseScopeSpans": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.ScopeSpans"
+          },
+          {
+            "required": [
+              "spans"
+            ]
+          }
+        ],
+        "description": "ScopeSpans as the trace endpoints return it, with spans always present."
+      },
+      "jaeger.api_v3.TraceResponseTracesData": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+          },
+          {
+            "properties": {
+              "resourceSpans": {
+                "items": {
+                  "$ref": "#/components/schemas/jaeger.api_v3.TraceResponseResourceSpans"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "resourceSpans"
+            ]
+          }
+        ],
+        "description": "TracesData as the trace endpoints return it, with resourceSpans always present."
       },
       "jaeger.api_v3.TraceSummary": {
         "description": "TraceSummary contains lightweight summary information about a trace,\n suitable for display in search result lists.",
@@ -1464,7 +1519,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+                  "$ref": "#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper"
                 }
               }
             },
@@ -1503,7 +1558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+                  "$ref": "#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper"
                 }
               }
             },

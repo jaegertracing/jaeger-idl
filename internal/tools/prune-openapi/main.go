@@ -79,14 +79,23 @@ func main() {
 		}
 	}
 
-	// 1.7 Point the GetTrace 200 response at the `{"result": ...}` envelope the HTTP
-	// gateway actually sends. The operation description has always said the body is
-	// wrapped while the $ref named a bare TracesData, so every generated client
-	// unmarshals one level too shallow. GRPCGatewayWrapper is declared in the proto for
-	// exactly this shape, but gnostic only emits schemas that something already
-	// references, so the schema has to be supplied here alongside the rewritten ref.
-	if envelopeGetTraceResponse(pathsNode) {
+	// 1.7 Point the wrapped 200 responses at the `{"result": ...}` envelope the HTTP
+	// gateway actually sends. The operation descriptions have always said the body is
+	// wrapped while the $ref named a bare TracesData, so every generated client unmarshals
+	// one level too shallow. GRPCGatewayWrapper is declared in the proto for this shape,
+	// but gnostic only emits schemas that something already references, so the schemas are
+	// supplied here alongside the rewritten refs.
+	wrapped := false
+	for _, binding := range envelopeBindings {
+		if envelopeResponse(pathsNode, binding.path, binding.method) {
+			wrapped = true
+		}
+	}
+	if wrapped {
 		insertSchema(schemasNode, envelopeSchemaName, envelopeSchema())
+		insertSchema(schemasNode, responseTracesDataName, responseTracesData())
+		insertSchema(schemasNode, responseResourceSpansName, responseResourceSpans())
+		insertSchema(schemasNode, responseScopeSpansName, responseScopeSpans())
 	}
 
 	// 1.8 Declare the OTLP ID fields required. Their own descriptions say "This field is
@@ -306,13 +315,31 @@ func findNode(root *yaml.Node, key string) *yaml.Node {
 }
 
 // Names of the nodes patched by hand below. GRPCGatewayWrapper is declared in
-// proto/api_v3/query_service.proto for the {"result": ...} document the gateway sends.
+// proto/api_v3/query_service.proto for the {"result": ...} document the gateway sends. The
+// three TraceResponse names have no proto message behind them. They are views of the OTLP
+// schemas scoped to these responses, so the reusable OTLP schemas stay as OTLP defines them.
 const (
-	schemaRefPrefix    = "#/components/schemas/"
-	getTracePath       = "/api/v3/traces/{traceId}"
-	tracesDataSchema   = "opentelemetry.proto.trace.v1.TracesData"
-	envelopeSchemaName = "jaeger.api_v3.GRPCGatewayWrapper"
+	schemaRefPrefix           = "#/components/schemas/"
+	getTracePath              = "/api/v3/traces/{traceId}"
+	findTracesPath            = "/api/v3/traces"
+	tracesDataSchema          = "opentelemetry.proto.trace.v1.TracesData"
+	resourceSpansSchema       = "opentelemetry.proto.trace.v1.ResourceSpans"
+	scopeSpansSchema          = "opentelemetry.proto.trace.v1.ScopeSpans"
+	envelopeSchemaName        = "jaeger.api_v3.GRPCGatewayWrapper"
+	responseTracesDataName    = "jaeger.api_v3.TraceResponseTracesData"
+	responseResourceSpansName = "jaeger.api_v3.TraceResponseResourceSpans"
+	responseScopeSpansName    = "jaeger.api_v3.TraceResponseScopeSpans"
 )
+
+// envelopeBindings are the operations whose 200 body the gateway wraps. In the backend's
+// apiv3 http_gateway, getTrace and findTraces both reach returnTraces, which answers 404
+// when it has no traces and otherwise merges what it has and calls returnTrace, so all
+// three bindings publish the same wrapped document with the same guarantees.
+var envelopeBindings = []struct{ path, method string }{
+	{getTracePath, "get"},
+	{findTracesPath, "get"},
+	{findTracesPath, "post"},
+}
 
 // requiredFields lists the fields whose own description in the generated document already
 // states they are required. Only fields that exist under `properties` are declared, so a
@@ -355,6 +382,10 @@ func seqNode(items ...*yaml.Node) *yaml.Node {
 	return &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq", Content: items}
 }
 
+func refNode(schema string) *yaml.Node {
+	return mappingNode(scalarNode("$ref", 0), scalarNode(schemaRefPrefix+schema, yaml.SingleQuotedStyle))
+}
+
 // setPair sets key to val in a mapping, replacing an existing entry in place so the
 // surrounding key order is preserved, and otherwise appending.
 func setPair(mapping *yaml.Node, key string, val *yaml.Node) {
@@ -367,12 +398,11 @@ func setPair(mapping *yaml.Node, key string, val *yaml.Node) {
 	mapping.Content = append(mapping.Content, scalarNode(key, 0), val)
 }
 
-// envelopeGetTraceResponse repoints the GetTrace 200 response at the envelope schema. It
-// changes nothing and reports false unless the ref is the bare TracesData, so neither a
-// missing path nor an already enveloped ref can cause a second copy of the schema to be
-// injected.
-func envelopeGetTraceResponse(pathsNode *yaml.Node) bool {
-	schema := descend(pathsNode, getTracePath, "get", "responses", "200", "content", "application/json", "schema")
+// envelopeResponse repoints one operation's 200 response at the envelope schema. It changes
+// nothing and reports false unless the ref is the bare TracesData, so neither a missing
+// binding nor an already enveloped ref can cause a second copy of the schema to be injected.
+func envelopeResponse(pathsNode *yaml.Node, path, method string) bool {
+	schema := descend(pathsNode, path, method, "responses", "200", "content", "application/json", "schema")
 	ref := descend(schema, "$ref")
 	if ref == nil || ref.Value != schemaRefPrefix+tracesDataSchema {
 		return false
@@ -387,7 +417,7 @@ func envelopeGetTraceResponse(pathsNode *yaml.Node) bool {
 // response refs, and leaving out the note about a possible future chunked multi-response,
 // which describes where the server may go rather than the body this schema describes.
 func envelopeSchema() *yaml.Node {
-	description := "GRPCGatewayWrapper wraps streaming responses from GetTrace for HTTP.\n" +
+	description := "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\n" +
 		"Today there is always only one response because internally the HTTP server gets\n" +
 		"data from QueryService that does not support multiple responses. In case of errors,\n" +
 		"google.rpc.Status is returned instead.\n\n" +
@@ -397,14 +427,52 @@ func envelopeSchema() *yaml.Node {
 		scalarNode("type", 0), scalarNode("object", 0),
 		scalarNode("properties", 0), mappingNode(
 			scalarNode("result", 0), mappingNode(
-				scalarNode("allOf", 0), seqNode(mappingNode(
-					scalarNode("$ref", 0), scalarNode(schemaRefPrefix+tracesDataSchema, yaml.SingleQuotedStyle),
-				)),
+				scalarNode("allOf", 0), seqNode(refNode(responseTracesDataName)),
 				scalarNode("description", 0), scalarNode("The trace data, always present on a 200 response.", 0),
 			),
 		),
 		scalarNode("description", 0), scalarNode(description, yaml.LiteralStyle),
 	)
+}
+
+// responseView builds a view of an OTLP schema for these responses: the schema itself, and a
+// second allOf member requiring one array field and, where the elements carry a requirement
+// of their own, narrowing the element type to the next view. Composing rather than copying
+// keeps the view from drifting when the OTLP schema gains a field, and leaves the OTLP
+// schema itself untouched for every other reader.
+func responseView(base, field, itemSchema, description string) *yaml.Node {
+	overlay := mappingNode(scalarNode("required", 0), seqNode(scalarNode(field, 0)))
+	if itemSchema != "" {
+		overlay.Content = append(overlay.Content,
+			scalarNode("properties", 0), mappingNode(
+				scalarNode(field, 0), mappingNode(
+					scalarNode("type", 0), scalarNode("array", 0),
+					scalarNode("items", 0), refNode(itemSchema),
+				),
+			),
+		)
+	}
+	return mappingNode(
+		scalarNode("allOf", 0), seqNode(refNode(base), overlay),
+		scalarNode("description", 0), scalarNode(description, 0),
+	)
+}
+
+func responseTracesData() *yaml.Node {
+	return responseView(tracesDataSchema, "resourceSpans", responseResourceSpansName,
+		"TracesData as the trace endpoints return it, with resourceSpans always present.")
+}
+
+func responseResourceSpans() *yaml.Node {
+	return responseView(resourceSpansSchema, "scopeSpans", responseScopeSpansName,
+		"ResourceSpans as the trace endpoints return it, with scopeSpans always present.")
+}
+
+// responseScopeSpans passes no item schema: Span already carries its own required list, so
+// the elements need no narrowing.
+func responseScopeSpans() *yaml.Node {
+	return responseView(scopeSpansSchema, "spans", "",
+		"ScopeSpans as the trace endpoints return it, with spans always present.")
 }
 
 // insertSchema adds a schema to components/schemas, or replaces one already there under the
