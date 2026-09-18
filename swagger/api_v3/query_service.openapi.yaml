@@ -634,6 +634,7 @@ components:
                 {"error": {"grpcCode": ..., "httpCode": ..., "message": ..., "httpStatus": ...}}
 
                 See https://github.com/grpc-ecosystem/grpc-gateway/issues/2189
+                for where that shape originates.
         jaeger.api_v3.GetOperationsResponse:
             required:
                 - operations
