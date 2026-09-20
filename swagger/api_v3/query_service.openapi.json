@@ -128,6 +128,23 @@
         },
         "type": "object"
       },
+      "jaeger.api_v3.GRPCGatewayWrapper": {
+        "description": "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\nToday there is always only one response because internally the HTTP server gets\ndata from QueryService that does not support multiple responses. In case of errors,\nGRPCGatewayError is returned instead:\n{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\nSee grpc-ecosystem/grpc-gateway#2189 for where that shape originates.",
+        "properties": {
+          "result": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+              }
+            ],
+            "description": "The trace data, always present on a 200 response."
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object"
+      },
       "jaeger.api_v3.GetOperationsResponse": {
         "description": "Response object to get operation names.",
         "properties": {
@@ -1443,7 +1460,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+                  "$ref": "#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper"
                 }
               }
             },
@@ -1482,7 +1499,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+                  "$ref": "#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper"
                 }
               }
             },
@@ -1550,7 +1567,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/opentelemetry.proto.trace.v1.TracesData"
+                  "$ref": "#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper"
                 }
               }
             },

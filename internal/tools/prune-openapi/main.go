@@ -79,6 +79,22 @@ func main() {
 		}
 	}
 
+	// 1.7 Point the wrapped 200 responses at the `{"result": ...}` envelope the HTTP
+	// gateway actually sends. The operation descriptions have always said the body is
+	// wrapped while the $ref named a bare TracesData, so every generated client unmarshals
+	// one level too shallow. GRPCGatewayWrapper is declared in the proto for this shape,
+	// but gnostic only emits schemas that something already references, so the schema is
+	// supplied here alongside the rewritten refs.
+	wrapped := false
+	for _, binding := range envelopeBindings {
+		if envelopeResponse(pathsNode, binding.path, binding.method) {
+			wrapped = true
+		}
+	}
+	if wrapped {
+		insertSchema(schemasNode, envelopeSchemaName, envelopeSchema())
+	}
+
 	// 2. Identify all reachable schemas starting from "paths"
 	reachable := make(map[string]bool)
 
@@ -283,4 +299,104 @@ func findNode(root *yaml.Node, key string) *yaml.Node {
 		}
 	}
 	return nil
+}
+
+// Names of the nodes patched by hand below. GRPCGatewayWrapper is declared in
+// proto/api_v3/query_service.proto for the {"result": ...} document the gateway sends,
+// but nothing references it, so gnostic never emits it.
+const (
+	schemaRefPrefix    = "#/components/schemas/"
+	getTracePath       = "/api/v3/traces/{traceId}"
+	findTracesPath     = "/api/v3/traces"
+	tracesDataSchema   = "opentelemetry.proto.trace.v1.TracesData"
+	envelopeSchemaName = "jaeger.api_v3.GRPCGatewayWrapper"
+)
+
+// envelopeBindings are the operations whose 200 body the gateway wraps. In the backend's
+// apiv3 http_gateway, getTrace and findTraces both reach returnTraces, which answers 404
+// when it has no traces and otherwise merges what it has and calls returnTrace, so all
+// three bindings publish the same wrapped document.
+var envelopeBindings = []struct{ path, method string }{
+	{getTracePath, "get"},
+	{findTracesPath, "get"},
+	{findTracesPath, "post"},
+}
+
+// descend walks a chain of mapping keys, returning nil as soon as one is missing.
+func descend(node *yaml.Node, keys ...string) *yaml.Node {
+	for _, key := range keys {
+		if node == nil {
+			return nil
+		}
+		node = findNode(node, key)
+	}
+	return node
+}
+
+func seqNode(items ...*yaml.Node) *yaml.Node {
+	return &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq", Content: items}
+}
+
+func refNode(schema string) *yaml.Node {
+	return mappingNode(scalarNode("$ref", 0), scalarNode(schemaRefPrefix+schema, yaml.SingleQuotedStyle))
+}
+
+// envelopeResponse repoints one operation's 200 response at the envelope schema. It changes
+// nothing and reports false unless the ref is the bare TracesData, so neither a missing
+// binding nor an already enveloped ref can cause a second copy of the schema to be injected.
+func envelopeResponse(pathsNode *yaml.Node, path, method string) bool {
+	schema := descend(pathsNode, path, method, "responses", "200", "content", "application/json", "schema")
+	ref := descend(schema, "$ref")
+	if ref == nil || ref.Value != schemaRefPrefix+tracesDataSchema {
+		return false
+	}
+	ref.Value = schemaRefPrefix + envelopeSchemaName
+	return true
+}
+
+// envelopeSchema is what gnostic would have emitted for GRPCGatewayWrapper had anything
+// referenced it. The description paraphrases that message's own comment, keeping its error
+// contract: the gateway serializes GRPCGatewayError, which is what an empty search returns
+// with its 404. The note about a possible future chunked multi-response is left out, since
+// it describes where the server may go rather than the body this schema describes.
+//
+// The document's `default` responses still ref google.rpc.Status, which is not what the
+// gateway sends. That is a separate defect in the generated paths, not one this schema
+// should propagate.
+func envelopeSchema() *yaml.Node {
+	description := "GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.\n" +
+		"Today there is always only one response because internally the HTTP server gets\n" +
+		"data from QueryService that does not support multiple responses. In case of errors,\n" +
+		"GRPCGatewayError is returned instead:\n" +
+		"{\"error\": {\"grpcCode\": ..., \"httpCode\": ..., \"message\": ..., \"httpStatus\": ...}}\n\n" +
+		"See grpc-ecosystem/grpc-gateway#2189 for where that shape originates."
+	return mappingNode(
+		scalarNode("required", 0), seqNode(scalarNode("result", 0)),
+		scalarNode("type", 0), scalarNode("object", 0),
+		scalarNode("properties", 0), mappingNode(
+			scalarNode("result", 0), mappingNode(
+				scalarNode("allOf", 0), seqNode(refNode(tracesDataSchema)),
+				scalarNode("description", 0), scalarNode("The trace data, always present on a 200 response.", 0),
+			),
+		),
+		scalarNode("description", 0), scalarNode(description, yaml.LiteralStyle),
+	)
+}
+
+// insertSchema adds a schema to components/schemas, or replaces one already there under the
+// same name, keeping the byte order the generator emits so the document reads as though it
+// had been generated with the schema in place.
+func insertSchema(schemasNode *yaml.Node, name string, schema *yaml.Node) {
+	for i := 0; i+1 < len(schemasNode.Content); i += 2 {
+		if schemasNode.Content[i].Value == name {
+			schemasNode.Content[i+1] = schema
+			return
+		}
+		if schemasNode.Content[i].Value > name {
+			tail := append([]*yaml.Node{scalarNode(name, 0), schema}, schemasNode.Content[i:]...)
+			schemasNode.Content = append(schemasNode.Content[:i:i], tail...)
+			return
+		}
+	}
+	schemasNode.Content = append(schemasNode.Content, scalarNode(name, 0), schema)
 }

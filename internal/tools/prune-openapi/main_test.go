@@ -104,3 +104,185 @@ func TestFilterQueryParamExample(t *testing.T) {
 		t.Errorf("the example uses the removed single reference term: %s", example)
 	}
 }
+
+// mkPaths builds the nesting a 200 response actually sits in, so the walk down to the
+// schema is exercised rather than stubbed.
+func mkPaths(path, method, ref string) *yaml.Node {
+	return mappingNode(
+		scalarNode(path, 0), mappingNode(
+			scalarNode(method, 0), mappingNode(
+				scalarNode("responses", 0), mappingNode(
+					scalarNode("200", 0), mappingNode(
+						scalarNode("content", 0), mappingNode(
+							scalarNode("application/json", 0), mappingNode(
+								scalarNode("schema", 0), mappingNode(
+									scalarNode("$ref", 0), scalarNode(ref, 0),
+								),
+							),
+						),
+					),
+				),
+			),
+		),
+	)
+}
+
+func mapKeys(mapping *yaml.Node) []string {
+	var out []string
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		out = append(out, mapping.Content[i].Value)
+	}
+	return out
+}
+
+func seqValues(seq *yaml.Node) []string {
+	var out []string
+	for _, n := range seq.Content {
+		out = append(out, n.Value)
+	}
+	return out
+}
+
+// TestEnvelopeResponse covers every binding the gateway wraps, and the two cases where the
+// rewrite must decline: the return value gates schema injection, so a false positive would
+// publish a second copy of the envelope schema.
+func TestEnvelopeResponse(t *testing.T) {
+	bare := schemaRefPrefix + tracesDataSchema
+	enveloped := schemaRefPrefix + envelopeSchemaName
+
+	t.Run("every wrapped binding is rewritten", func(t *testing.T) {
+		if len(envelopeBindings) == 0 {
+			t.Fatal("no bindings are declared as wrapped")
+		}
+		for _, binding := range envelopeBindings {
+			paths := mkPaths(binding.path, binding.method, bare)
+			if !envelopeResponse(paths, binding.path, binding.method) {
+				t.Errorf("%s %s was not rewritten", binding.method, binding.path)
+				continue
+			}
+			schema := descend(paths, binding.path, binding.method, "responses", "200", "content", "application/json", "schema")
+			if got := descend(schema, "$ref").Value; got != enveloped {
+				t.Errorf("%s %s refs %q, want %q", binding.method, binding.path, got, enveloped)
+			}
+		}
+	})
+
+	t.Run("both FindTraces bindings are covered", func(t *testing.T) {
+		var methods []string
+		for _, binding := range envelopeBindings {
+			if binding.path == findTracesPath {
+				methods = append(methods, binding.method)
+			}
+		}
+		if !reflect.DeepEqual(methods, []string{"get", "post"}) {
+			t.Errorf("FindTraces bindings are %v, want both get and post", methods)
+		}
+	})
+
+	// If a future generator emits the envelope itself, the rewrite is already done and
+	// injecting the schema again would duplicate the key.
+	t.Run("leaves an already enveloped ref alone", func(t *testing.T) {
+		paths := mkPaths(getTracePath, "get", enveloped)
+		if envelopeResponse(paths, getTracePath, "get") {
+			t.Error("rewrote a ref that was already the envelope")
+		}
+	})
+
+	t.Run("a missing binding is left alone", func(t *testing.T) {
+		paths := mkPaths(getTracePath, "get", bare)
+		if envelopeResponse(paths, findTracesPath, "post") {
+			t.Error("rewrote a binding that is not in the document")
+		}
+	})
+}
+
+// TestEnvelopeSchemaShape pins the published envelope against the contract the operation
+// description states. The `result` object is always present and holds the trace data.
+// Nothing else would catch the schema drifting away from the ref the rewrite installs.
+func TestEnvelopeSchemaShape(t *testing.T) {
+	schema := envelopeSchema()
+
+	required := findNode(schema, "required")
+	if required == nil {
+		t.Fatal("the envelope declares no required list")
+	}
+	if got := seqValues(required); !reflect.DeepEqual(got, []string{"result"}) {
+		t.Errorf("required is %v, want [result]", got)
+	}
+
+	// The gateway serializes GRPCGatewayError, not google.rpc.Status. The document's default
+	// responses say otherwise, so the description must not be inferred from them.
+	description := findNode(schema, "description")
+	if description == nil {
+		t.Fatal("the envelope publishes no description")
+	}
+	if !strings.Contains(description.Value, "GRPCGatewayError") {
+		t.Errorf("the description does not name the error type the gateway sends: %s", description.Value)
+	}
+	if strings.Contains(description.Value, "google.rpc.Status") {
+		t.Errorf("the description names google.rpc.Status, which the gateway does not send: %s", description.Value)
+	}
+
+	result := descend(schema, "properties", "result")
+	if result == nil {
+		t.Fatal("the envelope has no result property")
+	}
+	var refs []string
+	traverse(result, func(node *yaml.Node) {
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			if node.Content[i].Value == "$ref" {
+				refs = append(refs, node.Content[i+1].Value)
+			}
+		}
+	})
+	if !reflect.DeepEqual(refs, []string{schemaRefPrefix + tracesDataSchema}) {
+		t.Errorf("result refs %v, want the bare TracesData", refs)
+	}
+}
+
+// TestInsertSchema checks the sorted placement. The generator emits components/schemas in
+// byte order, so inserting anywhere else would show up as unrelated churn the next time
+// someone reads the document, and `GRPC` sorting before `Get` is the case that catches a
+// case-insensitive comparison.
+func TestInsertSchema(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		add  string
+		want []string
+	}{
+		{
+			name: "GRPCGatewayWrapper sorts before GetOperationsResponse",
+			in:   []string{"jaeger.api_v3.FindTracesRequest", "jaeger.api_v3.GetOperationsResponse"},
+			add:  envelopeSchemaName,
+			want: []string{"jaeger.api_v3.FindTracesRequest", envelopeSchemaName, "jaeger.api_v3.GetOperationsResponse"},
+		},
+		{
+			name: "sorts last when nothing follows it",
+			in:   []string{"google.protobuf.Any"},
+			add:  envelopeSchemaName,
+			want: []string{"google.protobuf.Any", envelopeSchemaName},
+		},
+		{
+			name: "replaces in place, no duplicate key",
+			in:   []string{"google.protobuf.Any", envelopeSchemaName, "opentelemetry.proto.trace.v1.Span"},
+			add:  envelopeSchemaName,
+			want: []string{"google.protobuf.Any", envelopeSchemaName, "opentelemetry.proto.trace.v1.Span"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			schemas := mappingNode()
+			for _, name := range tt.in {
+				schemas.Content = append(schemas.Content, scalarNode(name, 0), mappingNode())
+			}
+			insertSchema(schemas, tt.add, envelopeSchema())
+			if got := mapKeys(schemas); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+			if findNode(schemas, tt.add) == nil {
+				t.Error("the inserted schema is not reachable by its own name")
+			}
+		})
+	}
+}

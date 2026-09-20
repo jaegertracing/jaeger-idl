@@ -428,7 +428,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
+                                $ref: '#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper'
                 default:
                     description: Default error response
                     content:
@@ -454,7 +454,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
+                                $ref: '#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper'
                 default:
                     description: Default error response
                     content:
@@ -505,7 +505,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
+                                $ref: '#/components/schemas/jaeger.api_v3.GRPCGatewayWrapper'
                 default:
                     description: Default error response
                     content:
@@ -617,6 +617,23 @@ components:
                 query:
                     $ref: '#/components/schemas/jaeger.api_v3.TraceQueryParameters'
             description: Request object to search traces.
+        jaeger.api_v3.GRPCGatewayWrapper:
+            required:
+                - result
+            type: object
+            properties:
+                result:
+                    allOf:
+                        - $ref: '#/components/schemas/opentelemetry.proto.trace.v1.TracesData'
+                    description: The trace data, always present on a 200 response.
+            description: |-
+                GRPCGatewayWrapper wraps streaming responses from GetTrace and FindTraces for HTTP.
+                Today there is always only one response because internally the HTTP server gets
+                data from QueryService that does not support multiple responses. In case of errors,
+                GRPCGatewayError is returned instead:
+                {"error": {"grpcCode": ..., "httpCode": ..., "message": ..., "httpStatus": ...}}
+
+                See grpc-ecosystem/grpc-gateway#2189 for where that shape originates.
         jaeger.api_v3.GetOperationsResponse:
             required:
                 - operations
