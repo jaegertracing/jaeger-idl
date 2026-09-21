@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.0
 
 require (
-	github.com/apache/thrift v0.23.0
+	github.com/apache/thrift v0.24.0
 	github.com/gogo/googleapis v1.4.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/stretchr/testify v1.10.0
