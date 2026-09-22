@@ -11,6 +11,10 @@ The project uses a `Makefile` that heavily relies on Docker (specifically `jaege
 -   `make proto-all`: Runs all generation targets.
 -   `make proto-api-v3-openapi`: Generates the OpenAPI v3 specification from `proto/api_v3`.
 
+### Regenerate after every proto edit
+
+The checked-in `swagger/api_v3/query_service.openapi.yaml` and `.json` embed the comments of `proto/api_v3/query_service.proto`, so any edit to that file, including a comment-only one, must be followed by `make proto-api-v3-openapi` and the regenerated documents committed alongside. CI runs `make test-code-gen`, which fails when they drift. The target needs Docker and the initialized submodules (`git submodule update --init --recursive`), which a fresh worktree does not have.
+
 ### OpenAPI Generation Pipeline
 
 1.  **Generation**: Uses `protoc-gen-openapi` (Gnostic).
