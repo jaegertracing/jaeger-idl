@@ -754,6 +754,16 @@ components:
                     description: |-
                         The page size and cursor (RFC 0014). There is no search_depth: a span search
                          is bounded by its page size, and the server caps that.
+                orderBy:
+                    maxItems: 4
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/jaeger.api_v3.SpanSortOrder'
+                    description: |-
+                        order_by lists sort terms from highest to lowest precedence; an empty list
+                         selects (startTime desc, traceID asc, spanID asc).
+                         The server appends any missing fields from that default as tie-breakers, and
+                         a continuation token is valid only for the same effective ordering (RFC 0016 §6).
             description: |-
                 Query parameters to find spans.
 
@@ -761,6 +771,29 @@ components:
                  returned as the result.
 
                  This differs from the trace search, which returns whole traces that contain at least one matching span.
+        jaeger.api_v3.SpanSortOrder:
+            required:
+                - expression
+            type: object
+            properties:
+                expression:
+                    allOf:
+                        - $ref: '#/components/schemas/jaeger.expression.v1.Expression'
+                    description: |-
+                        expression must name a built-in span field: startTime, duration, traceID or spanID.
+                         Other expressions and repeated fields in an order_by list are rejected.
+                direction:
+                    enum:
+                        - ''
+                        - asc
+                        - desc
+                    type: string
+                    description: |-
+                        direction accepts "asc" and "desc"; an empty value means "asc".
+                         Any other value is rejected rather than replaced with the default.
+            description: |-
+                SpanSortOrder orders matching spans by one expression (RFC 0016 §6).
+                 It applies only to FindSpans, and an explicit order requires span_sorting support.
         jaeger.api_v3.TraceQueryParameters:
             type: object
             properties:

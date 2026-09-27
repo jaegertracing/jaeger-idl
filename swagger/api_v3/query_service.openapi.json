@@ -243,6 +243,14 @@
             ],
             "description": "The predicates (RFC 0005): a single boolean-valued Call."
           },
+          "orderBy": {
+            "description": "order_by lists sort terms from highest to lowest precedence; an empty list\n selects (startTime desc, traceID asc, spanID asc).\n The server appends any missing fields from that default as tie-breakers, and\n a continuation token is valid only for the same effective ordering (RFC 0016 §6).",
+            "items": {
+              "$ref": "#/components/schemas/jaeger.api_v3.SpanSortOrder"
+            },
+            "maxItems": 4,
+            "type": "array"
+          },
           "pagination": {
             "allOf": [
               {
@@ -261,6 +269,32 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "jaeger.api_v3.SpanSortOrder": {
+        "description": "SpanSortOrder orders matching spans by one expression (RFC 0016 §6).\n It applies only to FindSpans, and an explicit order requires span_sorting support.",
+        "properties": {
+          "direction": {
+            "description": "direction accepts \"asc\" and \"desc\"; an empty value means \"asc\".\n Any other value is rejected rather than replaced with the default.",
+            "enum": [
+              "",
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "expression": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/jaeger.expression.v1.Expression"
+              }
+            ],
+            "description": "expression must name a built-in span field: startTime, duration, traceID or spanID.\n Other expressions and repeated fields in an order_by list are rejected."
+          }
+        },
+        "required": [
+          "expression"
+        ],
         "type": "object"
       },
       "jaeger.api_v3.TraceQueryParameters": {

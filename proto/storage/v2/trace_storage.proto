@@ -6,6 +6,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "opentelemetry/proto/trace/v1/trace.proto";
 import "expression/v1/expression.proto";
+import "gnostic/openapiv3/annotations.proto";
 
 option go_package = "storage";
 
@@ -177,8 +178,32 @@ message SpanQueryParameters {
   // is bounded by its page size, and the server caps that.
   Pagination pagination = 4;
 
-  // 5 to 15 are reserved for the result-shaping and aggregation clauses of
-  // RFC 0016 §5: projection, group_by, having, order_by.
+  // order_by lists sort terms from highest to lowest precedence; an empty list
+  // selects (startTime desc, traceID asc, spanID asc).
+  // The server appends any missing fields from that default as tie-breakers, and
+  // a continuation token is valid only for the same effective ordering (RFC 0016 §6).
+  repeated SpanSortOrder order_by = 5 [(openapi.v3.property) = {max_items: 4}];
+
+  // Fields 6 to 15 remain available for projection, group_by and having.
+}
+
+// SpanSortOrder orders matching spans by one expression (RFC 0016 §6).
+// It applies only to FindSpans, and an explicit order requires span_sorting support.
+message SpanSortOrder {
+  option (openapi.v3.schema) = {required: ["expression"]};
+
+  // expression must name a built-in span field: startTime, duration, traceID or spanID.
+  // Other expressions and repeated fields in an order_by list are rejected.
+  jaeger.expression.v1.Expression expression = 1;
+
+  // direction accepts "asc" and "desc"; an empty value means "asc".
+  // Any other value is rejected rather than replaced with the default.
+  string direction = 2 [
+    (openapi.v3.property) = {
+      type: "string",
+      enum: [{yaml: "''"}, {yaml: "asc"}, {yaml: "desc"}]
+    }
+  ];
 }
 
 // FindSpansRequest represents a request to find spans.
