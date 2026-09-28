@@ -47,6 +47,13 @@ message SearchCapabilities {
   // field it does not recognize, to the least-capable answer.
   bool span_search = 5;
 
+  // span_sorting requires span_search and promises FindSpans ordering by any sequence
+  // of distinct span.startTime, span.duration, span.traceID and span.spanID fields in
+  // either direction, with the tie-breakers and continuation semantics of RFC 0016 §6.
+  // A false value permits only an omitted order_by, and clients must check this
+  // capability before sending an explicit order to a peer that may ignore unknown fields.
+  bool span_sorting = 6;
+
 }
 
 // FilterCapabilities declares how much of the structured trace-query filter a backend
