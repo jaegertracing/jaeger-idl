@@ -71,7 +71,9 @@ const (
 	OpExists Operator = "exists"
 	OpIn     Operator = "in"
 	OpNotIn  Operator = "not_in"
-	OpSome   Operator = "some"
+	OpSome     Operator = "some"
+	OpPhrase   Operator = "phrase"
+	OpFulltext Operator = "fulltext"
 )
 
 // operators is every operator. Nothing dispatches on it — validateCall has a case per operator
@@ -80,7 +82,7 @@ const (
 var operators = []Operator{
 	OpAnd, OpOr, OpNot,
 	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
-	OpSome,
+	OpSome, OpPhrase, OpFulltext,
 }
 
 // Operators returns every operator a Call may apply. A consumer that switches on the operator
@@ -248,7 +250,8 @@ type TimestampValue struct {
 	Value time.Time
 }
 
-// List is a homogeneous list constant, the right-hand argument of OpIn and OpNotIn. Its elements
+// List is a homogeneous list constant, the right-hand argument of OpIn, OpNotIn, OpPhrase and
+// OpFulltext. Its elements
 // stay as the caller wrote them, and every one of them is read as a single type.
 //
 // That type comes from one of two places: either Type declares it, or the built-in field the list
