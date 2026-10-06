@@ -53,8 +53,8 @@ func (l Level) Valid() bool {
 }
 
 // Operator is what a Call applies to its arguments: a boolean combinator, a
-// comparison, a set-membership test, or the existential quantifier over a span's
-// events or links. See RFC 0005 §5.3 and §5.5.
+// comparison, a set-membership test, a text-search operator, or the existential
+// quantifier over a span's events or links. See RFC 0005 §5.3 and §5.5.
 type Operator string
 
 const (
@@ -273,8 +273,8 @@ type List struct {
 }
 
 // Call applies Op to Args. The arity follows the operator: OpNot and OpExists are
-// unary, the comparisons and OpIn/OpNotIn are binary, and OpAnd/OpOr take two or
-// more. Because an argument is itself an Expression, a comparison reads two
+// unary, the comparisons, OpIn/OpNotIn and OpPhrase/OpFulltext are binary, and
+// OpAnd/OpOr take two or more. Because an argument is itself an Expression, a comparison reads two
 // references as readily as a reference and a constant — what it requires is that
 // both operands hold the same kind of value, which the query boundary checks before
 // a backend sees the filter.
