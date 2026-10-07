@@ -78,7 +78,7 @@ const (
 	OpFulltext Operator = "fulltext"
 )
 
-// operators is every operator, in the order that Operators returns them.
+// operators is every operator, in the order that Operators() returns them.
 var operators = []Operator{
 	OpAnd, OpOr, OpNot,
 	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
