@@ -559,7 +559,7 @@
         "type": "object"
       },
       "jaeger.expression.v1.List": {
-        "description": "List is a homogeneous list constant, the right arg of the operators that take one, which the\n comment on the `op` field of Call names.\n Every element is read as one type, and that type comes from one of two places: either the type field below declares it, or the\n built-in field the list is compared against supplies it. Compared against an attribute neither\n place has a type to give, so the elements are matched at whatever type they were stored, the same\n way an untyped scalar beside an attribute is matched (§5.4).",
+        "description": "List is a homogeneous list constant, the right arg of a membership or text-search operator (see\n the comment on the `op` field of Call). Every element is read as one type, and that type comes\n from one of three places: the type field below declares it, the built-in field the list is\n compared against supplies it, or the operator fixes it, as the text-search operators fix it to\n string. Compared against an attribute by a membership operator, no place has a type to give, so\n the elements are matched at whatever type they were stored, the same way an untyped scalar\n beside an attribute is matched (§5.4).",
         "properties": {
           "type": {
             "description": "type is the type every element is read as, and a list matches only values of that type. It is\n OPTIONAL. Left empty, it means one of two things: the built-in field the list is compared\n against supplies the type, or the list sits beside an attribute, where nothing supplies one and\n the elements are under no type constraint at all (see Scalar.type).",

@@ -1134,12 +1134,13 @@ components:
                          against supplies the type, or the list sits beside an attribute, where nothing supplies one and
                          the elements are under no type constraint at all (see Scalar.type).
             description: |-
-                List is a homogeneous list constant, the right arg of the operators that take one, which the
-                 comment on the `op` field of Call names.
-                 Every element is read as one type, and that type comes from one of two places: either the type field below declares it, or the
-                 built-in field the list is compared against supplies it. Compared against an attribute neither
-                 place has a type to give, so the elements are matched at whatever type they were stored, the same
-                 way an untyped scalar beside an attribute is matched (§5.4).
+                List is a homogeneous list constant, the right arg of a membership or text-search operator (see
+                 the comment on the `op` field of Call). Every element is read as one type, and that type comes
+                 from one of three places: the type field below declares it, the built-in field the list is
+                 compared against supplies it, or the operator fixes it, as the text-search operators fix it to
+                 string. Compared against an attribute by a membership operator, no place has a type to give, so
+                 the elements are matched at whatever type they were stored, the same way an untyped scalar
+                 beside an attribute is matched (§5.4).
         jaeger.expression.v1.NestedReference:
             required:
                 - level

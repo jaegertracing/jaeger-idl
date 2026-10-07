@@ -79,7 +79,9 @@ const (
 	OpFulltext Operator = "fulltext"
 )
 
-// operators is every operator, in the order that Operators() returns them.
+// operators is every operator. The TestPublishedOperatorsMatchTheDomain test checks it against the
+// enum published on the op field of the Call message, so an operator added to one place and not
+// the other fails there.
 var operators = []Operator{
 	OpAnd, OpOr, OpNot,
 	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
@@ -251,12 +253,14 @@ type TimestampValue struct {
 	Value time.Time
 }
 
-// List is a homogeneous list constant, the right-hand argument of the operators that take one.
-// Its elements stay as the caller wrote them, and every one of them is read as a single type.
+// List is a homogeneous list constant, the right-hand argument of a membership or text-search
+// operator. Its elements stay as the caller wrote them, and every one of them is read as a single
+// type.
 //
-// That type comes from one of two places: either Type declares it, or the built-in field the list
-// is compared against supplies it. Compared against an attribute neither place has a type to give,
-// so the elements are matched at whatever type they were stored, the same way an untyped scalar
+// That type comes from one of three places: Type declares it, the built-in field the list is
+// compared against supplies it, or the operator fixes it, as the text-search operators fix it to
+// string. Compared against an attribute by a membership operator, no place has a type to give, so
+// the elements are matched at whatever type they were stored, the same way an untyped scalar
 // beside an attribute is matched. Declaring a type is still worth doing where a caller knows it,
 // because a list matches only values of the type it names.
 //
