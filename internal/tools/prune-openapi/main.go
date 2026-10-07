@@ -4,6 +4,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -13,10 +14,12 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("Usage: %s <openapi-file>", os.Args[0])
+	descriptors := flag.String("descriptors", "", "a FileDescriptorSet holding the compiled protos, from which the operator vocabulary of Call.op is published")
+	flag.Parse()
+	if flag.NArg() != 1 || *descriptors == "" {
+		log.Fatalf("Usage: %s -descriptors <descriptor-set> <openapi-file>", os.Args[0])
 	}
-	filename := os.Args[1]
+	filename := flag.Arg(0)
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -93,6 +96,21 @@ func main() {
 	}
 	if wrapped {
 		insertSchema(schemasNode, envelopeSchemaName, envelopeSchema())
+	}
+
+	// 1.8 Publish the operator vocabulary of Call.op: the enum from the operator names, and
+	// each operator's definition appended to the field's description. gnostic copies only the
+	// field's comment, so without this step the document would name no operators at all.
+	set, err := os.ReadFile(*descriptors)
+	if err != nil {
+		log.Fatalf("Error reading descriptor set: %v", err)
+	}
+	defs, err := readOperatorDefinitions(set)
+	if err != nil {
+		log.Fatalf("Error reading operator definitions: %v", err)
+	}
+	if err := publishOperators(schemasNode, defs); err != nil {
+		log.Fatalf("Error publishing operators: %v", err)
 	}
 
 	// 2. Identify all reachable schemas starting from "paths"
@@ -399,4 +417,31 @@ func insertSchema(schemasNode *yaml.Node, name string, schema *yaml.Node) {
 		}
 	}
 	schemasNode.Content = append(schemasNode.Content, scalarNode(name, 0), schema)
+}
+
+// publishOperators writes the vocabulary into the `op` property of the Call schema: `enum` lists
+// the operator names, and the description gains the rendered definitions after the comment that
+// gnostic copied from the proto.
+func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
+	op := descend(schemasNode, callMessageName, "properties", opFieldName)
+	if op == nil {
+		return fmt.Errorf("the document has no %s.%s property", callMessageName, opFieldName)
+	}
+	if findNode(op, "enum") != nil {
+		return fmt.Errorf("%s.%s already publishes an enum; the vocabulary is declared through the operators option alone", callMessageName, opFieldName)
+	}
+	names := make([]*yaml.Node, 0, len(defs))
+	for _, def := range defs {
+		names = append(names, scalarNode(def.name, 0))
+	}
+	op.Content = append(op.Content, scalarNode("enum", 0), seqNode(names...))
+
+	rendered := renderOperatorDefinitions(defs)
+	if description := findNode(op, "description"); description != nil {
+		description.Value = description.Value + "\n\n" + rendered
+		description.Style = yaml.LiteralStyle
+	} else {
+		op.Content = append(op.Content, scalarNode("description", 0), scalarNode(rendered, yaml.LiteralStyle))
+	}
+	return nil
 }
