@@ -115,7 +115,8 @@ message Scalar {
   ];
 }
 
-// List is a homogeneous list constant, the right arg of the operators that take one (Call.op).
+// List is a homogeneous list constant, the right arg of the operators that take one, which the
+// comment on the `op` field of Call names.
 // Every element is read as one type, and that type comes from one of two places: either the type field below declares it, or the
 // built-in field the list is compared against supplies it. Compared against an attribute neither
 // place has a type to give, so the elements are matched at whatever type they were stored, the same
@@ -139,7 +140,7 @@ message List {
 }
 
 // Call applies operator/function `op` to argument Expressions. The arity and the operands
-// follow the operator, as the comment on `op` defines (§5.3, §5.5).
+// follow the operator; the comment on the `op` field below defines each operator.
 message Call {
   option (openapi.v3.schema) = {required: ["op", "args"]};
 
@@ -165,7 +166,7 @@ message Call {
   // - eq: two operands holding the same kind of value (a number, a duration, an instant, text, a
   //   boolean); holds when the two values are equal. Either operand may be a reference or a
   //   constant; an attribute or an untyped constant takes its kind from the other operand.
-  // - ne: the operands eq takes; holds when the two values are not equal.
+  // - ne: the operands that eq takes; holds when the two values are not equal.
   // - gt, lt, gte, lte: two operands holding the same kind of value, which has an order; hold
   //   when the first exceeds, sorts before, equals or exceeds, or equals or sorts before the
   //   second. The comparison runs within one domain: numbers against numbers, durations against
@@ -178,7 +179,7 @@ message Call {
   //   flags are refused, because the backends' engines do not share them.
   // - exists: one attribute or field reference; holds when the value is present at all.
   // - in: a reference and a non-empty List; holds when the value is one of the list's elements.
-  // - not_in: the operands in takes; holds when the value is none of the elements.
+  // - not_in: the operands that in takes; holds when the value is none of the elements.
   // - some: a NestedReference naming a span's events or links and a predicate; holds when one
   //   element of that collection satisfies the predicate. Inside the predicate, references to the
   //   collection's level bind to that same element (§5.5).

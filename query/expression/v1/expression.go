@@ -55,8 +55,8 @@ func (l Level) Valid() bool {
 // Operator is what a Call applies to its arguments: a boolean combinator, a
 // comparison, a set-membership test, a text-search operator, or the existential
 // quantifier over a span's events or links. What each operator takes and means is
-// defined on the op field of the Call message in proto/expression/v1/expression.proto,
-// and RFC 0005 §5.3 and §5.5 hold the reasoning. The constants below name that vocabulary.
+// defined in the comment on the op field of the Call message in
+// proto/expression/v1/expression.proto, and RFC 0005 §5.3 and §5.5 hold the reasoning. The constants below name that vocabulary.
 type Operator string
 
 const (
@@ -271,11 +271,11 @@ type List struct {
 	Type   ValueType
 }
 
-// Call applies Op to Args. The arity and the operands follow the operator, as the op field of
-// the Call message in proto/expression/v1/expression.proto defines. Because an argument is
-// itself an Expression, a comparison reads two references as readily as a reference and a
-// constant — what it requires is that both operands hold the same kind of value, which the
-// query boundary checks before a backend sees the filter.
+// Call applies Op to Args. The arity and the operands follow the operator, as defined by the
+// comment on the op field of the Call message in proto/expression/v1/expression.proto. Because
+// an argument is itself an Expression, a comparison reads two references as readily as a
+// reference and a constant — what it requires is that both operands hold the same kind of
+// value, which the query boundary checks before a backend sees the filter.
 type Call struct {
 	expressionTerm
 
