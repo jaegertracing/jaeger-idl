@@ -54,7 +54,10 @@ func (l Level) Valid() bool {
 
 // Operator is what a Call applies to its arguments: a boolean combinator, a
 // comparison, a set-membership test, a text-search operator, or the existential
-// quantifier over a span's events or links. See RFC 0005 §5.3 and §5.5.
+// quantifier over a span's events or links. What each operator takes and means is
+// defined in the comment on the op field of the Call message in
+// proto/expression/v1/expression.proto, and RFC 0005 §5.3 and §5.5 hold the reasoning. The
+// constants below name that vocabulary.
 type Operator string
 
 const (
@@ -76,9 +79,9 @@ const (
 	OpFulltext Operator = "fulltext"
 )
 
-// operators is every operator. Nothing dispatches on it — validateCall has a case per operator
-// — but a test walks it to catch an operator added without a case, which would otherwise be
-// reported as unknown.
+// operators is every operator. The TestPublishedOperatorsMatchTheDomain test checks it against the
+// enum published on the op field of the Call message, so an operator added to one place and not
+// the other fails there.
 var operators = []Operator{
 	OpAnd, OpOr, OpNot,
 	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
@@ -250,13 +253,14 @@ type TimestampValue struct {
 	Value time.Time
 }
 
-// List is a homogeneous list constant, the right-hand argument of OpIn, OpNotIn, OpPhrase and
-// OpFulltext. Its elements
-// stay as the caller wrote them, and every one of them is read as a single type.
+// List is a homogeneous list constant, the right-hand argument of a membership or text-search
+// operator. Its elements stay as the caller wrote them, and every one of them is read as a single
+// type.
 //
-// That type comes from one of two places: either Type declares it, or the built-in field the list
-// is compared against supplies it. Compared against an attribute neither place has a type to give,
-// so the elements are matched at whatever type they were stored, the same way an untyped scalar
+// That type comes from one of three places: Type declares it, the built-in field the list is
+// compared against supplies it, or the operator fixes it, as the text-search operators fix it to
+// string. Compared against an attribute by a membership operator, no place has a type to give, so
+// the elements are matched at whatever type they were stored, the same way an untyped scalar
 // beside an attribute is matched. Declaring a type is still worth doing where a caller knows it,
 // because a list matches only values of the type it names.
 //
@@ -272,12 +276,11 @@ type List struct {
 	Type   ValueType
 }
 
-// Call applies Op to Args. The arity follows the operator: OpNot and OpExists are
-// unary, the comparisons, OpIn/OpNotIn and OpPhrase/OpFulltext are binary, and
-// OpAnd/OpOr take two or more. Because an argument is itself an Expression, a comparison reads two
-// references as readily as a reference and a constant — what it requires is that
-// both operands hold the same kind of value, which the query boundary checks before
-// a backend sees the filter.
+// Call applies Op to Args. The arity and the operands follow the operator, as defined by the
+// comment on the op field of the Call message in proto/expression/v1/expression.proto. Because
+// an argument is itself an Expression, a comparison reads two references as readily as a
+// reference and a constant — what it requires is that both operands hold the same kind of
+// value, which the query boundary checks before a backend sees the filter.
 type Call struct {
 	expressionTerm
 

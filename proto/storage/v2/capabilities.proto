@@ -89,12 +89,13 @@ message FilterCapabilities {
   // long as operators names something (see the table above).
   repeated string levels = 1;
 
-  // operators lists the op values the backend evaluates
-  // (and|or|not|eq|ne|gt|lt|gte|lte|regex|exists|in|not_in|some). A predicate whose op is
-  // not listed is refused. The boolean combinators are listed here like any other
-  // operator: a flat inverted index declares `and` and omits `or` and `not`, which is
-  // what confines it to the conjunctive subset. Nesting is not separately declared,
-  // because `and` is associative and a caller flattens it before asking.
+  // operators lists the op values the backend evaluates. The vocabulary, and what each
+  // operator means, is defined in the comment on the `op` field of the expression/v1
+  // Call message (RFC 0005 §5.3). A predicate whose op is not listed is refused. The
+  // boolean combinators are listed here like any other operator: a flat inverted index
+  // declares `and` and omits `or` and `not`, which is what confines it to the conjunctive
+  // subset. Nesting is not separately declared, because `and` is associative and a caller
+  // flattens it before asking.
   repeated string operators = 2;
 }
 
