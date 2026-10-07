@@ -990,6 +990,8 @@ components:
                         - in
                         - not_in
                         - some
+                        - phrase
+                        - fulltext
                     type: string
                 args:
                     type: array
@@ -998,9 +1000,9 @@ components:
                     description: args are the operands, and how many an operator takes is a property of op.
             description: |-
                 Call applies operator/function `op` to argument Expressions. Arity follows the
-                 operator: unary for not/exists, binary for the comparisons and in/not_in,
-                 n-ary for and/or. `some` is an event/link existential; its args are a
-                 NestedReference and the Call evaluated against each element (§5.5).
+                 operator: unary for not/exists, binary for the comparisons, in/not_in,
+                 phrase/fulltext, n-ary for and/or. `some` is an event/link existential; its
+                 args are a NestedReference and the Call evaluated against each element (§5.5).
         jaeger.expression.v1.Expression:
             type: object
             oneOf:
@@ -1077,7 +1079,7 @@ components:
                          against supplies the type, or the list sits beside an attribute, where nothing supplies one and
                          the elements are under no type constraint at all (see Scalar.type).
             description: |-
-                List is a homogeneous list constant, the right arg of in/not_in. Every element is read as one
+                List is a homogeneous list constant, the right arg of in/not_in/phrase/fulltext. Every element is read as one
                  type, and that type comes from one of two places: either the type field below declares it, or the
                  built-in field the list is compared against supplies it. Compared against an attribute neither
                  place has a type to give, so the elements are matched at whatever type they were stored, the same
