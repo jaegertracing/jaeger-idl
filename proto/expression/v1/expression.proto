@@ -156,23 +156,23 @@ message Call {
   // an operator on some fields or under some configuration only declares it and refuses the
   // predicates it cannot serve. What no backend does is answer an approximation.
   //
-  // Two rules hold for every leaf operator, except 'and', 'or' and 'not'. A leaf
-  // over a reference that holds no value is false, so ne and not_in do not match a span that
-  // lacks the attribute, and only not flips that. When a reference resolves to several values, as
+  // Two rules hold for every leaf operator, except `and`, `or` and `not`. A leaf over a
+  // reference that holds no value is false, so `ne` and `not_in` do not match a span that lacks
+  // the attribute, and only `not` flips that. When a reference resolves to several values, as
   // an unqualified attribute recorded at more than one level does, a positive leaf holds when one
   // of the values satisfies it, and a negated leaf holds when none of them does.
   //
-  // phrase and fulltext share one contract. They match words, not characters: the backend splits
-  // the stored value into words, at least on ASCII whitespace, ignores ASCII case, and asks
+  // `phrase` and `fulltext` share one contract. They match words, not characters: the backend
+  // splits the stored value into words, at least on ASCII whitespace, ignores ASCII case, and asks
   // whether the listed words occur among them. The subject is an attribute only, since a built-in
-  // field is a short identifier that eq and regex already search. The list is of strings,
+  // field is a short identifier that `eq` and `regex` already search. The list is of strings,
   // declared or undeclared, with one word per element: a non-empty run of Unicode letters,
   // combining marks and digits of at most 255 UTF-16 code units. The caller splits the words, so
   // no element is a search string with syntax of its own. Everything beyond that is
   // backend-specific: punctuation between words, case folding and word boundaries beyond ASCII,
   // splitting of long stored words, stemming, and stop-word removal. A listed word the backend's
-  // analyzer drops constrains nothing under fulltext; under phrase, whether its position must be
-  // empty or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text search".
+  // analyzer drops constrains nothing under `fulltext`; under `phrase`, whether its position must
+  // be empty or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text search".
   string op = 1 [
     (jaeger.expression.v1.operators) = {
       name: "and"
@@ -205,7 +205,7 @@ message Call {
       name: "ne"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the two values are not equal, with the operands that eq takes."
+      description: "Holds when the two values are not equal, with the operands that `eq` takes."
     },
     (jaeger.expression.v1.operators) = {
       name: "gt"
@@ -215,26 +215,26 @@ message Call {
         "Holds when the first value exceeds the second. Both operands hold the same kind of "
         "value, which has an order, and the comparison runs within one domain: numbers against "
         "numbers, durations against durations, instants against instants, and text against text "
-        "lexicographically. A boolean and the word-valued fields span.status and span.kind have "
+        "lexicographically. A boolean and the word-valued fields `span.status` and `span.kind` have "
         "no order, so an ordered comparison over them is refused."
     },
     (jaeger.expression.v1.operators) = {
       name: "lt"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the first value sorts before the second, with the operands that gt takes."
+      description: "Holds when the first value sorts before the second, with the operands that `gt` takes."
     },
     (jaeger.expression.v1.operators) = {
       name: "gte"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the first value equals or exceeds the second, with the operands that gt takes."
+      description: "Holds when the first value equals or exceeds the second, with the operands that `gt` takes."
     },
     (jaeger.expression.v1.operators) = {
       name: "lte"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the first value equals or sorts before the second, with the operands that gt takes."
+      description: "Holds when the first value equals or sorts before the second, with the operands that `gt` takes."
     },
     (jaeger.expression.v1.operators) = {
       name: "regex"
@@ -262,7 +262,7 @@ message Call {
       name: "not_in"
       arity: ARITY_BINARY
       operands: [OPERAND_REFERENCE, OPERAND_LIST]
-      description: "Holds when the value is none of the elements, with the operands that in takes."
+      description: "Holds when the value is none of the elements, with the operands that `in` takes."
     },
     (jaeger.expression.v1.operators) = {
       name: "some"
