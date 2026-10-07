@@ -56,7 +56,8 @@ func (l Level) Valid() bool {
 // comparison, a set-membership test, a text-search operator, or the existential
 // quantifier over a span's events or links. What each operator takes and means is
 // defined in the comment on the op field of the Call message in
-// proto/expression/v1/expression.proto, and RFC 0005 §5.3 and §5.5 hold the reasoning. The constants below name that vocabulary.
+// proto/expression/v1/expression.proto, and RFC 0005 §5.3 and §5.5 hold the reasoning. The
+// constants below name that vocabulary.
 type Operator string
 
 const (
