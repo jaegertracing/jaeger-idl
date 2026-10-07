@@ -56,7 +56,11 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 	if err != nil {
 		return nil, fmt.Errorf("finding the %s message: %w", callMessageName, err)
 	}
-	opField := callDesc.(protoreflect.MessageDescriptor).Fields().ByName(opFieldName)
+	callMessage, ok := callDesc.(protoreflect.MessageDescriptor)
+	if !ok {
+		return nil, fmt.Errorf("%s is not a message", callMessageName)
+	}
+	opField := callMessage.Fields().ByName(opFieldName)
 	if opField == nil {
 		return nil, fmt.Errorf("%s has no %s field", callMessageName, opFieldName)
 	}
@@ -75,6 +79,7 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 	}
 
 	defs := make([]operatorDefinition, 0, list.Len())
+	seen := make(map[string]bool, list.Len())
 	for i := range list.Len() {
 		m := list.Get(i).Message()
 		fields := m.Descriptor().Fields()
@@ -90,6 +95,10 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 		if err := def.validate(); err != nil {
 			return nil, fmt.Errorf("operator definition %d: %w", i, err)
 		}
+		if seen[def.name] {
+			return nil, fmt.Errorf("operator definition %d: %q is defined twice", i, def.name)
+		}
+		seen[def.name] = true
 		defs = append(defs, def)
 	}
 	return defs, nil

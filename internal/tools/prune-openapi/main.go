@@ -427,6 +427,9 @@ func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
 	if op == nil {
 		return fmt.Errorf("the document has no %s.%s property", callMessageName, opFieldName)
 	}
+	if findNode(op, "enum") != nil {
+		return fmt.Errorf("%s.%s already publishes an enum; the vocabulary is declared through the operators option alone", callMessageName, opFieldName)
+	}
 	names := make([]*yaml.Node, 0, len(defs))
 	for _, def := range defs {
 		names = append(names, scalarNode(def.name, 0))

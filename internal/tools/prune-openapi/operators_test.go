@@ -32,7 +32,9 @@ func vocabularyFile() *descriptorpb.FileDescriptorProto {
 				enumValue("ARITY_UNSPECIFIED", 0), enumValue("ARITY_UNARY", 1), enumValue("ARITY_BINARY", 2), enumValue("ARITY_VARIADIC", 3),
 			}},
 			{Name: proto.String("Operand"), Value: []*descriptorpb.EnumValueDescriptorProto{
-				enumValue("OPERAND_UNSPECIFIED", 0), enumValue("OPERAND_PREDICATE", 1), enumValue("OPERAND_REFERENCE", 2), enumValue("OPERAND_LIST", 7),
+				enumValue("OPERAND_UNSPECIFIED", 0), enumValue("OPERAND_PREDICATE", 1), enumValue("OPERAND_REFERENCE", 2),
+				enumValue("OPERAND_ATTRIBUTE_REFERENCE", 3), enumValue("OPERAND_COLLECTION_REFERENCE", 4), enumValue("OPERAND_VALUE", 5),
+				enumValue("OPERAND_CONSTANT", 6), enumValue("OPERAND_LIST", 7),
 			}},
 		},
 		MessageType: []*descriptorpb.DescriptorProto{{
@@ -128,6 +130,10 @@ func TestReadOperatorDefinitions(t *testing.T) {
 	set := descriptorSet(t, vocabulary, expressionFile(t, vocabulary,
 		[]any{"and", "ARITY_VARIADIC", []string{"OPERAND_PREDICATE"}, "Holds when every predicate holds."},
 		[]any{"in", "ARITY_BINARY", []string{"OPERAND_REFERENCE", "OPERAND_LIST"}, "Holds when the value is listed."},
+		[]any{"some", "ARITY_BINARY", []string{"OPERAND_COLLECTION_REFERENCE", "OPERAND_PREDICATE"}, "Holds when one element satisfies the predicate."},
+		[]any{"regex", "ARITY_BINARY", []string{"OPERAND_REFERENCE", "OPERAND_CONSTANT"}, "Holds when the pattern matches."},
+		[]any{"phrase", "ARITY_BINARY", []string{"OPERAND_ATTRIBUTE_REFERENCE", "OPERAND_LIST"}, "Holds when the words are adjacent."},
+		[]any{"eq", "ARITY_BINARY", []string{"OPERAND_VALUE", "OPERAND_VALUE"}, "Holds when equal."},
 	))
 	defs, err := readOperatorDefinitions(set)
 	if err != nil {
@@ -136,6 +142,10 @@ func TestReadOperatorDefinitions(t *testing.T) {
 	want := []operatorDefinition{
 		{name: "and", description: "Holds when every predicate holds.", arity: "ARITY_VARIADIC", operands: []string{"OPERAND_PREDICATE"}},
 		{name: "in", description: "Holds when the value is listed.", arity: "ARITY_BINARY", operands: []string{"OPERAND_REFERENCE", "OPERAND_LIST"}},
+		{name: "some", description: "Holds when one element satisfies the predicate.", arity: "ARITY_BINARY", operands: []string{"OPERAND_COLLECTION_REFERENCE", "OPERAND_PREDICATE"}},
+		{name: "regex", description: "Holds when the pattern matches.", arity: "ARITY_BINARY", operands: []string{"OPERAND_REFERENCE", "OPERAND_CONSTANT"}},
+		{name: "phrase", description: "Holds when the words are adjacent.", arity: "ARITY_BINARY", operands: []string{"OPERAND_ATTRIBUTE_REFERENCE", "OPERAND_LIST"}},
+		{name: "eq", description: "Holds when equal.", arity: "ARITY_BINARY", operands: []string{"OPERAND_VALUE", "OPERAND_VALUE"}},
 	}
 	if !reflect.DeepEqual(defs, want) {
 		t.Errorf("definitions = %+v, want %+v", defs, want)
@@ -172,6 +182,13 @@ func TestReadOperatorDefinitions_Refuses(t *testing.T) {
 			name: "variadic with two operands",
 			set:  descriptorSet(t, vocabulary, expressionFile(t, vocabulary, []any{"x", "ARITY_VARIADIC", []string{"OPERAND_PREDICATE", "OPERAND_PREDICATE"}, "x"})),
 			want: "lists 2 operand kinds, not 1",
+		},
+		{
+			name: "duplicate name",
+			set: descriptorSet(t, vocabulary, expressionFile(t, vocabulary,
+				[]any{"not", "ARITY_UNARY", []string{"OPERAND_PREDICATE"}, "x"},
+				[]any{"not", "ARITY_UNARY", []string{"OPERAND_PREDICATE"}, "y"})),
+			want: `"not" is defined twice`,
 		},
 		{
 			name: "operand kind without a noun",
@@ -246,6 +263,14 @@ jaeger.expression.v1.Call:
 		if !strings.Contains(description, want) {
 			t.Errorf("description lacks %q:\n%s", want, description)
 		}
+	}
+
+	var withEnum yaml.Node
+	if err := yaml.Unmarshal([]byte("jaeger.expression.v1.Call:\n    properties:\n        op:\n            type: string\n            enum: [and]\n"), &withEnum); err != nil {
+		t.Fatal(err)
+	}
+	if err := publishOperators(&withEnum, defs); err == nil || !strings.Contains(err.Error(), "already publishes an enum") {
+		t.Errorf("publishing over a hand-written enum should fail, got %v", err)
 	}
 
 	var noOp yaml.Node
