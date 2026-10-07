@@ -93,8 +93,8 @@ const (
 	// text, a boolean) and holds when the two values are equal. Either operand may be a reference
 	// or a constant; an attribute or an untyped constant takes its kind from the other operand.
 	OpEq Operator = "eq"
-	// OpNe takes the operands OpEq takes and holds when the reference is present and holds no
-	// value equal to the other operand.
+	// OpNe takes the operands OpEq takes and holds when the two values are not equal. Over a
+	// reference it follows the two rules on Operator, so it does not match a missing value.
 	OpNe Operator = "ne"
 	// OpGt takes two operands holding the same kind of value, which has an order, and holds when
 	// the first exceeds the second. The comparison runs within one domain: numbers against
@@ -115,13 +115,13 @@ const (
 	// anywhere in the value, case-sensitively. Anchors, word boundaries, lazy quantifiers and
 	// inline case-folding flags are refused, because the backends' engines do not share them.
 	OpRegex Operator = "regex"
-	// OpExists takes one reference and holds when the value is present at all.
+	// OpExists takes one attribute or field reference and holds when the value is present at all.
 	OpExists Operator = "exists"
 	// OpIn takes a reference and a non-empty List and holds when the value is one of the list's
 	// elements.
 	OpIn Operator = "in"
-	// OpNotIn takes the operands OpIn takes and holds when the reference is present and none of
-	// its values is one of the elements.
+	// OpNotIn takes the operands OpIn takes and holds when the value is none of the elements. It
+	// follows the two rules on Operator, so it does not match a missing value.
 	OpNotIn Operator = "not_in"
 	// OpSome takes a NestedRef naming a span's events or links and a predicate, and holds when
 	// one element of that collection satisfies the predicate. Inside the predicate, references
@@ -137,9 +137,9 @@ const (
 	OpFulltext Operator = "fulltext"
 )
 
-// operators is every operator. Nothing dispatches on it — validateCall has a case per operator
-// — but a test walks it to catch an operator added without a case, which would otherwise be
-// reported as unknown.
+// operators is every operator. Nothing in this package dispatches on it; a consumer's validator
+// has a case per operator, and a test there walks this list to catch an operator added without a
+// case, which would otherwise be reported as unknown.
 var operators = []Operator{
 	OpAnd, OpOr, OpNot,
 	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
@@ -334,7 +334,7 @@ type List struct {
 }
 
 // Call applies Op to Args. The arity follows the operator: OpNot and OpExists are
-// unary, the comparisons, OpIn/OpNotIn and OpPhrase/OpFulltext are binary, and
+// unary, the comparisons, OpIn/OpNotIn, OpPhrase/OpFulltext and OpSome are binary, and
 // OpAnd/OpOr take two or more. Because an argument is itself an Expression, a comparison reads two
 // references as readily as a reference and a constant — what it requires is that
 // both operands hold the same kind of value, which the query boundary checks before
