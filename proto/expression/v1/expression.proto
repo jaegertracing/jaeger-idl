@@ -231,7 +231,9 @@ message Call {
       name: "exists"
       arity: ARITY_UNARY
       operands: [OPERAND_REFERENCE]
-      description: "Holds when the value is present at all."
+      description:
+        "Holds when the referenced attribute or built-in field has a value on the span, whatever "
+        "that value is."
     },
     (jaeger.expression.v1.operators) = {
       name: "in"
