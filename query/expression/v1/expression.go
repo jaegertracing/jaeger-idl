@@ -54,88 +54,27 @@ func (l Level) Valid() bool {
 
 // Operator is what a Call applies to its arguments: a boolean combinator, a
 // comparison, a set-membership test, a text-search operator, or the existential
-// quantifier over a span's events or links. See RFC 0005 §5.3 and §5.5.
-//
-// The comment on each constant is the operator's definition: what operands it takes and what it
-// asks of the span. A definition states what every backend must do, and where it says a point is
-// backend-specific, backends may differ there: a text search on one backend may stem words that
-// another matches literally, and both conform. A backend that cannot meet the required part of a
-// definition leaves the operator out of the operators it declares, and the query service refuses
-// a filter that uses it before the backend sees it. The declaration is coarse, so a backend that
-// serves an operator on some fields or under some configuration only declares it and refuses the
-// predicates it cannot serve. What no backend does is answer an approximation.
-//
-// Two rules hold for every leaf operator, which is every operator but OpAnd, OpOr and OpNot. A
-// leaf over a reference that holds no value is false, so OpNe and OpNotIn do not match a span
-// that lacks the attribute, and only OpNot flips that. When a reference resolves to several
-// values, as an unqualified attribute recorded at more than one level does, a positive leaf holds
-// when one of the values satisfies it, and a negated leaf holds when none of them does.
-//
-// The two text-search operators, OpPhrase and OpFulltext, share one contract. They match words,
-// not characters: the backend splits the stored value into words, at least on ASCII whitespace,
-// ignores ASCII case, and asks whether the listed words occur among them. The subject is an
-// attribute only, since a built-in field is a short identifier that OpEq and OpRegex already
-// search. The list is of strings, declared or undeclared, with one word per element: a non-empty
-// run of Unicode letters, combining marks and digits of at most 255 UTF-16 code units. The caller
-// splits the words, so no element is a search string with syntax of its own. Everything beyond
-// that is backend-specific: punctuation between words, case folding and word boundaries beyond
-// ASCII, splitting of long stored words, stemming, and stop-word removal. A listed word the
-// backend's analyzer drops constrains nothing under OpFulltext; under OpPhrase, whether its
-// position must be empty or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text
-// search".
+// quantifier over a span's events or links. What each operator takes and means is
+// defined on the op field of the Call message in proto/expression/v1/expression.proto,
+// and RFC 0005 §5.3 and §5.5 hold the reasoning. The constants below name that vocabulary.
 type Operator string
 
 const (
-	// OpAnd takes two or more predicates and holds when every one of them holds.
-	OpAnd Operator = "and"
-	// OpOr takes two or more predicates and holds when at least one of them holds.
-	OpOr Operator = "or"
-	// OpNot takes one predicate and holds when it does not.
-	OpNot Operator = "not"
-	// OpEq takes two operands holding the same kind of value (a number, a duration, an instant,
-	// text, a boolean) and holds when the two values are equal. Either operand may be a reference
-	// or a constant; an attribute or an untyped constant takes its kind from the other operand.
-	OpEq Operator = "eq"
-	// OpNe takes the operands OpEq takes and holds when the two values are not equal.
-	OpNe Operator = "ne"
-	// OpGt takes two operands holding the same kind of value, which has an order, and holds when
-	// the first exceeds the second. The comparison runs within one domain: numbers against
-	// numbers, durations against durations, instants against instants, and text against text
-	// lexicographically. A boolean and the word-valued fields span.status and span.kind have no
-	// order, so an ordered comparison over them is refused.
-	OpGt Operator = "gt"
-	// OpLt holds when the first operand sorts before the second, with the operands OpGt takes.
-	OpLt Operator = "lt"
-	// OpGte holds when the first operand equals or exceeds the second, with the operands OpGt
-	// takes.
-	OpGte Operator = "gte"
-	// OpLte holds when the first operand equals or sorts before the second, with the operands
-	// OpGt takes.
-	OpLte Operator = "lte"
-	// OpRegex takes a reference that holds text (a string field, a word-valued field, or an
-	// attribute) and a constant string pattern in RE2 syntax, and holds when the pattern matches
-	// anywhere in the value, case-sensitively. Anchors, word boundaries, lazy quantifiers and
-	// inline case-folding flags are refused, because the backends' engines do not share them.
-	OpRegex Operator = "regex"
-	// OpExists takes one attribute or field reference and holds when the value is present at all.
-	OpExists Operator = "exists"
-	// OpIn takes a reference and a non-empty List and holds when the value is one of the list's
-	// elements.
-	OpIn Operator = "in"
-	// OpNotIn takes the operands OpIn takes and holds when the value is none of the elements.
-	OpNotIn Operator = "not_in"
-	// OpSome takes a NestedRef naming a span's events or links and a predicate, and holds when
-	// one element of that collection satisfies the predicate. Inside the predicate, references
-	// to the collection's level bind to that same element (RFC 0005 §5.5).
-	OpSome Operator = "some"
-	// OpPhrase takes an AttributeRef and a non-empty List of words, and holds when the attribute's
-	// value contains every listed word the backend's analyzer keeps, adjacent and in the listed
-	// order, the way a quoted web search does. The text-search contract on Operator says how
-	// words are read.
-	OpPhrase Operator = "phrase"
-	// OpFulltext takes an AttributeRef and a non-empty List of words, and holds when the
-	// attribute's value contains every listed word the backend's analyzer keeps, in any order.
-	// The text-search contract on Operator says how words are read.
+	OpAnd      Operator = "and"
+	OpOr       Operator = "or"
+	OpNot      Operator = "not"
+	OpEq       Operator = "eq"
+	OpNe       Operator = "ne"
+	OpGt       Operator = "gt"
+	OpLt       Operator = "lt"
+	OpGte      Operator = "gte"
+	OpLte      Operator = "lte"
+	OpRegex    Operator = "regex"
+	OpExists   Operator = "exists"
+	OpIn       Operator = "in"
+	OpNotIn    Operator = "not_in"
+	OpSome     Operator = "some"
+	OpPhrase   Operator = "phrase"
 	OpFulltext Operator = "fulltext"
 )
 
@@ -332,11 +271,11 @@ type List struct {
 	Type   ValueType
 }
 
-// Call applies Op to Args. The arity and the operands follow the operator, as each Operator
-// constant defines. Because an argument is itself an Expression, a comparison reads two
-// references as readily as a reference and a constant — what it requires is that
-// both operands hold the same kind of value, which the query boundary checks before
-// a backend sees the filter.
+// Call applies Op to Args. The arity and the operands follow the operator, as the op field of
+// the Call message in proto/expression/v1/expression.proto defines. Because an argument is
+// itself an Expression, a comparison reads two references as readily as a reference and a
+// constant — what it requires is that both operands hold the same kind of value, which the
+// query boundary checks before a backend sees the filter.
 type Call struct {
 	expressionTerm
 

@@ -115,7 +115,7 @@ message Scalar {
   ];
 }
 
-// List is a homogeneous list constant, the right arg of the operators that take one (see Call).
+// List is a homogeneous list constant, the right arg of the operators that take one (Call.op).
 // Every element is read as one type, and that type comes from one of two places: either the type field below declares it, or the
 // built-in field the list is compared against supplies it. Compared against an attribute neither
 // place has a type to give, so the elements are matched at whatever type they were stored, the same
@@ -139,11 +139,66 @@ message List {
 }
 
 // Call applies operator/function `op` to argument Expressions. The arity and the operands
-// follow the operator; the vocabulary, and what each operator takes and means, is defined once
-// on the Operator constants of the query/expression/v1 Go package (§5.3, §5.5).
+// follow the operator, as the comment on `op` defines (§5.3, §5.5).
 message Call {
   option (openapi.v3.schema) = {required: ["op", "args"]};
 
+  // op names the operator. Each operator's definition below states what operands it takes and
+  // what it asks of the span. A definition states what every backend must do, and where it says
+  // a point is backend-specific, backends may differ there: a text search on one backend may stem
+  // words that another matches literally, and both conform. A backend that cannot meet the
+  // required part of a definition leaves the operator out of the operators it declares
+  // (storage/v2 FilterCapabilities), and the query service refuses a filter that uses it before
+  // the backend sees it. The declaration is coarse, so a backend that serves an operator on some
+  // fields or under some configuration only declares it and refuses the predicates it cannot
+  // serve. What no backend does is answer an approximation.
+  //
+  // Two rules hold for every leaf operator, which is every operator but and, or and not. A leaf
+  // over a reference that holds no value is false, so ne and not_in do not match a span that
+  // lacks the attribute, and only not flips that. When a reference resolves to several values, as
+  // an unqualified attribute recorded at more than one level does, a positive leaf holds when one
+  // of the values satisfies it, and a negated leaf holds when none of them does.
+  //
+  // - and: two or more predicates; holds when every one of them holds.
+  // - or: two or more predicates; holds when at least one of them holds.
+  // - not: one predicate; holds when it does not.
+  // - eq: two operands holding the same kind of value (a number, a duration, an instant, text, a
+  //   boolean); holds when the two values are equal. Either operand may be a reference or a
+  //   constant; an attribute or an untyped constant takes its kind from the other operand.
+  // - ne: the operands eq takes; holds when the two values are not equal.
+  // - gt, lt, gte, lte: two operands holding the same kind of value, which has an order; hold
+  //   when the first exceeds, sorts before, equals or exceeds, or equals or sorts before the
+  //   second. The comparison runs within one domain: numbers against numbers, durations against
+  //   durations, instants against instants, and text against text lexicographically. A boolean
+  //   and the word-valued fields span.status and span.kind have no order, so an ordered
+  //   comparison over them is refused.
+  // - regex: a reference that holds text (a string field, a word-valued field, or an attribute)
+  //   and a constant string pattern in RE2 syntax; holds when the pattern matches anywhere in the
+  //   value, case-sensitively. Anchors, word boundaries, lazy quantifiers and inline case-folding
+  //   flags are refused, because the backends' engines do not share them.
+  // - exists: one attribute or field reference; holds when the value is present at all.
+  // - in: a reference and a non-empty List; holds when the value is one of the list's elements.
+  // - not_in: the operands in takes; holds when the value is none of the elements.
+  // - some: a NestedReference naming a span's events or links and a predicate; holds when one
+  //   element of that collection satisfies the predicate. Inside the predicate, references to the
+  //   collection's level bind to that same element (§5.5).
+  // - phrase: an AttributeReference and a non-empty List of words; holds when the attribute's
+  //   value contains every listed word the backend's analyzer keeps, adjacent and in the listed
+  //   order, the way a quoted web search does.
+  // - fulltext: an AttributeReference and a non-empty List of words; holds when the attribute's
+  //   value contains every listed word the backend's analyzer keeps, in any order.
+  //
+  // phrase and fulltext share one contract. They match words, not characters: the backend splits
+  // the stored value into words, at least on ASCII whitespace, ignores ASCII case, and asks
+  // whether the listed words occur among them. The subject is an attribute only, since a built-in
+  // field is a short identifier that eq and regex already search. The list is of strings,
+  // declared or undeclared, with one word per element: a non-empty run of Unicode letters,
+  // combining marks and digits of at most 255 UTF-16 code units. The caller splits the words, so
+  // no element is a search string with syntax of its own. Everything beyond that is
+  // backend-specific: punctuation between words, case folding and word boundaries beyond ASCII,
+  // splitting of long stored words, stemming, and stop-word removal. A listed word the backend's
+  // analyzer drops constrains nothing under fulltext; under phrase, whether its position must be
+  // empty or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text search".
   string op = 1 [
     (openapi.v3.property) = {
       type: "string",

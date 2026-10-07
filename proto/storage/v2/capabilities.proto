@@ -90,8 +90,8 @@ message FilterCapabilities {
   repeated string levels = 1;
 
   // operators lists the op values the backend evaluates. The vocabulary, and what each
-  // operator means, is defined once on the Operator constants of the query/expression/v1
-  // Go package (RFC 0005 §5.3). A predicate whose op is not listed is refused. The
+  // operator means, is defined on expression/v1 Call.op (RFC 0005 §5.3). A predicate
+  // whose op is not listed is refused. The
   // boolean combinators are listed here like any other operator: a flat inverted index declares `and` and omits `or` and `not`, which is
   // what confines it to the conjunctive subset. Nesting is not separately declared,
   // because `and` is associative and a caller flattens it before asking.
