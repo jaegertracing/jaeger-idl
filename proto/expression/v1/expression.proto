@@ -186,7 +186,7 @@ message Call {
       name: "ne"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the two values are not equal, with the operands that `eq` takes."
+      description: "Holds when the two values are not equal. Takes the same operands as `eq`."
     },
     (jaeger.expression.v1.operators) = {
       name: "gt"
@@ -203,19 +203,19 @@ message Call {
       name: "lt"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the first value sorts before the second, with the operands that `gt` takes."
+      description: "Holds when the first value sorts before the second. Takes the same operands as `gt`."
     },
     (jaeger.expression.v1.operators) = {
       name: "gte"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the first value equals or exceeds the second, with the operands that `gt` takes."
+      description: "Holds when the first value equals or exceeds the second. Takes the same operands as `gt`."
     },
     (jaeger.expression.v1.operators) = {
       name: "lte"
       arity: ARITY_BINARY
       operands: [OPERAND_VALUE, OPERAND_VALUE]
-      description: "Holds when the first value equals or sorts before the second, with the operands that `gt` takes."
+      description: "Holds when the first value equals or sorts before the second. Takes the same operands as `gt`."
     },
     (jaeger.expression.v1.operators) = {
       name: "regex"
@@ -243,7 +243,7 @@ message Call {
       name: "not_in"
       arity: ARITY_BINARY
       operands: [OPERAND_REFERENCE, OPERAND_LIST]
-      description: "Holds when the value is none of the elements, with the operands that `in` takes."
+      description: "Holds when the value is none of the elements. Takes the same operands as `in`."
     },
     (jaeger.expression.v1.operators) = {
       name: "some"
