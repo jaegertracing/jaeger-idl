@@ -440,7 +440,7 @@
         "type": "object"
       },
       "jaeger.expression.v1.Call": {
-        "description": "Call applies operator/function `op` to argument Expressions. Arity follows the\n operator: unary for not/exists, binary for the comparisons, in/not_in,\n phrase/fulltext, n-ary for and/or. `some` is an event/link existential; its\n args are a NestedReference and the Call evaluated against each element (§5.5).",
+        "description": "Call applies operator/function `op` to argument Expressions. The arity and the operands\n follow the operator; the vocabulary, and what each operator takes and means, is defined once\n on the Operator constants of the query/expression/v1 Go package (§5.3, §5.5).",
         "properties": {
           "args": {
             "description": "args are the operands, and how many an operator takes is a property of op.",
@@ -558,7 +558,7 @@
         "type": "object"
       },
       "jaeger.expression.v1.List": {
-        "description": "List is a homogeneous list constant, the right arg of in/not_in/phrase/fulltext. Every element is read as one\n type, and that type comes from one of two places: either the type field below declares it, or the\n built-in field the list is compared against supplies it. Compared against an attribute neither\n place has a type to give, so the elements are matched at whatever type they were stored, the same\n way an untyped scalar beside an attribute is matched (§5.4).",
+        "description": "List is a homogeneous list constant, the right arg of the operators that take one (see Call).\n Every element is read as one type, and that type comes from one of two places: either the type field below declares it, or the\n built-in field the list is compared against supplies it. Compared against an attribute neither\n place has a type to give, so the elements are matched at whatever type they were stored, the same\n way an untyped scalar beside an attribute is matched (§5.4).",
         "properties": {
           "type": {
             "description": "type is the type every element is read as, and a list matches only values of that type. It is\n OPTIONAL. Left empty, it means one of two things: the built-in field the list is compared\n against supplies the type, or the list sits beside an attribute, where nothing supplies one and\n the elements are under no type constraint at all (see Scalar.type).",

@@ -43,7 +43,7 @@ message Expression {
     FieldReference      field      = 2;  // a built-in field of a level (§5.2)
     NestedReference     nested     = 3;  // the nested events or links, for `some` (§5.5)
     Scalar              scalar     = 4;  // a single constant
-    List                list       = 5;  // a homogeneous list constant (right arg of in/not_in/phrase/fulltext)
+    List                list       = 5;  // a homogeneous list constant, the right arg of the operators that take one
     Call                call       = 6;  // an operator/function over argument Expressions
   }
 }
@@ -115,8 +115,8 @@ message Scalar {
   ];
 }
 
-// List is a homogeneous list constant, the right arg of in/not_in/phrase/fulltext. Every element is read as one
-// type, and that type comes from one of two places: either the type field below declares it, or the
+// List is a homogeneous list constant, the right arg of the operators that take one (see Call).
+// Every element is read as one type, and that type comes from one of two places: either the type field below declares it, or the
 // built-in field the list is compared against supplies it. Compared against an attribute neither
 // place has a type to give, so the elements are matched at whatever type they were stored, the same
 // way an untyped scalar beside an attribute is matched (§5.4).
@@ -138,10 +138,9 @@ message List {
   ];
 }
 
-// Call applies operator/function `op` to argument Expressions. Arity follows the
-// operator: unary for not/exists, binary for the comparisons, in/not_in,
-// phrase/fulltext, n-ary for and/or. `some` is an event/link existential; its
-// args are a NestedReference and the Call evaluated against each element (§5.5).
+// Call applies operator/function `op` to argument Expressions. The arity and the operands
+// follow the operator; the vocabulary, and what each operator takes and means, is defined once
+// on the Operator constants of the query/expression/v1 Go package (§5.3, §5.5).
 message Call {
   option (openapi.v3.schema) = {required: ["op", "args"]};
 

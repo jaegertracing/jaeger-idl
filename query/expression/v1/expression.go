@@ -311,9 +311,8 @@ type TimestampValue struct {
 	Value time.Time
 }
 
-// List is a homogeneous list constant, the right-hand argument of OpIn, OpNotIn, OpPhrase and
-// OpFulltext. Its elements stay as the caller wrote them, and every one of them is read as a
-// single type.
+// List is a homogeneous list constant, the right-hand argument of the operators that take one.
+// Its elements stay as the caller wrote them, and every one of them is read as a single type.
 //
 // That type comes from one of two places: either Type declares it, or the built-in field the list
 // is compared against supplies it. Compared against an attribute neither place has a type to give,
@@ -333,9 +332,8 @@ type List struct {
 	Type   ValueType
 }
 
-// Call applies Op to Args. The arity follows the operator: OpNot and OpExists are
-// unary, the comparisons, OpIn/OpNotIn, OpPhrase/OpFulltext and OpSome are binary, and
-// OpAnd/OpOr take two or more. Because an argument is itself an Expression, a comparison reads two
+// Call applies Op to Args. The arity and the operands follow the operator, as each Operator
+// constant defines. Because an argument is itself an Expression, a comparison reads two
 // references as readily as a reference and a constant — what it requires is that
 // both operands hold the same kind of value, which the query boundary checks before
 // a backend sees the filter.
