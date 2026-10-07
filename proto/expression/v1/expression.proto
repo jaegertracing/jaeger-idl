@@ -146,15 +146,7 @@ message List {
 message Call {
   option (openapi.v3.schema) = {required: ["op", "args"]};
 
-  // op names the operator. The (jaeger.expression.v1.operators) option below defines each one:
-  // the operands it takes and what it asks of the span. A definition states what every backend
-  // must do, and where it says a point is backend-specific, backends may differ there: a text
-  // search on one backend may stem words that another matches literally, and both conform. A
-  // backend that cannot meet the required part of a definition leaves the operator out of the
-  // operators it declares (storage/v2 FilterCapabilities), and the query service refuses a filter
-  // that uses it before the backend sees it. The declaration is coarse, so a backend that serves
-  // an operator on some fields or under some configuration only declares it and refuses the
-  // predicates it cannot serve. What no backend does is answer an approximation.
+  // op names the operator. The (jaeger.expression.v1.operators) option below defines each one.
   //
   // Two rules hold for every leaf operator, except `and`, `or` and `not`. A leaf over a
   // reference that holds no value is false, so `ne` and `not_in` do not match a span that lacks
@@ -170,9 +162,10 @@ message Call {
   // combining marks and digits of at most 255 UTF-16 code units. The caller splits the words, so
   // no element is a search string with syntax of its own. Everything beyond that is
   // backend-specific: punctuation between words, case folding and word boundaries beyond ASCII,
-  // splitting of long stored words, stemming, and stop-word removal. A listed word the backend's
-  // analyzer drops constrains nothing under `fulltext`; under `phrase`, whether its position must
-  // be empty or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text search".
+  // splitting of long stored words, stemming, and stop-word removal, so one backend may stem
+  // words that another matches literally and both conform. A listed word the backend's analyzer
+  // drops constrains nothing under `fulltext`; under `phrase`, whether its position must be empty
+  // or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text search".
   string op = 1 [
     (jaeger.expression.v1.operators) = {
       name: "and"
