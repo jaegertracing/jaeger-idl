@@ -13,7 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
@@ -48,11 +47,11 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 	if err != nil {
 		return nil, fmt.Errorf("resolving descriptor set: %w", err)
 	}
-	extDesc, err := files.FindDescriptorByName(operatorsExtName)
+	types := dynamicpb.NewTypes(files)
+	ext, err := types.FindExtensionByName(operatorsExtName)
 	if err != nil {
 		return nil, fmt.Errorf("finding the %s option: %w", operatorsExtName, err)
 	}
-	ext := dynamicpb.NewExtensionType(extDesc.(protoreflect.ExtensionDescriptor))
 	callDesc, err := files.FindDescriptorByName(callMessageName)
 	if err != nil {
 		return nil, fmt.Errorf("finding the %s message: %w", callMessageName, err)
@@ -69,12 +68,8 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 	if err != nil {
 		return nil, fmt.Errorf("re-encoding the %s options: %w", opFieldName, err)
 	}
-	var types protoregistry.Types
-	if err := types.RegisterExtension(ext); err != nil {
-		return nil, err
-	}
 	options := dynamicpb.NewMessage((&descriptorpb.FieldOptions{}).ProtoReflect().Descriptor())
-	if err := (proto.UnmarshalOptions{Resolver: &types}).Unmarshal(raw, options); err != nil {
+	if err := (proto.UnmarshalOptions{Resolver: types}).Unmarshal(raw, options); err != nil {
 		return nil, fmt.Errorf("decoding the %s options: %w", opFieldName, err)
 	}
 	list := options.Get(ext.TypeDescriptor()).List()
@@ -181,15 +176,11 @@ func article(noun string) string {
 	return "a"
 }
 
-// renderedHeading opens the rendered list, and marks where a description already published
-// once is cut before the list is written again.
-const renderedHeading = "Operators, each with the operands it takes:\n"
-
 // renderOperatorDefinitions renders the vocabulary as the Markdown list appended to the `op`
 // description, one line per operator.
 func renderOperatorDefinitions(defs []operatorDefinition) string {
 	var b strings.Builder
-	b.WriteString(renderedHeading)
+	b.WriteString("Operators, each with the operands it takes:\n")
 	for _, def := range defs {
 		fmt.Fprintf(&b, "\n- `%s` (%s): %s", def.name, operandPhrase(def), def.description)
 	}

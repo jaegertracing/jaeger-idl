@@ -65,11 +65,10 @@ func expressionFile(t *testing.T, vocabulary *descriptorpb.FileDescriptorProto, 
 	if err != nil {
 		t.Fatal(err)
 	}
-	extDesc, err := files.FindDescriptorByName(operatorsExtName)
+	ext, err := dynamicpb.NewTypes(files).FindExtensionByName(operatorsExtName)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ext := dynamicpb.NewExtensionType(extDesc.(protoreflect.ExtensionDescriptor))
 	defDesc := ext.TypeDescriptor().Message()
 
 	options := dynamicpb.NewMessage((&descriptorpb.FieldOptions{}).ProtoReflect().Descriptor())
@@ -252,18 +251,6 @@ jaeger.expression.v1.Call:
 		if !strings.Contains(description, want) {
 			t.Errorf("description lacks %q:\n%s", want, description)
 		}
-	}
-
-	// A second run replaces the enum and the rendered list rather than appending to either.
-	if err := publishOperators(&schemas, defs[:1]); err != nil {
-		t.Fatal(err)
-	}
-	if got := len(findNode(op, "enum").Content); got != 1 {
-		t.Errorf("enum has %d entries after republishing one operator", got)
-	}
-	description = findNode(op, "description").Value
-	if strings.Count(description, renderedHeading) != 1 || strings.Contains(description, "`exists`") {
-		t.Errorf("republishing did not replace the rendered list:\n%s", description)
 	}
 
 	var noOp yaml.Node

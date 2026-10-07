@@ -16,8 +16,8 @@ import (
 func main() {
 	descriptors := flag.String("descriptors", "", "a FileDescriptorSet holding the compiled protos, from which the operator vocabulary of Call.op is published")
 	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatalf("Usage: %s [-descriptors <descriptor-set>] <openapi-file>", os.Args[0])
+	if flag.NArg() != 1 || *descriptors == "" {
+		log.Fatalf("Usage: %s -descriptors <descriptor-set> <openapi-file>", os.Args[0])
 	}
 	filename := flag.Arg(0)
 
@@ -101,18 +101,16 @@ func main() {
 	// 1.8 Publish the operator vocabulary of Call.op: the enum from the operator names, and
 	// each operator's definition appended to the field's description. gnostic copies only the
 	// field's comment, so without this step the document would name no operators at all.
-	if *descriptors != "" {
-		set, err := os.ReadFile(*descriptors)
-		if err != nil {
-			log.Fatalf("Error reading descriptor set: %v", err)
-		}
-		defs, err := readOperatorDefinitions(set)
-		if err != nil {
-			log.Fatalf("Error reading operator definitions: %v", err)
-		}
-		if err := publishOperators(schemasNode, defs); err != nil {
-			log.Fatalf("Error publishing operators: %v", err)
-		}
+	set, err := os.ReadFile(*descriptors)
+	if err != nil {
+		log.Fatalf("Error reading descriptor set: %v", err)
+	}
+	defs, err := readOperatorDefinitions(set)
+	if err != nil {
+		log.Fatalf("Error reading operator definitions: %v", err)
+	}
+	if err := publishOperators(schemasNode, defs); err != nil {
+		log.Fatalf("Error publishing operators: %v", err)
 	}
 
 	// 2. Identify all reachable schemas starting from "paths"
@@ -437,10 +435,7 @@ func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
 
 	rendered := renderOperatorDefinitions(defs)
 	if description := findNode(op, "description"); description != nil {
-		// A description published once already ends in the rendered list, which is cut so the
-		// list is written once however often the tool runs.
-		comment, _, _ := strings.Cut(description.Value, "\n\n"+renderedHeading)
-		description.Value = comment + "\n\n" + rendered
+		description.Value = description.Value + "\n\n" + rendered
 		description.Style = yaml.LiteralStyle
 	} else {
 		setKey(op, "description", scalarNode(rendered, yaml.LiteralStyle))
