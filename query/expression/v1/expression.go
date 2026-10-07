@@ -61,7 +61,9 @@ func (l Level) Valid() bool {
 // backend-specific, backends may differ there: a text search on one backend may stem words that
 // another matches literally, and both conform. A backend that cannot meet the required part of a
 // definition leaves the operator out of the operators it declares, and the query service refuses
-// a filter that uses it before the backend sees it, rather than letting the backend approximate.
+// a filter that uses it before the backend sees it. The declaration is coarse, so a backend that
+// serves an operator on some fields or under some configuration only declares it and refuses the
+// predicates it cannot serve. What no backend does is answer an approximation.
 //
 // Two rules hold for every leaf operator, which is every operator but OpAnd, OpOr and OpNot. A
 // leaf over a reference that holds no value is false, so OpNe and OpNotIn do not match a span
@@ -94,8 +96,7 @@ const (
 	// text, a boolean) and holds when the two values are equal. Either operand may be a reference
 	// or a constant; an attribute or an untyped constant takes its kind from the other operand.
 	OpEq Operator = "eq"
-	// OpNe takes the operands OpEq takes and holds when the two values are not equal. Over a
-	// reference it follows the two rules on Operator, so it does not match a missing value.
+	// OpNe takes the operands OpEq takes and holds when the two values are not equal.
 	OpNe Operator = "ne"
 	// OpGt takes two operands holding the same kind of value, which has an order, and holds when
 	// the first exceeds the second. The comparison runs within one domain: numbers against
@@ -121,26 +122,24 @@ const (
 	// OpIn takes a reference and a non-empty List and holds when the value is one of the list's
 	// elements.
 	OpIn Operator = "in"
-	// OpNotIn takes the operands OpIn takes and holds when the value is none of the elements. It
-	// follows the two rules on Operator, so it does not match a missing value.
+	// OpNotIn takes the operands OpIn takes and holds when the value is none of the elements.
 	OpNotIn Operator = "not_in"
 	// OpSome takes a NestedRef naming a span's events or links and a predicate, and holds when
 	// one element of that collection satisfies the predicate. Inside the predicate, references
 	// to the collection's level bind to that same element (RFC 0005 §5.5).
 	OpSome Operator = "some"
 	// OpPhrase takes an AttributeRef and a non-empty List of words, and holds when the attribute's
-	// value contains every listed word, adjacent and in the listed order, the way a quoted web
-	// search does. The text-search contract on Operator says how words are read.
+	// value contains every listed word the backend's analyzer keeps, adjacent and in the listed
+	// order, the way a quoted web search does. The text-search contract on Operator says how
+	// words are read.
 	OpPhrase Operator = "phrase"
 	// OpFulltext takes an AttributeRef and a non-empty List of words, and holds when the
-	// attribute's value contains every listed word, in any order. The text-search contract on
-	// Operator says how words are read.
+	// attribute's value contains every listed word the backend's analyzer keeps, in any order.
+	// The text-search contract on Operator says how words are read.
 	OpFulltext Operator = "fulltext"
 )
 
-// operators is every operator. Nothing in this package dispatches on it; a consumer's validator
-// has a case per operator, and a test there walks this list to catch an operator added without a
-// case, which would otherwise be reported as unknown.
+// operators is every operator, in the order Operators returns them.
 var operators = []Operator{
 	OpAnd, OpOr, OpNot,
 	OpEq, OpNe, OpGt, OpLt, OpGte, OpLte, OpRegex, OpExists, OpIn, OpNotIn,
