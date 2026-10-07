@@ -258,9 +258,12 @@ message Call {
       arity: ARITY_BINARY
       operands: [OPERAND_COLLECTION_REFERENCE, OPERAND_PREDICATE]
       description:
-        "Holds when one element of the collection, the events or links of a span, satisfies the "
-        "predicate. Inside the predicate, references to the collection's level bind to that same "
-        "element (§5.5)."
+        "Holds when one element of the collection, the events or the links of a span, satisfies the "
+        "predicate. Inside the predicate, every reference to the collection's level reads from that "
+        "one element. For example, `some` over the events with the predicate `and(eq(event.name, "
+        "\"exception\"), eq(event.exception.type, \"Timeout\"))` holds only when a single event has "
+        "both that name and that attribute, whereas the same conjunction outside `some` also holds "
+        "when one event has the name and a different event has the attribute."
     },
     (jaeger.expression.v1.operators) = {
       name: "phrase"
@@ -280,7 +283,7 @@ message Call {
         "ASCII, splitting of long stored words, stemming, and stop-word removal, so one backend "
         "may stem words that another matches literally and both conform. Whether the position of "
         "a listed word the analyzer drops must be empty or may hold any one word is "
-        "backend-specific. See RFC 0005 §5.3, \"Text search\"."
+        "backend-specific."
     },
     (jaeger.expression.v1.operators) = {
       name: "fulltext"
