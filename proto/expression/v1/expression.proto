@@ -156,7 +156,7 @@ message Call {
   // an operator on some fields or under some configuration only declares it and refuses the
   // predicates it cannot serve. What no backend does is answer an approximation.
   //
-  // Two rules hold for every leaf operator, which is every operator but and, or and not. A leaf
+  // Two rules hold for every leaf operator, except 'and', 'or' and 'not'. A leaf
   // over a reference that holds no value is false, so ne and not_in do not match a span that
   // lacks the attribute, and only not flips that. When a reference resolves to several values, as
   // an unqualified attribute recorded at more than one level does, a positive leaf holds when one
