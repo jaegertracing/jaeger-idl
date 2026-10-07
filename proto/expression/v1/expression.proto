@@ -232,8 +232,9 @@ message Call {
       arity: ARITY_UNARY
       operands: [OPERAND_REFERENCE]
       description:
-        "Holds when the referenced attribute or built-in field has a value on the span, whatever "
-        "that value is."
+        "Holds when the span carries the referenced attribute or built-in field. An attribute "
+        "whose value is the empty string is carried. A built-in field left at its OTLP zero "
+        "value, such as an empty status message or parent span ID, is not."
     },
     (jaeger.expression.v1.operators) = {
       name: "in"
