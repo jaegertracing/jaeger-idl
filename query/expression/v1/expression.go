@@ -57,10 +57,11 @@ func (l Level) Valid() bool {
 // quantifier over a span's events or links. See RFC 0005 §5.3 and §5.5.
 //
 // The comment on each constant is the operator's definition: what operands it takes and what it
-// asks of the span. These are properties of the query's meaning, not of any backend's ability to
-// serve it. A backend that cannot answer an operator faithfully leaves it out of the operators it
-// declares, and the query service refuses a filter that uses it before the backend sees it; no
-// backend answers a different question instead.
+// asks of the span. A definition states what every backend must do, and where it says a point is
+// backend-specific, backends may differ there: a text search on one backend may stem words that
+// another matches literally, and both conform. A backend that cannot meet the required part of a
+// definition leaves the operator out of the operators it declares, and the query service refuses
+// a filter that uses it before the backend sees it, rather than letting the backend approximate.
 //
 // Two rules hold for every leaf operator, which is every operator but OpAnd, OpOr and OpNot. A
 // leaf over a reference that holds no value is false, so OpNe and OpNotIn do not match a span
