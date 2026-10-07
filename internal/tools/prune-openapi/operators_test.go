@@ -4,6 +4,7 @@
 package main
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -136,14 +137,8 @@ func TestReadOperatorDefinitions(t *testing.T) {
 		{name: "and", description: "Holds when every predicate holds.", arity: "ARITY_VARIADIC", operands: []string{"OPERAND_PREDICATE"}},
 		{name: "in", description: "Holds when the value is listed.", arity: "ARITY_BINARY", operands: []string{"OPERAND_REFERENCE", "OPERAND_LIST"}},
 	}
-	if len(defs) != len(want) {
-		t.Fatalf("got %d definitions, want %d", len(defs), len(want))
-	}
-	for i := range want {
-		if defs[i].name != want[i].name || defs[i].description != want[i].description || defs[i].arity != want[i].arity ||
-			strings.Join(defs[i].operands, ",") != strings.Join(want[i].operands, ",") {
-			t.Errorf("definition %d = %+v, want %+v", i, defs[i], want[i])
-		}
+	if !reflect.DeepEqual(defs, want) {
+		t.Errorf("definitions = %+v, want %+v", defs, want)
 	}
 }
 

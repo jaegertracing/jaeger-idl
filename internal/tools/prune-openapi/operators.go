@@ -62,12 +62,9 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 	}
 
 	// The descriptor set was decoded without the extension registered, so the option sits in
-	// the unknown fields of the FieldOptions. Re-decoding it with the extension type known is
-	// what turns those bytes into definitions.
-	raw, err := proto.Marshal(opField.Options())
-	if err != nil {
-		return nil, fmt.Errorf("re-encoding the %s options: %w", opFieldName, err)
-	}
+	// the unknown fields of the FieldOptions in wire format. Decoding those bytes with the
+	// extension type known is what turns them into definitions.
+	raw := opField.Options().ProtoReflect().GetUnknown()
 	options := dynamicpb.NewMessage((&descriptorpb.FieldOptions{}).ProtoReflect().Descriptor())
 	if err := (proto.UnmarshalOptions{Resolver: types}).Unmarshal(raw, options); err != nil {
 		return nil, fmt.Errorf("decoding the %s options: %w", opFieldName, err)

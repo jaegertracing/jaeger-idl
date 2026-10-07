@@ -431,26 +431,14 @@ func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
 	for _, def := range defs {
 		names = append(names, scalarNode(def.name, 0))
 	}
-	setKey(op, "enum", seqNode(names...))
+	op.Content = append(op.Content, scalarNode("enum", 0), seqNode(names...))
 
 	rendered := renderOperatorDefinitions(defs)
 	if description := findNode(op, "description"); description != nil {
 		description.Value = description.Value + "\n\n" + rendered
 		description.Style = yaml.LiteralStyle
 	} else {
-		setKey(op, "description", scalarNode(rendered, yaml.LiteralStyle))
+		op.Content = append(op.Content, scalarNode("description", 0), scalarNode(rendered, yaml.LiteralStyle))
 	}
 	return nil
-}
-
-// setKey replaces the value under key in a mapping node, or appends the pair when the key is
-// absent.
-func setKey(mapping *yaml.Node, key string, value *yaml.Node) {
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			mapping.Content[i+1] = value
-			return
-		}
-	}
-	mapping.Content = append(mapping.Content, scalarNode(key, 0), value)
 }
