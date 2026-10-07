@@ -146,7 +146,8 @@ message List {
 message Call {
   option (openapi.v3.schema) = {required: ["op", "args"]};
 
-  // op names the operator. The (jaeger.expression.v1.operators) option below defines each one.
+  // op names one of the operators listed after this text, each with the operands it takes and
+  // what it asks of the span.
   //
   // Two rules hold for every leaf operator, except `and`, `or` and `not`. A leaf over a
   // reference that holds no value is false, so `ne` and `not_in` do not match a span that lacks
