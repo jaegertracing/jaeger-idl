@@ -59,7 +59,27 @@ func (l Level) Valid() bool {
 // The comment on each constant is the operator's definition: what operands it takes and what it
 // asks of the span. These are properties of the query's meaning, not of any backend's ability to
 // serve it. A backend that cannot answer an operator faithfully leaves it out of the operators it
-// declares and refuses a filter that uses it; it does not answer a different question instead.
+// declares, and the query service refuses a filter that uses it before the backend sees it; no
+// backend answers a different question instead.
+//
+// Two rules hold for every leaf operator, which is every operator but OpAnd, OpOr and OpNot. A
+// leaf over a reference that holds no value is false, so OpNe and OpNotIn do not match a span
+// that lacks the attribute, and only OpNot flips that. When a reference resolves to several
+// values, as an unqualified attribute recorded at more than one level does, a positive leaf holds
+// when one of the values satisfies it, and a negated leaf holds when none of them does.
+//
+// The two text-search operators, OpPhrase and OpFulltext, share one contract. They match words,
+// not characters: the backend splits the stored value into words, at least on ASCII whitespace,
+// ignores ASCII case, and asks whether the listed words occur among them. The subject is an
+// attribute only, since a built-in field is a short identifier that OpEq and OpRegex already
+// search. The list is of strings, declared or undeclared, with one word per element: a non-empty
+// run of Unicode letters, combining marks and digits of at most 255 UTF-16 code units. The caller
+// splits the words, so no element is a search string with syntax of its own. Everything beyond
+// that is backend-specific: punctuation between words, case folding and word boundaries beyond
+// ASCII, splitting of long stored words, stemming, and stop-word removal. A listed word the
+// backend's analyzer drops constrains nothing under OpFulltext; under OpPhrase, whether its
+// position must be empty or may hold any one word is backend-specific. See RFC 0005 §5.3, "Text
+// search".
 type Operator string
 
 const (
@@ -70,10 +90,11 @@ const (
 	// OpNot takes one predicate and holds when it does not.
 	OpNot Operator = "not"
 	// OpEq takes two operands holding the same kind of value (a number, a duration, an instant,
-	// text) and holds when the two values are equal. Either operand may be a reference or a
-	// constant; an attribute or an untyped constant takes its kind from the other operand.
+	// text, a boolean) and holds when the two values are equal. Either operand may be a reference
+	// or a constant; an attribute or an untyped constant takes its kind from the other operand.
 	OpEq Operator = "eq"
-	// OpNe is the negation of OpEq over the same operands.
+	// OpNe takes the operands OpEq takes and holds when the reference is present and holds no
+	// value equal to the other operand.
 	OpNe Operator = "ne"
 	// OpGt takes two operands holding the same kind of value, which has an order, and holds when
 	// the first exceeds the second. The comparison runs within one domain: numbers against
@@ -83,7 +104,8 @@ const (
 	OpGt Operator = "gt"
 	// OpLt holds when the first operand sorts before the second, with the operands OpGt takes.
 	OpLt Operator = "lt"
-	// OpGte holds when the first operand equals or exceeds the second, with the operands OpGt takes.
+	// OpGte holds when the first operand equals or exceeds the second, with the operands OpGt
+	// takes.
 	OpGte Operator = "gte"
 	// OpLte holds when the first operand equals or sorts before the second, with the operands
 	// OpGt takes.
@@ -98,29 +120,20 @@ const (
 	// OpIn takes a reference and a non-empty List and holds when the value is one of the list's
 	// elements.
 	OpIn Operator = "in"
-	// OpNotIn takes the operands OpIn takes and holds when the value is none of the elements.
+	// OpNotIn takes the operands OpIn takes and holds when the reference is present and none of
+	// its values is one of the elements.
 	OpNotIn Operator = "not_in"
 	// OpSome takes a NestedRef naming a span's events or links and a predicate, and holds when
 	// one element of that collection satisfies the predicate. Inside the predicate, references
 	// to the collection's level bind to that same element (RFC 0005 §5.5).
 	OpSome Operator = "some"
-	// OpPhrase takes an AttributeRef and a List of words, and holds when the attribute's value
-	// contains every listed word, adjacent and in the listed order, the way a quoted web search
-	// does. The text-search contract under OpFulltext applies to both operators.
+	// OpPhrase takes an AttributeRef and a non-empty List of words, and holds when the attribute's
+	// value contains every listed word, adjacent and in the listed order, the way a quoted web
+	// search does. The text-search contract on Operator says how words are read.
 	OpPhrase Operator = "phrase"
-	// OpFulltext takes an AttributeRef and a List of words, and holds when the attribute's value
-	// contains every listed word, in any order.
-	//
-	// Both text-search operators match words, not characters. The backend splits the stored
-	// value into words, at least on ASCII whitespace, ignores ASCII case, and asks whether the
-	// listed words occur among them. The subject is an attribute only, since a built-in field is a
-	// short identifier that OpEq and OpRegex already search. The list is of strings, declared or
-	// undeclared, with one word per element: a non-empty run of Unicode letters, combining marks
-	// and digits of at most 255 UTF-16 code units. The caller splits the words, so no element is a
-	// search string with syntax of its own. Everything beyond that is backend-specific and may
-	// widen the match: punctuation between words, case folding and word boundaries beyond ASCII,
-	// splitting of long stored words, stemming, and stop-word removal, so a listed word the
-	// backend's analyzer drops constrains nothing. See RFC 0005 §5.3, "Text search".
+	// OpFulltext takes an AttributeRef and a non-empty List of words, and holds when the
+	// attribute's value contains every listed word, in any order. The text-search contract on
+	// Operator says how words are read.
 	OpFulltext Operator = "fulltext"
 )
 
