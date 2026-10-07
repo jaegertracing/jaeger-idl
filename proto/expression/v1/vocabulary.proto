@@ -1,0 +1,70 @@
+// Copyright (c) 2026 The Jaeger Authors.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package jaeger.expression.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "expression";
+
+// This file declares the annotation through which expression.proto defines the operator
+// vocabulary of the filter AST (RFC 0005 §5.3). A definition is data on the `op` field of Call
+// rather than prose in its comment, so that the OpenAPI document, the Go and Python packages and
+// their tests all read the same list: the `enum` published for `op` is generated from it.
+
+// OperatorDefinition defines one operator: its name on the wire, the operands it takes, and what
+// it asks of the span.
+message OperatorDefinition {
+  // name is the value the `op` field carries.
+  string name = 1;
+
+  // description states what the operator asks of the span, and which parts of that every
+  // backend must honor. A point the description calls backend-specific may differ between
+  // backends.
+  string description = 2;
+
+  // arity is how many operands the operator takes.
+  Arity arity = 3;
+
+  // operands lists the kind of each operand in order. A variadic operator lists one kind,
+  // which every operand has.
+  repeated Operand operands = 4;
+}
+
+// Arity is how many operands an operator takes.
+enum Arity {
+  ARITY_UNSPECIFIED = 0;
+  // ARITY_UNARY is one operand.
+  ARITY_UNARY = 1;
+  // ARITY_BINARY is two operands.
+  ARITY_BINARY = 2;
+  // ARITY_VARIADIC is two or more operands.
+  ARITY_VARIADIC = 3;
+}
+
+// Operand is the kind of expression an operand must be.
+enum Operand {
+  OPERAND_UNSPECIFIED = 0;
+  // OPERAND_PREDICATE is a Call, an expression that holds or does not.
+  OPERAND_PREDICATE = 1;
+  // OPERAND_REFERENCE is an AttributeReference or a FieldReference.
+  OPERAND_REFERENCE = 2;
+  // OPERAND_ATTRIBUTE_REFERENCE is an AttributeReference only.
+  OPERAND_ATTRIBUTE_REFERENCE = 3;
+  // OPERAND_COLLECTION_REFERENCE is a NestedReference, the events or links of a span.
+  OPERAND_COLLECTION_REFERENCE = 4;
+  // OPERAND_VALUE is a reference or a Scalar constant, either of which holds one value.
+  OPERAND_VALUE = 5;
+  // OPERAND_CONSTANT is a Scalar constant.
+  OPERAND_CONSTANT = 6;
+  // OPERAND_LIST is a List constant.
+  OPERAND_LIST = 7;
+}
+
+extend google.protobuf.FieldOptions {
+  // operators defines the vocabulary of a string field that names an operator. The field
+  // accepts exactly the names listed.
+  repeated OperatorDefinition operators = 51001;
+}

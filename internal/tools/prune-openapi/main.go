@@ -4,6 +4,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -13,10 +14,12 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("Usage: %s <openapi-file>", os.Args[0])
+	descriptors := flag.String("descriptors", "", "a FileDescriptorSet holding the compiled protos, from which the operator vocabulary of Call.op is published")
+	flag.Parse()
+	if flag.NArg() != 1 {
+		log.Fatalf("Usage: %s [-descriptors <descriptor-set>] <openapi-file>", os.Args[0])
 	}
-	filename := os.Args[1]
+	filename := flag.Arg(0)
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -93,6 +96,23 @@ func main() {
 	}
 	if wrapped {
 		insertSchema(schemasNode, envelopeSchemaName, envelopeSchema())
+	}
+
+	// 1.8 Publish the operator vocabulary of Call.op: the enum from the operator names, and
+	// each operator's definition appended to the field's description. gnostic copies only the
+	// field's comment, so without this step the document would name no operators at all.
+	if *descriptors != "" {
+		set, err := os.ReadFile(*descriptors)
+		if err != nil {
+			log.Fatalf("Error reading descriptor set: %v", err)
+		}
+		defs, err := readOperatorDefinitions(set)
+		if err != nil {
+			log.Fatalf("Error reading operator definitions: %v", err)
+		}
+		if err := publishOperators(schemasNode, defs); err != nil {
+			log.Fatalf("Error publishing operators: %v", err)
+		}
 	}
 
 	// 2. Identify all reachable schemas starting from "paths"
@@ -399,4 +419,40 @@ func insertSchema(schemasNode *yaml.Node, name string, schema *yaml.Node) {
 		}
 	}
 	schemasNode.Content = append(schemasNode.Content, scalarNode(name, 0), schema)
+}
+
+// publishOperators writes the vocabulary into the `op` property of the Call schema: `enum` lists
+// the operator names, and the description gains the rendered definitions after the comment that
+// gnostic copied from the proto.
+func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
+	op := descend(schemasNode, callSchemaName, "properties", opFieldName)
+	if op == nil {
+		return fmt.Errorf("the document has no %s.%s property", callSchemaName, opFieldName)
+	}
+	names := make([]*yaml.Node, 0, len(defs))
+	for _, def := range defs {
+		names = append(names, scalarNode(def.name, 0))
+	}
+	setKey(op, "enum", seqNode(names...))
+
+	rendered := renderOperatorDefinitions(defs)
+	if description := findNode(op, "description"); description != nil {
+		description.Value = description.Value + "\n\n" + rendered
+		description.Style = yaml.LiteralStyle
+	} else {
+		setKey(op, "description", scalarNode(rendered, yaml.LiteralStyle))
+	}
+	return nil
+}
+
+// setKey replaces the value under key in a mapping node, or appends the pair when the key is
+// absent.
+func setKey(mapping *yaml.Node, key string, value *yaml.Node) {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			mapping.Content[i+1] = value
+			return
+		}
+	}
+	mapping.Content = append(mapping.Content, scalarNode(key, 0), value)
 }
