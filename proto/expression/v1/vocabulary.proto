@@ -11,8 +11,9 @@ option go_package = "expression";
 
 // This file declares the annotation through which expression.proto defines the operator
 // vocabulary of the filter AST (RFC 0005 §5.3). A definition is data on the `op` field of Call
-// rather than prose in its comment, so that the OpenAPI document, the Go and Python packages and
-// their tests all read the same list: the `enum` published for `op` is generated from it.
+// rather than prose in its comment, so that a tool can read it: the `enum` and the operator
+// descriptions published for `op` in the OpenAPI document are generated from it, and the Go
+// package's tests check its constants against that published enum.
 
 // OperatorDefinition defines one operator: its name on the wire, the operands it takes, and what
 // it asks of the span.

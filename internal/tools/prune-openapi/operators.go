@@ -4,7 +4,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -24,7 +27,6 @@ const (
 	callMessageName  = "jaeger.expression.v1.Call"
 	opFieldName      = "op"
 	operatorsExtName = "jaeger.expression.v1.operators"
-	callSchemaName   = callMessageName
 )
 
 // operatorDefinition is one entry of the vocabulary, read from the option.
@@ -93,12 +95,41 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 		for j := range operands.Len() {
 			def.operands = append(def.operands, enumName(fields.ByName("operands"), operands.Get(j).Enum()))
 		}
-		if def.name == "" {
-			return nil, fmt.Errorf("operator definition %d has no name", i)
+		if err := def.validate(); err != nil {
+			return nil, fmt.Errorf("operator definition %d: %w", i, err)
 		}
 		defs = append(defs, def)
 	}
 	return defs, nil
+}
+
+// operandCounts is how many operands each arity takes; a variadic operator lists the one kind
+// every operand has.
+var operandCounts = map[string]int{
+	"ARITY_UNARY":    1,
+	"ARITY_BINARY":   2,
+	"ARITY_VARIADIC": 1,
+}
+
+// validate refuses a definition the renderer could only misdescribe: a missing name, an
+// arity that does not match the operand list, or an operand kind the renderer has no noun for.
+func (def operatorDefinition) validate() error {
+	if def.name == "" {
+		return errors.New("has no name")
+	}
+	want, ok := operandCounts[def.arity]
+	if !ok {
+		return fmt.Errorf("%q has arity %s, which is not one of %v", def.name, def.arity, slices.Sorted(maps.Keys(operandCounts)))
+	}
+	if len(def.operands) != want {
+		return fmt.Errorf("%q has arity %s but lists %d operand kinds, not %d", def.name, def.arity, len(def.operands), want)
+	}
+	for _, operand := range def.operands {
+		if _, ok := operandNouns[operand]; !ok {
+			return fmt.Errorf("%q has an operand kind %s that the renderer has no noun for", def.name, operand)
+		}
+	}
+	return nil
 }
 
 func enumName(field protoreflect.FieldDescriptor, number protoreflect.EnumNumber) string {
@@ -125,11 +156,7 @@ var operandNouns = map[string]string{
 func operandPhrase(def operatorDefinition) string {
 	nouns := make([]string, 0, len(def.operands))
 	for _, operand := range def.operands {
-		noun, ok := operandNouns[operand]
-		if !ok {
-			noun = strings.ToLower(strings.TrimPrefix(operand, "OPERAND_"))
-		}
-		nouns = append(nouns, noun)
+		nouns = append(nouns, operandNouns[operand])
 	}
 	if def.arity == "ARITY_VARIADIC" && len(nouns) == 1 {
 		return "two or more " + plural(nouns[0])
@@ -154,11 +181,15 @@ func article(noun string) string {
 	return "a"
 }
 
+// renderedHeading opens the rendered list, and marks where a description already published
+// once is cut before the list is written again.
+const renderedHeading = "Operators, each with the operands it takes:\n"
+
 // renderOperatorDefinitions renders the vocabulary as the Markdown list appended to the `op`
 // description, one line per operator.
 func renderOperatorDefinitions(defs []operatorDefinition) string {
 	var b strings.Builder
-	b.WriteString("Operators, each with the operands it takes:\n")
+	b.WriteString(renderedHeading)
 	for _, def := range defs {
 		fmt.Fprintf(&b, "\n- `%s` (%s): %s", def.name, operandPhrase(def), def.description)
 	}

@@ -278,9 +278,8 @@ type List struct {
 
 // Call applies Op to Args. The arity and the operands follow the operator, as defined by the
 // operators option on the op field of the Call message in proto/expression/v1/expression.proto.
-// Because
-// an argument is itself an Expression, a comparison reads two references as readily as a
-// reference and a constant — what it requires is that both operands hold the same kind of
+// Because an argument is itself an Expression, a comparison reads two references as readily as
+// a reference and a constant — what it requires is that both operands hold the same kind of
 // value, which the query boundary checks before a backend sees the filter.
 type Call struct {
 	expressionTerm

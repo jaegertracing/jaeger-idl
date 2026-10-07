@@ -127,7 +127,7 @@ PROTO_INCLUDES := \
 	-I/gnostic/gnostic
 # Remapping of std types to gogo types (must not contain spaces)
 PROTO_GOGO_MAPPINGS := $(shell echo \
-		Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/types, \
+		Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor, \
 		Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types, \
 		Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types, \
@@ -329,17 +329,17 @@ proto-api-v3-all:
 
 .PHONY: proto-api-v3-openapi
 proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
+	mkdir -p $(POLYGLOT_DIR_ROOT)
 	# Generate OpenAPI v3 from proto source. The descriptor set carries the operator vocabulary
 	# that expression.proto declares as an option on Call.op, which prune-openapi publishes into
 	# the document, since gnostic reads comments but not custom options.
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
 		--openapi_out=fq_schema_naming=true,naming=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3,Mexpression/v1/expression.proto=github.com/jaegertracing/jaeger-idl/expression/v1,Mexpression/v1/vocabulary.proto=github.com/jaegertracing/jaeger-idl/expression/v1:./swagger/api_v3 \
-		--descriptor_set_out=./swagger/api_v3/.descriptors.pb --include_imports \
+		--descriptor_set_out=$(POLYGLOT_DIR_ROOT)/api_v3.descriptors.pb --include_imports \
 		proto/api_v3/query_service.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
-	$(PRUNE_OPENAPI) -descriptors ./swagger/api_v3/.descriptors.pb ./swagger/api_v3/query_service.openapi.yaml
-	rm ./swagger/api_v3/.descriptors.pb
+	$(PRUNE_OPENAPI) -descriptors $(POLYGLOT_DIR_ROOT)/api_v3.descriptors.pb ./swagger/api_v3/query_service.openapi.yaml
 	$(MAKE) swagger-json
 
 

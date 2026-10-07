@@ -425,9 +425,9 @@ func insertSchema(schemasNode *yaml.Node, name string, schema *yaml.Node) {
 // the operator names, and the description gains the rendered definitions after the comment that
 // gnostic copied from the proto.
 func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
-	op := descend(schemasNode, callSchemaName, "properties", opFieldName)
+	op := descend(schemasNode, callMessageName, "properties", opFieldName)
 	if op == nil {
-		return fmt.Errorf("the document has no %s.%s property", callSchemaName, opFieldName)
+		return fmt.Errorf("the document has no %s.%s property", callMessageName, opFieldName)
 	}
 	names := make([]*yaml.Node, 0, len(defs))
 	for _, def := range defs {
@@ -437,7 +437,10 @@ func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
 
 	rendered := renderOperatorDefinitions(defs)
 	if description := findNode(op, "description"); description != nil {
-		description.Value = description.Value + "\n\n" + rendered
+		// A description published once already ends in the rendered list, which is cut so the
+		// list is written once however often the tool runs.
+		comment, _, _ := strings.Cut(description.Value, "\n\n"+renderedHeading)
+		description.Value = comment + "\n\n" + rendered
 		description.Style = yaml.LiteralStyle
 	} else {
 		setKey(op, "description", scalarNode(rendered, yaml.LiteralStyle))

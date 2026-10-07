@@ -164,6 +164,26 @@ func TestReadOperatorDefinitions_Refuses(t *testing.T) {
 			set:  descriptorSet(t, vocabulary, expressionFile(t, vocabulary, []any{"", "ARITY_UNARY", []string{"OPERAND_PREDICATE"}, "x"})),
 			want: "has no name",
 		},
+		{
+			name: "unspecified arity",
+			set:  descriptorSet(t, vocabulary, expressionFile(t, vocabulary, []any{"x", "ARITY_UNSPECIFIED", []string{"OPERAND_PREDICATE"}, "x"})),
+			want: "has arity ARITY_UNSPECIFIED",
+		},
+		{
+			name: "binary with one operand",
+			set:  descriptorSet(t, vocabulary, expressionFile(t, vocabulary, []any{"x", "ARITY_BINARY", []string{"OPERAND_PREDICATE"}, "x"})),
+			want: "lists 1 operand kinds, not 2",
+		},
+		{
+			name: "variadic with two operands",
+			set:  descriptorSet(t, vocabulary, expressionFile(t, vocabulary, []any{"x", "ARITY_VARIADIC", []string{"OPERAND_PREDICATE", "OPERAND_PREDICATE"}, "x"})),
+			want: "lists 2 operand kinds, not 1",
+		},
+		{
+			name: "operand kind without a noun",
+			set:  descriptorSet(t, vocabulary, expressionFile(t, vocabulary, []any{"x", "ARITY_UNARY", []string{"OPERAND_UNSPECIFIED"}, "x"})),
+			want: "operand kind OPERAND_UNSPECIFIED",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -185,7 +205,6 @@ func TestOperandPhrase(t *testing.T) {
 		{operatorDefinition{arity: "ARITY_UNARY", operands: []string{"OPERAND_ATTRIBUTE_REFERENCE"}}, "an attribute reference"},
 		{operatorDefinition{arity: "ARITY_BINARY", operands: []string{"OPERAND_VALUE", "OPERAND_VALUE"}}, "two values"},
 		{operatorDefinition{arity: "ARITY_BINARY", operands: []string{"OPERAND_COLLECTION_REFERENCE", "OPERAND_PREDICATE"}}, "a collection reference and a predicate"},
-		{operatorDefinition{arity: "ARITY_BINARY", operands: []string{"OPERAND_REFERENCE", "OPERAND_SOMETHING_NEW"}}, "a reference and a something_new"},
 	}
 	for _, test := range tests {
 		if got := operandPhrase(test.def); got != test.want {
@@ -215,7 +234,7 @@ jaeger.expression.v1.Call:
 	if err := publishOperators(&schemas, defs); err != nil {
 		t.Fatal(err)
 	}
-	op := descend(&schemas, callSchemaName, "properties", opFieldName)
+	op := descend(&schemas, callMessageName, "properties", opFieldName)
 
 	var names []string
 	for _, n := range findNode(op, "enum").Content {
@@ -235,12 +254,16 @@ jaeger.expression.v1.Call:
 		}
 	}
 
-	// A second run replaces the enum rather than appending a duplicate key.
+	// A second run replaces the enum and the rendered list rather than appending to either.
 	if err := publishOperators(&schemas, defs[:1]); err != nil {
 		t.Fatal(err)
 	}
 	if got := len(findNode(op, "enum").Content); got != 1 {
 		t.Errorf("enum has %d entries after republishing one operator", got)
+	}
+	description = findNode(op, "description").Value
+	if strings.Count(description, renderedHeading) != 1 || strings.Contains(description, "`exists`") {
+		t.Errorf("republishing did not replace the rendered list:\n%s", description)
 	}
 
 	var noOp yaml.Node
@@ -261,7 +284,7 @@ func TestPublishOperators_WithoutDescription(t *testing.T) {
 	if err := publishOperators(&schemas, defs); err != nil {
 		t.Fatal(err)
 	}
-	op := descend(&schemas, callSchemaName, "properties", opFieldName)
+	op := descend(&schemas, callMessageName, "properties", opFieldName)
 	if description := findNode(op, "description"); description == nil || !strings.HasPrefix(description.Value, "Operators, each with") {
 		t.Errorf("description was not created from the rendered definitions: %v", description)
 	}
