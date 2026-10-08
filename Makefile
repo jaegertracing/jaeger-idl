@@ -323,21 +323,24 @@ proto-expression-all:
 proto-api-v3-all:
 	# API v3
 	$(PROTOC_WITH_GRPC) \
-		proto/api_v3/query_service.proto
+		proto/api_v3/query_service.proto \
+		proto/api_v3/capabilities.proto
 	# OpenAPI v3
 	$(MAKE) proto-api-v3-openapi
 
 .PHONY: proto-api-v3-openapi
 proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 	mkdir -p $(POLYGLOT_DIR_ROOT)
-	# Generate OpenAPI v3 from proto source. The descriptor set carries the operator vocabulary
-	# that expression.proto declares as an option on Call.op, which prune-openapi publishes into
-	# the document, since gnostic reads comments but not custom options.
+	# Generate OpenAPI v3 from proto source. The descriptor set carries the operator and level
+	# vocabularies that expression.proto declares as options on Call.op and FieldReference.level,
+	# which prune-openapi publishes into the document, since gnostic reads comments but not
+	# custom options.
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
-		--openapi_out=fq_schema_naming=true,naming=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3,Mexpression/v1/expression.proto=github.com/jaegertracing/jaeger-idl/expression/v1,Mexpression/v1/vocabulary.proto=github.com/jaegertracing/jaeger-idl/expression/v1:./swagger/api_v3 \
+		--openapi_out=fq_schema_naming=true,naming=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3,Mapi_v3/capabilities.proto=github.com/jaegertracing/jaeger-idl/api_v3,Mexpression/v1/expression.proto=github.com/jaegertracing/jaeger-idl/expression/v1,Mexpression/v1/vocabulary.proto=github.com/jaegertracing/jaeger-idl/expression/v1:./swagger/api_v3 \
 		--descriptor_set_out=$(POLYGLOT_DIR_ROOT)/api_v3.descriptors.pb --include_imports \
-		proto/api_v3/query_service.proto
+		proto/api_v3/query_service.proto \
+		proto/api_v3/capabilities.proto
 	mv ./swagger/api_v3/openapi.yaml ./swagger/api_v3/query_service.openapi.yaml
 	$(PRUNE_OPENAPI) -descriptors $(POLYGLOT_DIR_ROOT)/api_v3.descriptors.pb ./swagger/api_v3/query_service.openapi.yaml
 	$(MAKE) swagger-json

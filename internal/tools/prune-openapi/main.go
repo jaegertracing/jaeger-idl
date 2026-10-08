@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -111,6 +112,27 @@ func main() {
 	}
 	if err := publishOperators(schemasNode, defs); err != nil {
 		log.Fatalf("Error publishing operators: %v", err)
+	}
+	// The level vocabulary of the three reference terms is published the same way, from the
+	// definitions on FieldReference.level.
+	levelDefs, err := readLevelDefinitions(set)
+	if err != nil {
+		log.Fatalf("Error reading level definitions: %v", err)
+	}
+	if err := publishLevels(schemasNode, levelDefs); err != nil {
+		log.Fatalf("Error publishing levels: %v", err)
+	}
+	// FilterCapabilities reports subsets of both vocabularies, so its lists enumerate them.
+	if err := publishFilterCapabilityEnums(schemasNode, levelDefs, defs); err != nil {
+		log.Fatalf("Error publishing filter capability enums: %v", err)
+	}
+
+	// 1.9 Name the document. gnostic titles it after its only service and leaves the title
+	// empty once the proto declares a second one, which api_v3 does with Capabilities. Its
+	// `title` plugin parameter cannot carry the space in the name through the protoc-wrapper
+	// script of the jaegertracing/protobuf image, which word-splits its arguments.
+	if err := setTitle(&root, documentTitle); err != nil {
+		log.Fatalf("Error setting title: %v", err)
 	}
 
 	// 2. Identify all reachable schemas starting from "paths"
@@ -296,6 +318,25 @@ func findRefs(node *yaml.Node, reachable *map[string]bool, queue *[]string) {
 	}
 }
 
+// documentTitle is the info.title the published document carries. It predates the second
+// service and is kept so that generated clients keep their name.
+const documentTitle = "QueryService API"
+
+// setTitle writes title into info.title, replacing whatever gnostic put there.
+func setTitle(root *yaml.Node, title string) error {
+	infoNode := findNode(root, "info")
+	if infoNode == nil {
+		return errors.New("could not find 'info' in OpenAPI spec")
+	}
+	titleNode := findNode(infoNode, "title")
+	if titleNode == nil {
+		return errors.New("could not find 'title' in 'info'")
+	}
+	titleNode.Value = title
+	titleNode.Style = 0
+	return nil
+}
+
 func findNode(root *yaml.Node, key string) *yaml.Node {
 	// Assuming root is Document -> Mapping
 	var mapNode *yaml.Node
@@ -436,12 +477,6 @@ func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
 	}
 	op.Content = append(op.Content, scalarNode("enum", 0), seqNode(names...))
 
-	rendered := renderOperatorDefinitions(defs)
-	if description := findNode(op, "description"); description != nil {
-		description.Value = description.Value + "\n\n" + rendered
-		description.Style = yaml.LiteralStyle
-	} else {
-		op.Content = append(op.Content, scalarNode("description", 0), scalarNode(rendered, yaml.LiteralStyle))
-	}
+	appendDescription(op, renderOperatorDefinitions(defs))
 	return nil
 }

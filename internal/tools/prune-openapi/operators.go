@@ -36,9 +36,9 @@ type operatorDefinition struct {
 	operands    []string
 }
 
-// readOperatorDefinitions returns the operator definitions on Call.op from a serialized
-// FileDescriptorSet, in the order the proto lists them.
-func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error) {
+// readFieldOption returns the repeated message option ext declared on field fieldName of
+// message messageName, from a serialized FileDescriptorSet, in the order the proto lists them.
+func readFieldOption(descriptorSet []byte, messageName, fieldName, extName string) (protoreflect.List, error) {
 	var set descriptorpb.FileDescriptorSet
 	if err := proto.Unmarshal(descriptorSet, &set); err != nil {
 		return nil, fmt.Errorf("decoding descriptor set: %w", err)
@@ -48,32 +48,41 @@ func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error)
 		return nil, fmt.Errorf("resolving descriptor set: %w", err)
 	}
 	types := dynamicpb.NewTypes(files)
-	ext, err := types.FindExtensionByName(operatorsExtName)
+	ext, err := types.FindExtensionByName(protoreflect.FullName(extName))
 	if err != nil {
-		return nil, fmt.Errorf("finding the %s option: %w", operatorsExtName, err)
+		return nil, fmt.Errorf("finding the %s option: %w", extName, err)
 	}
-	callDesc, err := files.FindDescriptorByName(callMessageName)
+	desc, err := files.FindDescriptorByName(protoreflect.FullName(messageName))
 	if err != nil {
-		return nil, fmt.Errorf("finding the %s message: %w", callMessageName, err)
+		return nil, fmt.Errorf("finding the %s message: %w", messageName, err)
 	}
-	callMessage, ok := callDesc.(protoreflect.MessageDescriptor)
+	message, ok := desc.(protoreflect.MessageDescriptor)
 	if !ok {
-		return nil, fmt.Errorf("%s is not a message", callMessageName)
+		return nil, fmt.Errorf("%s is not a message", messageName)
 	}
-	opField := callMessage.Fields().ByName(opFieldName)
-	if opField == nil {
-		return nil, fmt.Errorf("%s has no %s field", callMessageName, opFieldName)
+	field := message.Fields().ByName(protoreflect.Name(fieldName))
+	if field == nil {
+		return nil, fmt.Errorf("%s has no %s field", messageName, fieldName)
 	}
 
 	// The descriptor set was decoded without the extension registered, so the option sits in
 	// the unknown fields of the FieldOptions in wire format. Decoding those bytes with the
 	// extension type known is what turns them into definitions.
-	raw := opField.Options().ProtoReflect().GetUnknown()
+	raw := field.Options().ProtoReflect().GetUnknown()
 	options := dynamicpb.NewMessage((&descriptorpb.FieldOptions{}).ProtoReflect().Descriptor())
 	if err := (proto.UnmarshalOptions{Resolver: types}).Unmarshal(raw, options); err != nil {
-		return nil, fmt.Errorf("decoding the %s options: %w", opFieldName, err)
+		return nil, fmt.Errorf("decoding the %s options: %w", fieldName, err)
 	}
-	list := options.Get(ext.TypeDescriptor()).List()
+	return options.Get(ext.TypeDescriptor()).List(), nil
+}
+
+// readOperatorDefinitions returns the operator definitions on Call.op from a serialized
+// FileDescriptorSet, in the order the proto lists them.
+func readOperatorDefinitions(descriptorSet []byte) ([]operatorDefinition, error) {
+	list, err := readFieldOption(descriptorSet, callMessageName, opFieldName, operatorsExtName)
+	if err != nil {
+		return nil, err
+	}
 	if list.Len() == 0 {
 		return nil, fmt.Errorf("%s.%s declares no operators", callMessageName, opFieldName)
 	}

@@ -286,3 +286,41 @@ func TestInsertSchema(t *testing.T) {
 		})
 	}
 }
+
+func TestSetTitle(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr string
+	}{
+		{name: "replaces empty title", in: "info:\n    title: \"\"\n    version: 0.0.1\n", want: "title: QueryService API\n"},
+		{name: "missing info", in: "paths: {}\n", wantErr: "could not find 'info'"},
+		{name: "missing title", in: "info:\n    version: 0.0.1\n", wantErr: "could not find 'title'"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var root yaml.Node
+			if err := yaml.Unmarshal([]byte(tt.in), &root); err != nil {
+				t.Fatal(err)
+			}
+			err := setTitle(&root, "QueryService API")
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := yaml.Marshal(&root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := string(out); !strings.Contains(got, tt.want) {
+				t.Errorf("title not set, got:\n%s", got)
+			}
+		})
+	}
+}

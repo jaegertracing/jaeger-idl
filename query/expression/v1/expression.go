@@ -22,7 +22,9 @@ import (
 
 // Level is the scope a referenced value lives in. The five levels are the OTLP attribute
 // maps; an attribute reference may also leave it empty, which searches the span and
-// resource levels. See RFC 0005 §5.1.
+// resource levels. What each level reads is defined by the levels option on the level field of
+// the FieldReference message in proto/expression/v1/expression.proto, and RFC 0005 §5.1 holds
+// the reasoning. The constants below name that vocabulary.
 type Level string
 
 const (

@@ -67,6 +67,51 @@
         ],
         "type": "object"
       },
+      "jaeger.api_v3.FilterCapabilities": {
+        "description": "FilterCapabilities lists the attribute levels and the operators the deployment's storage\n evaluates in a structured filter (RFC 0005). It mirrors jaeger.storage.v2.FilterCapabilities\n field for field. The two lists are admission gates, not a guarantee of evaluation: a backend\n that lists `span` and `eq` says nothing about which built-in fields it holds or which type hints\n it honors, so a filter these lists admit may still be refused at query time.",
+        "properties": {
+          "levels": {
+            "description": "levels lists the attribute levels the backend can filter on. The vocabulary is the one\n defined on the `level` field of jaeger.expression.v1.FieldReference. Empty means only\n unqualified references are served.",
+            "items": {
+              "enum": [
+                "span",
+                "resource",
+                "scope",
+                "event",
+                "link"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "operators": {
+            "description": "operators lists the op values the backend evaluates. The vocabulary is the one defined on\n the `op` field of jaeger.expression.v1.Call. The boolean combinators are listed like any\n other operator, so a backend confined to conjunctive search lists `and` and omits `or` and `not`.",
+            "items": {
+              "enum": [
+                "and",
+                "or",
+                "not",
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "regex",
+                "exists",
+                "in",
+                "not_in",
+                "some",
+                "phrase",
+                "fulltext"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "jaeger.api_v3.FindSpansRequest": {
         "description": "Request object to search spans.",
         "properties": {
@@ -145,6 +190,15 @@
         ],
         "type": "object"
       },
+      "jaeger.api_v3.GetCapabilitiesResponse": {
+        "description": "GetCapabilitiesResponse reports what the deployment can do, grouped by the concern each set\n describes, so that a later addition is a sibling field.",
+        "properties": {
+          "search": {
+            "$ref": "#/components/schemas/jaeger.api_v3.SearchCapabilities"
+          }
+        },
+        "type": "object"
+      },
       "jaeger.api_v3.GetOperationsResponse": {
         "description": "Response object to get operation names.",
         "properties": {
@@ -207,6 +261,40 @@
         "required": [
           "pageSize"
         ],
+        "type": "object"
+      },
+      "jaeger.api_v3.SearchCapabilities": {
+        "description": "SearchCapabilities describes how faithfully the deployment's storage serves the search RPCs\n of QueryService. It mirrors jaeger.storage.v2.SearchCapabilities field for field. Its zero\n value is the least capable backend, so a client that reads a missing field as false stays\n on the safe side.",
+        "properties": {
+          "filter": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/jaeger.api_v3.FilterCapabilities"
+              }
+            ],
+            "description": "filter describes structured-filter support. An absent message, or one with both lists\n empty, means the backend serves only the legacy service_name / attributes / duration fields\n and the query service rewrites a filter into them, refusing what they cannot express."
+          },
+          "paginated": {
+            "description": "paginated is true when FindSpans and FindTraceSummaries honor a request's Pagination and\n return a next_page_token that resumes the search where the previous page stopped.",
+            "type": "boolean"
+          },
+          "sameSpanConjunction": {
+            "description": "same_span_conjunction is true when a multi-predicate conjunction is matched within a single\n span. When false the backend may satisfy different conjuncts from different spans of the\n same trace. It is reported, not enforced.",
+            "type": "boolean"
+          },
+          "spanSearch": {
+            "description": "span_search is true when FindSpans returns spans rather than gRPC status UNIMPLEMENTED\n (RFC 0016).",
+            "type": "boolean"
+          },
+          "spanSorting": {
+            "description": "span_sorting requires span_search and promises that FindSpans honors an explicit order_by\n over the built-in span fields. When false only an omitted order_by is accepted.",
+            "type": "boolean"
+          },
+          "withoutServiceName": {
+            "description": "without_service_name is true when FindTraces and FindTraceSummaries accept a query whose\n service_name is empty and read it as \"any service\". When false such a query is refused.",
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "jaeger.api_v3.ServiceSummary": {
@@ -422,7 +510,7 @@
             "type": "string"
           },
           "level": {
-            "description": "level says which attribute map to read. Empty means the unqualified\n span-or-resource search (§5.1), so the empty value is one of the enum's own.",
+            "description": "level says which attribute map to read. Empty means the unqualified\n span-or-resource search (§5.1), so the empty value is one of the enum's own.\n\nLevels:\n\n- `span`: The span's own attributes and built-in fields.\n- `resource`: The attributes of the resource the span was recorded by, such as the service name.\n- `scope`: The attributes of the instrumentation scope (OTLP's InstrumentationScope) that produced the span.\n- `event`: The attributes and built-in fields of the span's events, of which a span holds many.\n- `link`: The attributes and built-in fields of the span's links, of which a span holds many.",
             "enum": [
               "",
               "span",
@@ -538,6 +626,7 @@
         "description": "FieldReference names a built-in field — a value the data model defines\n directly rather than an attribute-map entry (§5.2).",
         "properties": {
           "level": {
+            "description": "level names one of the levels listed after this text. A built-in field belongs to a level\n by definition, so unlike an attribute reference a field reference has no unqualified form.\n This field defines the vocabulary; the `level` fields of AttributeReference and\n NestedReference each accept the subset their own enum lists.\n\nLevels:\n\n- `span`: The span's own attributes and built-in fields.\n- `resource`: The attributes of the resource the span was recorded by, such as the service name.\n- `scope`: The attributes of the instrumentation scope (OTLP's InstrumentationScope) that produced the span.\n- `event`: The attributes and built-in fields of the span's events, of which a span holds many.\n- `link`: The attributes and built-in fields of the span's links, of which a span holds many.",
             "enum": [
               "span",
               "resource",
@@ -590,6 +679,7 @@
         "description": "NestedReference names a span's events or links collection, which is what `some`\n quantifies over (§5.5).",
         "properties": {
           "level": {
+            "description": "Levels:\n\n- `event`: The attributes and built-in fields of the span's events, of which a span holds many.\n- `link`: The attributes and built-in fields of the span's links, of which a span holds many.",
             "enum": [
               "event",
               "link"
@@ -975,6 +1065,36 @@
   },
   "openapi": "3.0.3",
   "paths": {
+    "/api/v3/capabilities": {
+      "get": {
+        "operationId": "Capabilities_GetCapabilities",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/jaeger.api_v3.GetCapabilitiesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/google.rpc.Status"
+                }
+              }
+            },
+            "description": "Default error response"
+          }
+        },
+        "tags": [
+          "Capabilities"
+        ]
+      }
+    },
     "/api/v3/dependencies": {
       "get": {
         "operationId": "QueryService_GetDependencies",
@@ -1628,6 +1748,10 @@
     }
   },
   "tags": [
+    {
+      "description": "Capabilities reports what the deployment behind this API is able to do, so a client can avoid\n sending a query that would be refused: whether a search may omit the service name, which\n structured-filter levels and operators are served, and whether pagination, span search and\n span ordering are honored.\n\n It is a service of its own rather than a method on QueryService because what it reports is\n deployment metadata rather than trace data, and because it is expected to grow beyond search.\n\n A deployment whose storage cannot report its capabilities answers gRPC status UNIMPLEMENTED\n (HTTP 501), which a client reads as the least capable backend.",
+      "name": "Capabilities"
+    },
     {
       "name": "QueryService"
     }

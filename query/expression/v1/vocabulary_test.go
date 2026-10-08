@@ -90,6 +90,36 @@ func TestPublishedOperatorsMatchTheDomain(t *testing.T) {
 	assert.ElementsMatch(t, declared, publishedEnum(t, "jaeger.expression.v1.Call", "op"))
 }
 
+func publishedItemsEnum(t *testing.T, message, field string) []string {
+	items, ok := publishedProperty(t, message, field)["items"].(map[string]any)
+	require.True(t, ok, "%s.%s is an array", message, field)
+	values, ok := items["enum"].([]any)
+	require.True(t, ok, "%s.%s enumerates its items", message, field)
+
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		text, ok := value.(string)
+		require.True(t, ok, "%s.%s enumerates strings, got %#v", message, field, value)
+		out = append(out, text)
+	}
+	return out
+}
+
+// TestPublishedFilterCapabilitiesMatchTheDomain checks the two lists through which a backend
+// reports what it serves against the vocabularies a filter is written with, so a client reads
+// a capability declaration with the same closed sets it uses to compose a query.
+func TestPublishedFilterCapabilitiesMatchTheDomain(t *testing.T) {
+	var declaredLevels, declaredOperators []string
+	for _, level := range levels {
+		declaredLevels = append(declaredLevels, string(level))
+	}
+	for _, op := range operators {
+		declaredOperators = append(declaredOperators, string(op))
+	}
+	assert.ElementsMatch(t, declaredLevels, publishedItemsEnum(t, "jaeger.api_v3.FilterCapabilities", "levels"))
+	assert.ElementsMatch(t, declaredOperators, publishedItemsEnum(t, "jaeger.api_v3.FilterCapabilities", "operators"))
+}
+
 // TestPublishedValueTypesMatchTheDomain covers both places a type is declared. Each also accepts
 // the empty value, which means something in both: any type for a constant, and "the field the list
 // is compared against declares it" for a list.
