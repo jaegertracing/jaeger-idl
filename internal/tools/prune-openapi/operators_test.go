@@ -37,24 +37,44 @@ func vocabularyFile() *descriptorpb.FileDescriptorProto {
 				enumValue("OPERAND_CONSTANT", 6), enumValue("OPERAND_LIST", 7),
 			}},
 		},
-		MessageType: []*descriptorpb.DescriptorProto{{
-			Name: proto.String("OperatorDefinition"),
-			Field: []*descriptorpb.FieldDescriptorProto{
-				{Name: proto.String("name"), Number: proto.Int32(1), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("name")},
-				{Name: proto.String("description"), Number: proto.Int32(2), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("description")},
-				{Name: proto.String("arity"), Number: proto.Int32(3), Type: descriptorpb.FieldDescriptorProto_TYPE_ENUM.Enum(), TypeName: proto.String(".jaeger.expression.v1.Arity"), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("arity")},
-				{Name: proto.String("operands"), Number: proto.Int32(4), Type: descriptorpb.FieldDescriptorProto_TYPE_ENUM.Enum(), TypeName: proto.String(".jaeger.expression.v1.Operand"), Label: descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(), JsonName: proto.String("operands")},
+		MessageType: []*descriptorpb.DescriptorProto{
+			{
+				Name: proto.String("OperatorDefinition"),
+				Field: []*descriptorpb.FieldDescriptorProto{
+					{Name: proto.String("name"), Number: proto.Int32(1), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("name")},
+					{Name: proto.String("description"), Number: proto.Int32(2), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("description")},
+					{Name: proto.String("arity"), Number: proto.Int32(3), Type: descriptorpb.FieldDescriptorProto_TYPE_ENUM.Enum(), TypeName: proto.String(".jaeger.expression.v1.Arity"), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("arity")},
+					{Name: proto.String("operands"), Number: proto.Int32(4), Type: descriptorpb.FieldDescriptorProto_TYPE_ENUM.Enum(), TypeName: proto.String(".jaeger.expression.v1.Operand"), Label: descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(), JsonName: proto.String("operands")},
+				},
 			},
-		}},
-		Extension: []*descriptorpb.FieldDescriptorProto{{
-			Name:     proto.String("operators"),
-			Number:   proto.Int32(51001),
-			Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
-			TypeName: proto.String(".jaeger.expression.v1.OperatorDefinition"),
-			Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
-			Extendee: proto.String(".google.protobuf.FieldOptions"),
-			JsonName: proto.String("operators"),
-		}},
+			{
+				Name: proto.String("LevelDefinition"),
+				Field: []*descriptorpb.FieldDescriptorProto{
+					{Name: proto.String("name"), Number: proto.Int32(1), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("name")},
+					{Name: proto.String("description"), Number: proto.Int32(2), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), JsonName: proto.String("description")},
+				},
+			},
+		},
+		Extension: []*descriptorpb.FieldDescriptorProto{
+			{
+				Name:     proto.String("operators"),
+				Number:   proto.Int32(51001),
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+				TypeName: proto.String(".jaeger.expression.v1.OperatorDefinition"),
+				Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+				Extendee: proto.String(".google.protobuf.FieldOptions"),
+				JsonName: proto.String("operators"),
+			},
+			{
+				Name:     proto.String("levels"),
+				Number:   proto.Int32(51002),
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+				TypeName: proto.String(".jaeger.expression.v1.LevelDefinition"),
+				Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+				Extendee: proto.String(".google.protobuf.FieldOptions"),
+				JsonName: proto.String("levels"),
+			},
+		},
 	}
 }
 

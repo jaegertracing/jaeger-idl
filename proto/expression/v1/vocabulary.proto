@@ -9,11 +9,12 @@ import "google/protobuf/descriptor.proto";
 
 option go_package = "expression";
 
-// This file declares the annotation through which expression.proto defines the operator
-// vocabulary of the filter AST (RFC 0005 §5.3). A definition is data on the `op` field of Call
-// rather than prose in its comment, so that a tool can read it: the `enum` and the operator
-// descriptions published for `op` in the OpenAPI document are generated from it, and the Go
-// package's tests check its constants against that published enum.
+// This file declares the annotations through which expression.proto defines the two closed
+// vocabularies of the filter AST: the operators of Call (RFC 0005 §5.3) and the levels a
+// reference may name (§5.1). A definition is data on the field rather than prose in its
+// comment, so that a tool can read it: the `enum` and the per-value descriptions published for
+// the field in the OpenAPI document are generated from it, and the Go package's tests check its
+// constants against that published enum.
 
 // OperatorDefinition defines one operator: its name on the wire, the operands it takes, and what
 // it asks of the span.
@@ -64,8 +65,23 @@ enum Operand {
   OPERAND_LIST = 7;
 }
 
+// LevelDefinition defines one level: its name on the wire and the attribute map it reads.
+message LevelDefinition {
+  // name is the value a `level` field carries.
+  string name = 1;
+
+  // description states which part of the span the level reads.
+  string description = 2;
+}
+
 extend google.protobuf.FieldOptions {
   // operators defines the vocabulary of a string field that names an operator. The field
   // accepts exactly the names listed.
   repeated OperatorDefinition operators = 51001;
+
+  // levels defines the vocabulary of a string field that names a level. It is declared once, on
+  // the one `level` field that accepts every level; a `level` field that accepts a subset
+  // publishes that subset as its own enum, and the tool documents each listed value from this
+  // definition.
+  repeated LevelDefinition levels = 51002;
 }

@@ -422,7 +422,7 @@
             "type": "string"
           },
           "level": {
-            "description": "level says which attribute map to read. Empty means the unqualified\n span-or-resource search (§5.1), so the empty value is one of the enum's own.",
+            "description": "level says which attribute map to read. Empty means the unqualified\n span-or-resource search (§5.1), so the empty value is one of the enum's own.\n\nLevels:\n\n- `span`: The span's own attributes and built-in fields.\n- `resource`: The attributes of the resource the span was recorded by, such as the service name.\n- `scope`: The attributes of the instrumentation scope (OTLP's InstrumentationScope) that produced the span.\n- `event`: The attributes and built-in fields of the span's events, of which a span holds many.\n- `link`: The attributes and built-in fields of the span's links, of which a span holds many.",
             "enum": [
               "",
               "span",
@@ -538,6 +538,7 @@
         "description": "FieldReference names a built-in field — a value the data model defines\n directly rather than an attribute-map entry (§5.2).",
         "properties": {
           "level": {
+            "description": "level names one of the levels listed after this text. A built-in field belongs to a level\n by definition, so unlike an attribute reference a field reference has no unqualified form.\n This field defines the vocabulary; the `level` fields of AttributeReference and\n NestedReference each accept the subset their own enum lists.\n\nLevels:\n\n- `span`: The span's own attributes and built-in fields.\n- `resource`: The attributes of the resource the span was recorded by, such as the service name.\n- `scope`: The attributes of the instrumentation scope (OTLP's InstrumentationScope) that produced the span.\n- `event`: The attributes and built-in fields of the span's events, of which a span holds many.\n- `link`: The attributes and built-in fields of the span's links, of which a span holds many.",
             "enum": [
               "span",
               "resource",
@@ -590,6 +591,7 @@
         "description": "NestedReference names a span's events or links collection, which is what `some`\n quantifies over (§5.5).",
         "properties": {
           "level": {
+            "description": "Levels:\n\n- `event`: The attributes and built-in fields of the span's events, of which a span holds many.\n- `link`: The attributes and built-in fields of the span's links, of which a span holds many.",
             "enum": [
               "event",
               "link"

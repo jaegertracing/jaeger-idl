@@ -967,6 +967,14 @@ components:
                     description: |-
                         level says which attribute map to read. Empty means the unqualified
                          span-or-resource search (§5.1), so the empty value is one of the enum's own.
+
+                        Levels:
+
+                        - `span`: The span's own attributes and built-in fields.
+                        - `resource`: The attributes of the resource the span was recorded by, such as the service name.
+                        - `scope`: The attributes of the instrumentation scope (OTLP's InstrumentationScope) that produced the span.
+                        - `event`: The attributes and built-in fields of the span's events, of which a span holds many.
+                        - `link`: The attributes and built-in fields of the span's links, of which a span holds many.
             description: AttributeReference names an entry in one of the span's attribute maps.
         jaeger.expression.v1.Call:
             required:
@@ -1070,13 +1078,26 @@ components:
                     type: string
                     description: name of a built-in field of `level`, not an arbitrary key (§5.2).
                 level:
+                    type: string
+                    description: |-
+                        level names one of the levels listed after this text. A built-in field belongs to a level
+                         by definition, so unlike an attribute reference a field reference has no unqualified form.
+                         This field defines the vocabulary; the `level` fields of AttributeReference and
+                         NestedReference each accept the subset their own enum lists.
+
+                        Levels:
+
+                        - `span`: The span's own attributes and built-in fields.
+                        - `resource`: The attributes of the resource the span was recorded by, such as the service name.
+                        - `scope`: The attributes of the instrumentation scope (OTLP's InstrumentationScope) that produced the span.
+                        - `event`: The attributes and built-in fields of the span's events, of which a span holds many.
+                        - `link`: The attributes and built-in fields of the span's links, of which a span holds many.
                     enum:
                         - span
                         - resource
                         - scope
                         - event
                         - link
-                    type: string
             description: |-
                 FieldReference names a built-in field — a value the data model defines
                  directly rather than an attribute-map entry (§5.2).
@@ -1122,6 +1143,11 @@ components:
                         - event
                         - link
                     type: string
+                    description: |-
+                        Levels:
+
+                        - `event`: The attributes and built-in fields of the span's events, of which a span holds many.
+                        - `link`: The attributes and built-in fields of the span's links, of which a span holds many.
             description: |-
                 NestedReference names a span's events or links collection, which is what `some`
                  quantifies over (§5.5).

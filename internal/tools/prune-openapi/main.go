@@ -112,6 +112,15 @@ func main() {
 	if err := publishOperators(schemasNode, defs); err != nil {
 		log.Fatalf("Error publishing operators: %v", err)
 	}
+	// The level vocabulary of the three reference terms is published the same way, from the
+	// definitions on FieldReference.level.
+	levelDefs, err := readLevelDefinitions(set)
+	if err != nil {
+		log.Fatalf("Error reading level definitions: %v", err)
+	}
+	if err := publishLevels(schemasNode, levelDefs); err != nil {
+		log.Fatalf("Error publishing levels: %v", err)
+	}
 
 	// 2. Identify all reachable schemas starting from "paths"
 	reachable := make(map[string]bool)
@@ -436,12 +445,6 @@ func publishOperators(schemasNode *yaml.Node, defs []operatorDefinition) error {
 	}
 	op.Content = append(op.Content, scalarNode("enum", 0), seqNode(names...))
 
-	rendered := renderOperatorDefinitions(defs)
-	if description := findNode(op, "description"); description != nil {
-		description.Value = description.Value + "\n\n" + rendered
-		description.Style = yaml.LiteralStyle
-	} else {
-		op.Content = append(op.Content, scalarNode("description", 0), scalarNode(rendered, yaml.LiteralStyle))
-	}
+	appendDescription(op, renderOperatorDefinitions(defs))
 	return nil
 }
