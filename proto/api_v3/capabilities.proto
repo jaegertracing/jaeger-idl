@@ -1,0 +1,98 @@
+// Copyright (c) 2026 The Jaeger Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package jaeger.api_v3;
+
+import "google/api/annotations.proto";
+
+option go_package = "api_v3";
+option java_package = "io.jaegertracing.api_v3";
+
+// FilterCapabilities lists the attribute levels and the operators the deployment's storage
+// evaluates in a structured filter (RFC 0005). It mirrors jaeger.storage.v2.FilterCapabilities
+// field for field. The two lists are admission gates, not a guarantee of evaluation: a backend
+// that lists `span` and `eq` says nothing about which built-in fields it holds or which type hints
+// it honors, so a filter these lists admit may still be refused at query time.
+message FilterCapabilities {
+  // levels lists the attribute levels the backend can filter on. The vocabulary is the one
+  // defined on the `level` field of jaeger.expression.v1.FieldReference. Empty means only
+  // unqualified references are served.
+  repeated string levels = 1;
+
+  // operators lists the op values the backend evaluates. The vocabulary is the one defined on
+  // the `op` field of jaeger.expression.v1.Call. The boolean combinators are listed like any
+  // other operator, so a backend confined to conjunctive search lists `and` and omits `or` and `not`.
+  repeated string operators = 2;
+}
+
+// SearchCapabilities describes how faithfully the deployment's storage serves the search RPCs
+// of QueryService. It mirrors jaeger.storage.v2.SearchCapabilities field for field. Its zero
+// value is the least capable backend, so a client that reads a missing field as false stays
+// on the safe side.
+message SearchCapabilities {
+  // without_service_name is true when FindTraces and FindTraceSummaries accept a query whose
+  // service_name is empty and read it as "any service". When false such a query is refused.
+  bool without_service_name = 1;
+
+  // same_span_conjunction is true when a multi-predicate conjunction is matched within a single
+  // span. When false the backend may satisfy different conjuncts from different spans of the
+  // same trace. It is reported, not enforced.
+  bool same_span_conjunction = 2;
+
+  // filter describes structured-filter support. An absent message, or one with both lists
+  // empty, means the backend serves only the legacy service_name / attributes / duration fields
+  // and the query service rewrites a filter into them, refusing what they cannot express.
+  FilterCapabilities filter = 3;
+
+  // paginated is true when FindSpans and FindTraceSummaries honor a request's Pagination and
+  // return a next_page_token that resumes the search where the previous page stopped.
+  bool paginated = 4;
+
+  // span_search is true when FindSpans returns spans rather than gRPC status UNIMPLEMENTED
+  // (RFC 0016).
+  bool span_search = 5;
+
+  // span_sorting requires span_search and promises that FindSpans honors an explicit order_by
+  // over the built-in span fields. When false only an omitted order_by is accepted.
+  bool span_sorting = 6;
+}
+
+// Request object for Capabilities.GetCapabilities.
+message GetCapabilitiesRequest {}
+
+// GetCapabilitiesResponse reports what the deployment can do, grouped by the concern each set
+// describes, so that a later addition is a sibling field.
+message GetCapabilitiesResponse {
+  SearchCapabilities search = 1;
+}
+
+// Capabilities reports what the deployment behind this API is able to do, so a client can avoid
+// sending a query that would be refused: whether a search may omit the service name, which
+// structured-filter levels and operators are served, and whether pagination, span search and
+// span ordering are honored.
+//
+// It is a service of its own rather than a method on QueryService because what it reports is
+// deployment metadata rather than trace data, and because it is expected to grow beyond search.
+//
+// A deployment whose storage cannot report its capabilities answers gRPC status UNIMPLEMENTED
+// (HTTP 501), which a client reads as the least capable backend.
+service Capabilities {
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse) {
+    option (google.api.http) = {
+      get: "/api/v3/capabilities"
+    };
+  }
+}
