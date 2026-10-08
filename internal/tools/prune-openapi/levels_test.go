@@ -160,8 +160,12 @@ func TestPublishLevels(t *testing.T) {
 	// AttributeReference keeps its own enum, including the empty level, and documents the
 	// defined ones it lists.
 	attr := descend(&schemas, attributeReferenceMessageName, "properties", levelFieldName)
-	if got := len(findNode(attr, "enum").Content); got != 3 {
-		t.Errorf("AttributeReference enum has %d values, want the 3 it declared", got)
+	names = names[:0]
+	for _, n := range findNode(attr, "enum").Content {
+		names = append(names, n.Value)
+	}
+	if got := strings.Join(names, ","); got != ",span,event" {
+		t.Errorf("AttributeReference enum = %q, want the \"\",span,event it declared", got)
 	}
 	if description := findNode(attr, "description").Value; !strings.HasPrefix(description, "Levels:") || !strings.Contains(description, "- `span`:") {
 		t.Errorf("AttributeReference description was not rendered from the listed levels:\n%s", description)
@@ -199,6 +203,11 @@ func TestPublishLevels_Refuses(t *testing.T) {
 			name: "subset naming an undefined level",
 			doc:  strings.Replace(referencesDoc, "enum: [event]", "enum: [trace]", 1),
 			want: `lists "trace", which the levels option does not define`,
+		},
+		{
+			name: "subset listing a level twice",
+			doc:  strings.Replace(referencesDoc, "enum: [event]", "enum: [event, event]", 1),
+			want: `lists "event" twice`,
 		},
 		{
 			name: "subset listing only the empty level",

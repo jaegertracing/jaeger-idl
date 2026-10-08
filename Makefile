@@ -330,9 +330,10 @@ proto-api-v3-all:
 .PHONY: proto-api-v3-openapi
 proto-api-v3-openapi: $(PROTOC_GEN_OPENAPI) $(PRUNE_OPENAPI)
 	mkdir -p $(POLYGLOT_DIR_ROOT)
-	# Generate OpenAPI v3 from proto source. The descriptor set carries the operator vocabulary
-	# that expression.proto declares as an option on Call.op, which prune-openapi publishes into
-	# the document, since gnostic reads comments but not custom options.
+	# Generate OpenAPI v3 from proto source. The descriptor set carries the operator and level
+	# vocabularies that expression.proto declares as options on Call.op and FieldReference.level,
+	# which prune-openapi publishes into the document, since gnostic reads comments but not
+	# custom options.
 	$(PROTOC) \
 		$(PROTO_INCLUDES) \
 		--openapi_out=fq_schema_naming=true,naming=json,Mapi_v3/query_service.proto=github.com/jaegertracing/jaeger-idl/api_v3,Mexpression/v1/expression.proto=github.com/jaegertracing/jaeger-idl/expression/v1,Mexpression/v1/vocabulary.proto=github.com/jaegertracing/jaeger-idl/expression/v1:./swagger/api_v3 \

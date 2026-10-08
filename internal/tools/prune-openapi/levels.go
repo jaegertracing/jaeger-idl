@@ -99,16 +99,21 @@ func publishLevels(schemasNode *yaml.Node, defs []levelDefinition) error {
 	appendDescription(level, renderLevelDefinitions(defs))
 
 	for _, message := range []string{attributeReferenceMessageName, nestedReferenceMessageName} {
-		level := descend(schemasNode, message, "properties", levelFieldName)
-		if level == nil {
+		subset := descend(schemasNode, message, "properties", levelFieldName)
+		if subset == nil {
 			return fmt.Errorf("the document has no %s.%s property", message, levelFieldName)
 		}
-		enum := findNode(level, "enum")
+		enum := findNode(subset, "enum")
 		if enum == nil {
 			return fmt.Errorf("%s.%s publishes no enum; a level field that accepts a subset declares it", message, levelFieldName)
 		}
 		var listed []levelDefinition
+		seen := make(map[string]bool, len(enum.Content))
 		for _, value := range enum.Content {
+			if seen[value.Value] {
+				return fmt.Errorf("%s.%s lists %q twice", message, levelFieldName, value.Value)
+			}
+			seen[value.Value] = true
 			if value.Value == "" {
 				continue
 			}
@@ -121,7 +126,7 @@ func publishLevels(schemasNode *yaml.Node, defs []levelDefinition) error {
 		if len(listed) == 0 {
 			return errors.New(message + "." + levelFieldName + " lists no defined level")
 		}
-		appendDescription(level, renderLevelDefinitions(listed))
+		appendDescription(subset, renderLevelDefinitions(listed))
 	}
 	return nil
 }

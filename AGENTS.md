@@ -22,7 +22,7 @@ The checked-in `swagger/api_v3/query_service.openapi.yaml` and `.json` embed the
 2.  **Pruning**: Runs a custom Go tool `internal/tools/prune-openapi`.
     -   Removes unused schemas (e.g., transitively imported Gnostic types).
     -   Patches duplicate `operationId`s (e.g., `QueryService_FindTraces` -> `QueryService_FindTracesPost`).
-    -   Publishes the operator vocabulary of `Call.op`. The operators are defined as data through the `(jaeger.expression.v1.operators)` option in `proto/expression/v1/expression.proto`, which gnostic does not read, so the same `protoc` run also writes a descriptor set and the tool copies the names into the property's `enum` and renders each definition into its description. An operator is added or changed in that option alone; the Go constants in `query/expression/v1` are checked against the published enum by `vocabulary_test.go`.
+    -   Publishes the operator vocabulary of `Call.op` and the level vocabulary of `FieldReference.level`. Both are defined as data, through the `(jaeger.expression.v1.operators)` and `(jaeger.expression.v1.levels)` options in `proto/expression/v1/expression.proto`, which gnostic does not read, so the same `protoc` run also writes a descriptor set and the tool copies the names into each property's `enum` and renders each definition into its description. An operator or level is added or changed in its option alone; the Go constants in `query/expression/v1` are checked against the published enums by `vocabulary_test.go`. The `level` fields of `AttributeReference` and `NestedReference` accept a subset and keep their own enum, which the tool checks against the definitions and documents from them.
 
 ## Git sign-off
 
