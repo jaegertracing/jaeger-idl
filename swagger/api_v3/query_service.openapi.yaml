@@ -55,6 +55,67 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/google.rpc.Status'
+    /api/v3/explain-query:
+        get:
+            tags:
+                - QueryService
+            description: |-
+                ExplainQuery compiles a TraceQueryParameters.sql statement (RFC 0019) without
+                 executing it, returning the normalized statement, the compiled filter, the
+                 method it selects and its window, or the same error FindTraces/FindTraceSummaries
+                 would return for the same statement. Experimental, the dry run RFC 0019 §5.1 (3)
+                 reserves.
+            operationId: QueryService_ExplainQuery
+            parameters:
+                - name: sql
+                  in: query
+                  description: |-
+                    sql is the statement to compile, in the dialect of RFC 0019. It is not executed:
+                     ExplainQuery is the dry run TraceQueryParameters.sql's own validation reaches for.
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/jaeger.api_v3.ExplainQueryResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/google.rpc.Status'
+        post:
+            tags:
+                - QueryService
+            description: |-
+                ExplainQuery compiles a TraceQueryParameters.sql statement (RFC 0019) without
+                 executing it, returning the normalized statement, the compiled filter, the
+                 method it selects and its window, or the same error FindTraces/FindTraceSummaries
+                 would return for the same statement. Experimental, the dry run RFC 0019 §5.1 (3)
+                 reserves.
+            operationId: QueryService_ExplainQuery
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/jaeger.api_v3.ExplainQueryRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/jaeger.api_v3.ExplainQueryResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/google.rpc.Status'
     /api/v3/operations:
         get:
             tags:
@@ -286,6 +347,23 @@ paths:
                      only valid for the query that produced it.
                   schema:
                     type: string
+                - name: query.sql
+                  in: query
+                  description: |-
+                    sql is a read-only SELECT in the dialect of RFC 0019, over spans or traces. It
+                     carries the filter and the window itself, and is mutually exclusive with filter
+                     and the legacy predicate fields: a server refuses a request that sets both,
+                     rather than merging them, so one request has one description of the search.
+
+                     The statement's own LIMIT, when present, overrides search_depth and the page
+                     size pagination.page_size would otherwise ask for. A statement that selects
+                     spans (RFC 0019 §4.4's FindSpans shape) is refused: FindTraces and
+                     FindTraceSummaries both return trace-shaped results, never spans.
+
+                     Experimental, gated the same way filter is. ExplainQuery compiles a statement
+                     without executing it, for a client that wants to validate one before sending it.
+                  schema:
+                    type: string
                 - name: query.filter
                   in: query
                   description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
@@ -434,6 +512,23 @@ paths:
                      only valid for the query that produced it.
                   schema:
                     type: string
+                - name: query.sql
+                  in: query
+                  description: |-
+                    sql is a read-only SELECT in the dialect of RFC 0019, over spans or traces. It
+                     carries the filter and the window itself, and is mutually exclusive with filter
+                     and the legacy predicate fields: a server refuses a request that sets both,
+                     rather than merging them, so one request has one description of the search.
+
+                     The statement's own LIMIT, when present, overrides search_depth and the page
+                     size pagination.page_size would otherwise ask for. A statement that selects
+                     spans (RFC 0019 §4.4's FindSpans shape) is refused: FindTraces and
+                     FindTraceSummaries both return trace-shaped results, never spans.
+
+                     Experimental, gated the same way filter is. ExplainQuery compiles a statement
+                     without executing it, for a client that wants to validate one before sending it.
+                  schema:
+                    type: string
                 - name: query.filter
                   in: query
                   description: Structured query filter as a URL-encoded JSON object (a Call expression). See RFC 0005 §6.
@@ -578,6 +673,54 @@ components:
                     type: string
                 callCount:
                     type: string
+        jaeger.api_v3.ExplainQueryRequest:
+            type: object
+            properties:
+                sql:
+                    type: string
+                    description: |-
+                        sql is the statement to compile, in the dialect of RFC 0019. It is not executed:
+                         ExplainQuery is the dry run TraceQueryParameters.sql's own validation reaches for.
+            description: Request object for ExplainQuery.
+        jaeger.api_v3.ExplainQueryResponse:
+            type: object
+            properties:
+                normalizedSql:
+                    type: string
+                    description: |-
+                        normalized_sql is the statement printed back in one canonical spelling (RFC 0019
+                         §5), so two callers asking the same question in different spellings compile to
+                         the same string.
+                method:
+                    type: integer
+                    description: method is the search this statement selects.
+                    format: enum
+                filter:
+                    allOf:
+                        - $ref: '#/components/schemas/jaeger.expression.v1.Call'
+                    description: filter is the compiled RFC 0005 filter, absent when WHERE held only the window.
+                startTimeMin:
+                    type: string
+                    description: |-
+                        start_time_min and start_time_max are the window WHERE's top-level conjuncts on
+                         start_time bound, both always set for a statement that compiled.
+                    format: date-time
+                startTimeMax:
+                    type: string
+                    format: date-time
+                limit:
+                    type: integer
+                    description: limit is the statement's own LIMIT, or 0 when absent.
+                    format: uint32
+                warnings:
+                    type: array
+                    items:
+                        type: string
+                    description: warnings are non-fatal notices about the statement; empty when there are none.
+            description: |-
+                Response object for ExplainQuery. A statement that does not compile is reported as
+                 the RPC's own error (InvalidArgument), carrying the line, column and hint RFC 0019
+                 §4's compiler attaches, not as a field here.
         jaeger.api_v3.FilterCapabilities:
             type: object
             properties:
@@ -1003,6 +1146,21 @@ components:
                         pagination requests a paginated search, see comments for Pagination.
                          Mutually exclusive with search_depth. When this field is absent the search
                          returns a single page bounded by search_depth and no continuation token.
+                sql:
+                    type: string
+                    description: |-
+                        sql is a read-only SELECT in the dialect of RFC 0019, over spans or traces. It
+                         carries the filter and the window itself, and is mutually exclusive with filter
+                         and the legacy predicate fields: a server refuses a request that sets both,
+                         rather than merging them, so one request has one description of the search.
+
+                         The statement's own LIMIT, when present, overrides search_depth and the page
+                         size pagination.page_size would otherwise ask for. A statement that selects
+                         spans (RFC 0019 §4.4's FindSpans shape) is refused: FindTraces and
+                         FindTraceSummaries both return trace-shaped results, never spans.
+
+                         Experimental, gated the same way filter is. ExplainQuery compiles a statement
+                         without executing it, for a client that wants to validate one before sending it.
             description: |-
                 Query parameters to find traces.
 
