@@ -988,10 +988,9 @@ components:
                          mutually exclusive with the legacy predicate fields (service_name,
                          operation_name, duration_min/max, attributes).
 
-                         Experimental. A server that does not admit this field refuses the request rather
-                         than ignoring the field, because dropping a predicate would answer with more traces
-                         than were asked for. Jaeger controls admission with the `jaeger.query.structuredFilters`
-                         feature gate.
+                         A server that cannot evaluate the filter refuses the request rather than
+                         ignoring the field, because dropping a predicate would answer with more traces
+                         than were asked for.
 
                          Over the HTTP GET binding it is a URL-encoded JSON object; in a request body
                          it is the structured Call. For example, the filter http.status_code == 500 is

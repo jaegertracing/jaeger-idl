@@ -108,8 +108,8 @@ message TraceQueryParameters {
   // Mutually exclusive with the legacy predicate fields (service_name,
   // operation_name, duration_min/max, attributes).
   //
-  // Experimental. A filter reaches a remote backend only when the backend declares
-  // support via SearchCapabilities.filter; the query service refuses it otherwise.
+  // A filter reaches a remote backend only when the backend declares support via
+  // SearchCapabilities.filter; the query service refuses it otherwise.
   jaeger.expression.v1.Call filter = 9;
 
   // pagination requests a paginated search, see comments for Pagination.
