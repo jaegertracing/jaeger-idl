@@ -24,6 +24,80 @@ func paramNames(seq *yaml.Node) []string {
 	return out
 }
 
+func operationIDs(pathsNode *yaml.Node) []string {
+	var out []string
+	for i := 0; i+1 < len(pathsNode.Content); i += 2 {
+		pathVal := pathsNode.Content[i+1]
+		for j := 0; j+1 < len(pathVal.Content); j += 2 {
+			if id := findNode(pathVal.Content[j+1], "operationId"); id != nil {
+				out = append(out, id.Value)
+			}
+		}
+	}
+	return out
+}
+
+func TestRenamePostOperationIDs(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{
+			name: "a method bound to both verbs gets a distinct POST operationId",
+			in: `paths:
+    /api/v3/spans:
+        get:
+            operationId: QueryService_FindSpans
+        post:
+            operationId: QueryService_FindSpans
+    /api/v3/trace-summaries:
+        get:
+            operationId: QueryService_FindTraceSummaries
+        post:
+            operationId: QueryService_FindTraceSummaries
+`,
+			want: []string{
+				"QueryService_FindSpans", "QueryService_FindSpansPost",
+				"QueryService_FindTraceSummaries", "QueryService_FindTraceSummariesPost",
+			},
+		},
+		{
+			name: "an already distinct pair is left alone",
+			in: `paths:
+    /api/v3/traces:
+        get:
+            operationId: QueryService_FindTraces
+        post:
+            operationId: QueryService_FindTracesPost
+`,
+			want: []string{"QueryService_FindTraces", "QueryService_FindTracesPost"},
+		},
+		{
+			name: "a single binding is left alone",
+			in: `paths:
+    /api/v3/traces/{traceId}:
+        get:
+            operationId: QueryService_GetTrace
+`,
+			want: []string{"QueryService_GetTrace"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var root yaml.Node
+			if err := yaml.Unmarshal([]byte(tt.in), &root); err != nil {
+				t.Fatal(err)
+			}
+			paths := findNode(&root, "paths")
+			renamePostOperationIDs(paths)
+			if got := operationIDs(paths); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCollapseFilterParams(t *testing.T) {
 	tests := []struct {
 		name string

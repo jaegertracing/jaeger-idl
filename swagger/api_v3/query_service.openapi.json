@@ -1302,7 +1302,7 @@
       },
       "post": {
         "description": "FindSpans searches for spans matching the given query",
-        "operationId": "QueryService_FindSpans",
+        "operationId": "QueryService_FindSpansPost",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1471,7 +1471,7 @@
       },
       "post": {
         "description": "FindTraceSummaries searches for traces matching the given query and streams\n back lightweight summary information for each matching trace. Each response\n chunk may contain one or more summaries. Use this instead of FindTraces when\n full span data is not required (e.g. search results page).",
-        "operationId": "QueryService_FindTraceSummaries",
+        "operationId": "QueryService_FindTraceSummariesPost",
         "requestBody": {
           "content": {
             "application/json": {

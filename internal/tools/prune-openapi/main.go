@@ -47,29 +47,10 @@ func main() {
 		log.Fatalf("Could not find 'schemas' in 'components'")
 	}
 
-	// 1.5 Fix duplicated operationId for POST /api/v3/traces
-	// Iterate paths to find /api/v3/traces -> post -> operationId
-	for i := 0; i < len(pathsNode.Content); i += 2 {
-		pathKey := pathsNode.Content[i].Value
-		if pathKey == "/api/v3/traces" {
-			pathVal := pathsNode.Content[i+1]
-			// Find "post"
-			for j := 0; j < len(pathVal.Content); j += 2 {
-				method := pathVal.Content[j].Value
-				if method == "post" {
-					methodVal := pathVal.Content[j+1]
-					// Find "operationId"
-					for k := 0; k < len(methodVal.Content); k += 2 {
-						if methodVal.Content[k].Value == "operationId" {
-							if methodVal.Content[k+1].Value == "QueryService_FindTraces" {
-								methodVal.Content[k+1].Value = "QueryService_FindTracesPost"
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	// 1.5 Give the POST binding of each path its own operationId. gnostic names an operation
+	// after its RPC, so a method bound to both verbs through additional_bindings publishes
+	// one operationId twice, which OpenAPI forbids.
+	renamePostOperationIDs(pathsNode)
 
 	// 1.6 Collapse the flattened `query.filter.*` GET parameters into a single
 	// `query.filter` string parameter. A message-typed field in a GET binding is
@@ -221,6 +202,21 @@ func main() {
 	encoder.SetIndent(4)
 	if err := encoder.Encode(&root); err != nil {
 		log.Fatalf("Error encoding YAML: %v", err)
+	}
+}
+
+// renamePostOperationIDs appends Post to the operationId of a post operation whose get
+// sibling on the same path carries the same one. A pair that is already distinct is left
+// alone, so running the tool twice does not append Post again.
+func renamePostOperationIDs(pathsNode *yaml.Node) {
+	for i := 0; i+1 < len(pathsNode.Content); i += 2 {
+		pathVal := pathsNode.Content[i+1]
+		get := descend(pathVal, "get", "operationId")
+		post := descend(pathVal, "post", "operationId")
+		if get == nil || post == nil || get.Value != post.Value {
+			continue
+		}
+		post.Value += "Post"
 	}
 }
 
